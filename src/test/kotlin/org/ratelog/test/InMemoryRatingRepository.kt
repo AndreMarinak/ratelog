@@ -1,14 +1,17 @@
 package org.ratelog.test
 
+import org.ratelog.MediaType
 import org.ratelog.Rank
 import org.ratelog.movie.Movie
 import org.ratelog.movie.rating.Rating
 import org.ratelog.movie.rating.RatingRepository
+import org.ratelog.tag.Tag
 import org.ratelog.user.User
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-class InMemoryRatingRepository : RatingRepository {
+/** Pass [tags] to make the ranking honor the tag filter. */
+class InMemoryRatingRepository(private val tags: InMemoryTagRepository? = null) : RatingRepository {
     private val store = ConcurrentHashMap<Rating.Id, Rating>()
     private val idGenerator = AtomicLong(1)
 
@@ -20,7 +23,8 @@ class InMemoryRatingRepository : RatingRepository {
         genreId: String?,
         limit: Int,
         name: String?,
-        ratingCategory: String?
+        ratingCategory: String?,
+        tagId: Tag.Id?,
     ): List<Pair<Rank, Rating>> =
         store.values
             .filter { it.userId == userId }
@@ -34,8 +38,10 @@ class InMemoryRatingRepository : RatingRepository {
                     else -> it.score?.value ?: 0.0
                 }
             }
-            .take(limit)
             .mapIndexed { index, rating -> Pair(Rank(index + 1), rating) }
+            // Like the SQL: ranks stay overall ranks, the tag filter only narrows the list.
+            .filter { (_, rating) -> tagId == null || tags?.isTaggedForUser(tagId, userId, MediaType.movie, rating.movieId.value) == true }
+            .take(limit)
 
     override fun save(rating: Rating) {
         val ratingToSave = if (rating.id == null) {

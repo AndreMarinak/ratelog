@@ -39,6 +39,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
 
 **Item**: `{"tmdbId": 949, "type": "movie"}` or `{"title": "Heat", "year": 1995, "type": "movie"}`. Unknown extra fields are ignored.
+Optional `"tags": ["heist", "comfort watch"]` adds those tags to the title (see [Tags](#tags)), whether it was just added or already in the list.
 Items are appended in the order sent. At most **100 items per request**; at most 50 lists per user.
 
 **AddItemsResult**:
@@ -51,13 +52,48 @@ Items are appended in the order sent. At most **100 items per request**; at most
 }
 ```
 `reason` is one of `not_found`, `ambiguous`, `invalid`, `tmdb_error`. One bad item never fails the batch.
+An item whose tags can't be applied (bad tag name, tag limit reached) is `invalid` and is not added.
 
 **Candidate**: `{tmdbId, type, title, originalTitle, year, tmdbVoteAverage, overview}`.
 
+## Tags
+
+Your own labels for titles ("comfort watch", "mind-benders"). Tags are private to your account and are shown on title pages,
+on `/tags`, and as a filter on the Top movies / Top TV pages.
+
+- **Names**: 1-40 characters, trimmed, inner whitespace collapsed. Unique per user **ignoring case**; wherever tags are given by
+  name, an existing tag is matched ignoring case and a new name creates the tag.
+- **Colors** (optional): `clay`, `amber`, `green`, `teal`, `blue`, `violet`, `pink`, `gray`. `""` or `"none"` means no color.
+- At most 200 tags per user; at most 50 tags in one `PUT`.
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| GET | `/api/v1/tags` | | `[Tag]` sorted by name |
+| POST | `/api/v1/tags` | `{name, color?}` | `201 Tag` (`409 tag_exists` if you already have it) |
+| PATCH | `/api/v1/tags/{id}` | `{name?, color?}` (omitted = unchanged) | `Tag` |
+| DELETE | `/api/v1/tags/{id}` | | `204` (the tag is removed from every title) |
+| GET | `/api/v1/tags/{id}/titles` | | `{tag: Tag, titles: [{tmdbId, type, title, year, posterUrl, score}]}` sorted by title; `score` is your rating or `null` |
+| GET | `/api/v1/titles/{type}/{tmdbId}/tags` | | `TitleTags` (`title: null`, `tags: []` if Ratelog has never seen the title) |
+| PUT | `/api/v1/titles/{type}/{tmdbId}/tags` | `{"tags": ["comfort watch", "mind-benders"]}` | `TitleTags` |
+
+**Tag**: `{id, name, color, titleCount, url}` (`url` is the web page, `/tags/{id}`).
+
+**TitleTags**: `{tmdbId, type, title, tags: [Tag], created: [name]}`. `created` lists tags the `PUT` had to create.
+
+`PUT` **replaces** the title's tags with exactly the given list (`[]` clears them) and imports the title from TMDB first if needed,
+like adding it to a list. To add one tag without dropping the others, `GET` the title's tags, append, and `PUT` the result,
+or pass `tags` on list items. Other users' tags are never visible: their ids come back as `404`.
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"tags":["comfort watch","date night"]}' "$RATELOG_URL/api/v1/titles/movie/116149/tags"
+```
+
 ## Errors
 
-Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `not_found` (404, also for other users' lists),
-`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `list_limit` (400), `too_many_items` (413),
+Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `not_found` (404, also for other users' lists and tags),
+`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit` (400),
+`tag_exists` (409), `too_many_items` (413),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
 
 ## Example

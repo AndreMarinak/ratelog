@@ -4,6 +4,7 @@ import org.ratelog.Rank
 import org.ratelog.Review
 import org.ratelog.Score
 import org.ratelog.movie.Movie
+import org.ratelog.tag.Tag
 import org.ratelog.user.User
 import org.springframework.stereotype.Repository
 import java.time.Instant
@@ -29,7 +30,7 @@ data class Rating(
 @Repository
 interface RatingRepository {
     fun findByMovieIdAndUserId(movieId: Movie.Id, userId: User.Id): Rating?
-    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?): List<Pair<Rank, Rating>>
+    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id? = null): List<Pair<Rank, Rating>>
 
     fun save(rating: Rating)
     fun deleteById(ratingId: Rating.Id)

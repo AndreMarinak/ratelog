@@ -3,6 +3,9 @@ package org.ratelog.movie.top
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.movie.premieres.MoviePremieresHandler
 import org.ratelog.movie.premieres.MoviePremieresQuery
+import org.ratelog.tag.Tag
+import org.ratelog.tag.TagRepository
+import org.ratelog.tag.toView
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -23,6 +26,7 @@ data class GetTopMoviesResponse(
 class TopMovieController(
     private val handler: TopMovieHandler,
     private val moviePremieresHandler: MoviePremieresHandler,
+    private val tagRepository: TagRepository,
 ) {
 
     @GetMapping("/movies")
@@ -32,6 +36,7 @@ class TopMovieController(
         @RequestParam("ratingCategory", required = false) ratingCategory: String?,
         @RequestParam("limit", required = false, defaultValue = "10") limit: Int,
         @RequestParam("name", required = false) name: String?,
+        @RequestParam("tag", required = false) tagId: Long?,
         model: Model
     ): String {
         val tops = TopMovie(
@@ -41,6 +46,7 @@ class TopMovieController(
             limit = limit,
             name = name,
             lang = user.metadataLang,
+            tagId = tagId?.let(Tag::Id),
         ).let(handler::handle)
 
         model.addAttribute("tops", tops.map { toResponse(it) })
@@ -48,6 +54,8 @@ class TopMovieController(
         model.addAttribute("selectedRatingCategory", ratingCategory)
         model.addAttribute("selectedLimit", limit)
         model.addAttribute("selectedName", name)
+        model.addAttribute("selectedTag", tagId)
+        model.addAttribute("userTags", tagRepository.findByUserId(user.id).map { it.toView() })
 
         MoviePremieresQuery(user.id, user.metadataLang).let(moviePremieresHandler::handle)
             .fold(

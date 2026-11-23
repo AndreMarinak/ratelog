@@ -53,6 +53,7 @@
                 <img th:src="@{'https://image.tmdb.org/t/p/w45' + ${provider.logoPath.value}}" loading="lazy" />
             </a>
         </div>
+        <div th:replace="~{fragments/tags :: titleTags('movie', ${movie?.id}, ${movie?.tmdbId})}"></div>
 
         <div class="separator"></div>
 

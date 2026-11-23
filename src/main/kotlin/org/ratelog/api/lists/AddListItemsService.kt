@@ -16,6 +16,11 @@ import org.ratelog.customlist.CustomList
 import org.ratelog.customlist.additem.AddToListCommand
 import org.ratelog.customlist.additem.AddToListError
 import org.ratelog.customlist.additem.AddToListHandler
+import org.ratelog.tag.TagName
+import org.ratelog.tag.TagRepository
+import org.ratelog.tag.assign.AssignTagsCommand
+import org.ratelog.tag.assign.AssignTagsError
+import org.ratelog.tag.assign.AssignTagsHandler
 import org.ratelog.tmdb.TmdbError
 import org.ratelog.user.User
 import org.springframework.stereotype.Service
@@ -40,12 +45,14 @@ data class AddItemsResult(
 /**
  * Resolves each input to a TMDB title, saves it locally if needed, and appends it to the list
  * in the given order. One bad item never fails the batch; it is reported in [AddItemsResult.unresolved].
+ * Items may carry `tags`, which are added to the title (whether it was just added or already in the list).
  */
 @Service
 class AddListItemsService(
     private val titleResolver: TitleResolver,
     private val mediaImporter: MediaImporter,
     private val addToListHandler: AddToListHandler,
+    private val assignTagsHandler: AssignTagsHandler,
 ) {
     fun addItems(listId: CustomList.Id, userId: User.Id, lang: Lang, items: List<ItemInput>): AddItemsResult {
         val added = mutableListOf<TitleDto>()
@@ -72,6 +79,11 @@ class AddListItemsService(
                         )
                         continue
                     }
+                    // Tag before adding, so an item whose tags can't be applied is reported instead of half-done.
+                    tagFailure(userId, media.type, media.id, input.tags.orEmpty())?.let { message ->
+                        unresolved += UnresolvedItem(input, "invalid", message)
+                        continue
+                    }
                     addToListHandler.handle(AddToListCommand(listId, userId, media.id, media.type.name)).fold(
                         { error ->
                             when (error) {
@@ -89,6 +101,21 @@ class AddListItemsService(
         return AddItemsResult(added, already, unresolved)
     }
 
+    /** Adds the tags to the title; returns why that failed, or null on success. */
+    private fun tagFailure(userId: User.Id, type: MediaType, mediaId: Long, tags: List<String>): String? {
+        if (tags.isEmpty()) return null
+        return assignTagsHandler.handle(AssignTagsCommand(userId, type, mediaId, tags)).fold(
+            { error ->
+                when (error) {
+                    AssignTagsError.InvalidName -> TAG_NAME_MESSAGE
+                    AssignTagsError.TitleNotFound -> "Title is no longer available"
+                    AssignTagsError.TagLimitExceeded -> "Tag limit reached (${TagRepository.MAX_TAGS_PER_USER} per user)"
+                }
+            },
+            { null }
+        )
+    }
+
     private sealed interface Target {
         data class Found(val tmdbId: Int, val type: MediaType) : Target
         data class Unresolved(val item: UnresolvedItem) : Target
@@ -100,6 +127,8 @@ class AddListItemsService(
         } catch (e: Exception) {
             throw IllegalArgumentException(e.message)
         }
+        // Checked up front so a bad tag name doesn't cost a TMDB lookup.
+        require(input.tags.orEmpty().all { TagName.parse(it).isRight() }) { TAG_NAME_MESSAGE }
 
         if (input.tmdbId != null) {
             // Movie and TV ids are separate namespaces on TMDB, so the id alone is ambiguous.
@@ -140,5 +169,9 @@ class AddListItemsService(
                 }
             }
         )
+    }
+
+    companion object {
+        private const val TAG_NAME_MESSAGE = "tag names must be 1-${TagName.MAX_LENGTH} characters"
     }
 }

@@ -50,6 +50,8 @@ data class ItemInput(
     val type: String? = null,
     val title: String? = null,
     val year: Int? = null,
+    /** Optional tag names applied to the title once it is in the list (missing tags are created). */
+    val tags: List<String>? = null,
 )
 
 data class AddItemsRequest(val items: List<ItemInput> = emptyList())

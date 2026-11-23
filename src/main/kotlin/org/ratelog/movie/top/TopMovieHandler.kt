@@ -7,6 +7,7 @@ import org.ratelog.movie.MovieDescriptionRepository
 import org.ratelog.movie.MovieRepository
 import org.ratelog.movie.rating.Rating
 import org.ratelog.movie.rating.RatingRepository
+import org.ratelog.tag.Tag
 import org.ratelog.user.User
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,6 +19,7 @@ data class TopMovie(
     val limit: Int = 10,
     val name: String?,
     val lang: Lang,
+    val tagId: Tag.Id? = null,
 )
 
 data class TopMovieItem(
@@ -35,7 +37,7 @@ class TopMovieHandler(
 ) {
     @Transactional
     fun handle(query: TopMovie): List<TopMovieItem> =
-        ratingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, query.ratingCategory)
+        ratingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, query.ratingCategory, query.tagId)
             .mapNotNull { toItem(it, query.lang) }
 
     private fun toItem(item: Pair<Rank, Rating>, lang: Lang) =

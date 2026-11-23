@@ -2,6 +2,7 @@ package org.ratelog.tvshow.top
 
 import org.ratelog.Lang
 import org.ratelog.Rank
+import org.ratelog.tag.Tag
 import org.ratelog.tvshow.TvDescriptionRepository
 import org.ratelog.tvshow.TvShow
 import org.ratelog.tvshow.TvShowRepository
@@ -18,6 +19,7 @@ data class TopTvShow(
     val limit: Int = 10,
     val name: String?,
     val lang: Lang,
+    val tagId: Tag.Id? = null,
 )
 
 data class TopTvShowItem(
@@ -35,7 +37,7 @@ class TopTvShowHandler(
 ) {
     @Transactional
     fun handle(query: TopTvShow): List<TopTvShowItem> =
-        tvRatingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, query.ratingCategory)
+        tvRatingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, query.ratingCategory, query.tagId)
             .mapNotNull { toItem(it, query.lang) }
 
     private fun toItem(item: Pair<Rank, TvRating>, lang: Lang) =

@@ -1,6 +1,9 @@
 package org.ratelog.tvshow.top
 
 import org.ratelog.annotations.CurrentUser
+import org.ratelog.tag.Tag
+import org.ratelog.tag.TagRepository
+import org.ratelog.tag.toView
 import org.ratelog.tvshow.premieres.TvShowPremieresHandler
 import org.ratelog.tvshow.premieres.TvShowPremieresQuery
 import org.ratelog.user.User
@@ -23,6 +26,7 @@ data class GetTopTvShowsResponse(
 class TopTvShowController(
     private val handler: TopTvShowHandler,
     private val tvShowPremieresHandler: TvShowPremieresHandler,
+    private val tagRepository: TagRepository,
 ) {
 
     @GetMapping("/tvshows")
@@ -32,6 +36,7 @@ class TopTvShowController(
         @RequestParam("ratingCategory", required = false) ratingCategory: String?,
         @RequestParam("limit", required = false, defaultValue = "10") limit: Int,
         @RequestParam("name", required = false) name: String?,
+        @RequestParam("tag", required = false) tagId: Long?,
         model: Model
     ): String {
         val tops = TopTvShow(
@@ -41,6 +46,7 @@ class TopTvShowController(
             limit = limit,
             name = name,
             lang = user.metadataLang,
+            tagId = tagId?.let(Tag::Id),
         ).let(handler::handle)
 
         model.addAttribute("tops", tops.map { toResponse(it) })
@@ -48,6 +54,8 @@ class TopTvShowController(
         model.addAttribute("selectedRatingCategory", ratingCategory)
         model.addAttribute("selectedLimit", limit)
         model.addAttribute("selectedName", name)
+        model.addAttribute("selectedTag", tagId)
+        model.addAttribute("userTags", tagRepository.findByUserId(user.id).map { it.toView() })
 
         TvShowPremieresQuery(user.id, user.metadataLang).let(tvShowPremieresHandler::handle)
             .fold(

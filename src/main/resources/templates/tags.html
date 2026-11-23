@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(#{tags.title})}"></head>
+<body>
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='profile')}"></header>
+
+    <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
+    <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
+
+    <h1 th:text="#{tags.title}">Tags</h1>
+    <p class="help-text" th:text="#{tags.description}">
+        Your own labels for movies and shows. Only you can see them.
+    </p>
+
+    <form th:action="@{/tags}" method="post" class="card tags-create">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div class="flex gap centered">
+            <input type="text" name="name" required maxlength="40" class="flex-1" autocomplete="off"
+                   th:placeholder="#{tags.name.placeholder}" th:aria-label="#{tags.name.placeholder}"
+                   placeholder="Tag name, e.g. comfort watch" />
+            <button type="submit" class="primary" th:text="#{tags.create}">Create tag</button>
+        </div>
+        <div th:replace="~{fragments/tags :: colorPicker(null)}"></div>
+    </form>
+
+    <div th:if="${#lists.isEmpty(tags)}" class="empty-state" th:text="#{tags.none}">No tags yet.</div>
+
+    <details th:each="tag : ${tags}" class="card tags-row">
+        <summary class="flex separate centered gap">
+            <a th:href="@{/tags/{id}(id=${tag.id})}" class="tag-chip" th:classappend="${tag.color != null} ? 'colored'" th:style="${tag.style}">
+                <span class="tag-dot" th:if="${tag.color != null}" aria-hidden="true"></span>
+                <span th:text="${tag.name}">comfort watch</span>
+            </a>
+            <span class="flex gap centered">
+                <span class="text-soft" th:text="#{tags.count(${tag.titleCount})}">3 titles</span>
+                <span class="tags-row-toggle" th:title="#{tags.edit}">
+                    <i data-lucide="pencil" aria-hidden="true"></i>
+                </span>
+            </span>
+        </summary>
+
+        <div class="tags-row-body">
+            <form th:action="@{/tags/{id}/edit(id=${tag.id})}" method="post" class="tags-edit">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <div class="flex gap centered">
+                    <input type="text" name="name" required maxlength="40" class="flex-1" autocomplete="off"
+                           th:value="${tag.name}" th:aria-label="#{tags.name.placeholder}" />
+                    <button type="submit" class="primary" th:text="#{tags.save}">Save</button>
+                </div>
+                <div th:replace="~{fragments/tags :: colorPicker(${tag.color})}"></div>
+            </form>
+            <form th:action="@{/tags/{id}/delete(id=${tag.id})}" method="post"
+                  th:data-confirm="#{tags.delete.confirm}" onsubmit="return confirm(this.dataset.confirm)">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="link secondary tags-delete">
+                    <i data-lucide="trash" aria-hidden="true"></i>
+                    <span th:text="#{tags.delete}">Delete tag</span>
+                </button>
+            </form>
+        </div>
+    </details>
+</div>
+<style th:replace="~{fragments/tags :: tagStyles}"></style>
+<style>
+    .tags-create { display: grid; gap: 12px; margin-bottom: 16px; }
+    .tags-row summary { list-style: none; cursor: pointer; }
+    .tags-row summary::-webkit-details-marker { display: none; }
+    .tags-row-toggle { display: inline-flex; color: var(--text-soft); }
+    .tags-row-toggle svg { width: 18px; height: 18px; }
+    .tags-row[open] .tags-row-toggle { color: var(--text); }
+    .tags-row-body { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .tags-edit { display: grid; gap: 12px; }
+    .tags-delete { gap: 6px; justify-self: start; }
+    .tags-delete:hover { color: var(--danger); }
+</style>
+</body>
+</html>
