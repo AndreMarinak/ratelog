@@ -43,11 +43,7 @@
             </details>
         </div>
 
-        <form class="bb-find" action="/" method="get" role="search">
-            <label class="visually-hidden" for="bbFindQuery" th:text="#{browse.find}">Find a title</label>
-            <i data-lucide="search" aria-hidden="true"></i>
-            <input id="bbFindQuery" name="q" type="search" th:placeholder="#{browse.find.placeholder}" autocomplete="off">
-        </form>
+        <!--/* No "Find a title" field here: the header's search is on every page (two search boxes on Home, user 2026-11-23). */-->
     </div>
 
     <div class="bb-sub" th:if="${!#lists.isEmpty(bar.chips) or bar.sortMenu != null}">

@@ -36,6 +36,7 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Two search boxes on Home** (user, 2026-11-23): the header search and the Browse bar's "Find a title" both searched titles. The bar's field is gone; the header search is on every page.
 - **No way to delete a rating from the rating editor** (user, 2026-11-23: "im not able to delete a rating when i go to edit"): the
   panel's "Edit rating" opens the rate modal, which only had Quick / Detailed / Save; the delete was a 28px trash icon at the bottom
   of the "Your rating" card. Both rate modals (movie, TV season) now show "Delete rating" under Save in edit mode; it closes the
