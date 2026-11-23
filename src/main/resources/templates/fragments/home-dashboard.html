@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: the home dashboard (included by search.html when there is no query).
+  `home` is a HomeDashboardView (org.ratelog.home.dashboard.HomeDashboardView.kt).
+*/-->
+<div th:fragment="dashboard(home)" class="home-dashboard">
+    <link rel="stylesheet" href="/home.css">
+    <script src="/home.js" defer></script>
+
+    <!--/* browse-bar: the Browse page's quick filters go here, as
+         <div th:replace="~{fragments/browse-bar :: browseBar}"></div>
+    */-->
+
+    <div th:if="${home.showWelcome}" class="home-welcome">
+        <h2 th:text="#{home.welcome.title}">Your home</h2>
+        <p th:text="#{home.welcome.text}">Mark titles as Want to watch or Watching, rate what you've seen and make lists: they'll show up here.</p>
+    </div>
+
+    <section th:each="row : ${home.rows}" class="home-row" th:id="${row.id}" th:aria-labelledby="${row.id + '-title'}">
+        <div class="home-row-head">
+            <h2 th:id="${row.id + '-title'}" th:text="#{${row.titleKey}}">Row</h2>
+            <a th:if="${row.moreHref != null}" class="home-row-more" th:href="${row.moreHref}">
+                <span th:text="#{${row.moreKey}}">More</span>
+                <i data-lucide="arrow-right" aria-hidden="true"></i>
+            </a>
+            <div class="home-row-arrows">
+                <button type="button" data-row-prev th:aria-label="#{home.row.scroll.back}" disabled>
+                    <i data-lucide="chevron-left" aria-hidden="true"></i>
+                </button>
+                <button type="button" data-row-next th:aria-label="#{home.row.scroll.forward}">
+                    <i data-lucide="chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="home-row-track" th:classappend="${row.isLists} ? 'is-lists' : ''" tabindex="0"
+             th:aria-label="#{${row.titleKey}}">
+            <th:block th:if="${row.isLists}" th:each="card : ${row.lists}">
+                <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+            </th:block>
+
+            <div th:each="tile : ${row.tiles}" class="home-tile-wrap">
+                <a class="home-tile" th:href="${tile.href}">
+                    <div class="home-poster">
+                        <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
+                             th:srcset="${tile.posterUrl + ' 185w, ' + tile.posterUrl2x + ' 342w'}"
+                             sizes="(max-width: 900px) 31vw, 152px" alt="" loading="lazy" decoding="async">
+                        <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
+                        <span th:if="${tile.showTypeTag}" class="home-type"
+                              th:title="${tile.isMovie} ? #{search.type.movie} : #{search.type.tv}">
+                            <i th:data-lucide="${tile.isMovie} ? 'film' : 'tv'" aria-hidden="true"></i>
+                        </span>
+                        <span th:if="${tile.statusIcon != null}" class="home-status"
+                              th:title="#{${tile.statusKey}}" th:aria-label="#{${tile.statusKey}}" role="img">
+                            <i th:data-lucide="${tile.statusIcon}" aria-hidden="true"></i>
+                        </span>
+                        <span th:if="${tile.scoreLabel != null}" class="home-score" th:title="#{home.your.score}"
+                              th:text="${tile.scoreLabel}">8.5</span>
+                    </div>
+                    <span class="home-tile-title" th:text="${tile.title}">Title</span>
+                    <span class="home-tile-meta" th:text="${tile.meta}">2025</span>
+                </a>
+                <!--/* One-click watchlist (POST /watchlist/toggle). A sibling of the link, laid over the poster corner. */-->
+                <form th:if="${tile.canToggleWatchlist}" class="home-quick" th:classappend="${tile.inWatchlist} ? 'is-on' : ''"
+                      th:action="@{/watchlist/toggle}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="tmdbId" th:value="${tile.tmdbId}" />
+                    <input type="hidden" name="type" th:value="${tile.type}" />
+                    <button type="submit"
+                            th:title="${tile.inWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}"
+                            th:aria-label="(${tile.inWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}) + ': ' + ${tile.title}"
+                            th:aria-pressed="${tile.inWatchlist}">
+                        <i th:data-lucide="${tile.inWatchlist} ? 'bookmark-check' : 'bookmark'" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <p th:if="${home.tmdbNotConfigured and #authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}" class="home-note">
+        <i data-lucide="key-round" aria-hidden="true"></i>
+        <span>
+            <span th:text="#{home.tmdb.not.configured.admin}">Trending, in theaters and coming soon need a TMDB API key.</span>
+            <a href="/admin/configuration" class="link highlighted" th:text="#{home.tmdb.configure}">Add it in Configuration</a>
+        </span>
+    </p>
+    <p th:if="${home.tmdbUnavailable}" class="home-note">
+        <i data-lucide="cloud-off" aria-hidden="true"></i>
+        <span th:text="#{home.tmdb.unavailable}">Couldn't reach TMDB, so trending and new releases are hidden for now.</span>
+    </p>
+</div>
+</body>
+</html>

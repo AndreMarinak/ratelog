@@ -18,7 +18,7 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
 - [ ] **9. External scores and trailers on title pages**: TMDB score and trailers from TMDB; IMDb / Rotten Tomatoes scores (source being researched).
-- [ ] **10. Home dashboard**: rows for Watching, Up next (watchlist), Recently watched, Recently added lists.
+- [x] **10. Home dashboard**: rows for Continue watching, Up next, Recently rated, Your lists, then TMDB trending / in theaters / coming soon / popular TV (cached). Lists tab (`/lists`) and header search. API: `/api/v1/home` ([docs/api.md](docs/api.md#home)).
 
 ## Later (todo)
 

@@ -122,6 +122,42 @@ curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: appli
   -d '{"score": 8.5, "reviewTitle": "Still the best"}' "$RATELOG_URL/api/v1/ratings/movie/949"
 ```
 
+## Home
+
+The home dashboard as JSON: the same rows as the web home page (`/`). Your own rows come first and only when they have something in them,
+then rows from TMDB.
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| GET | `/api/v1/home` | | `{rows: [Row], tmdb: "ok" \| "not_configured" \| "unavailable"}` |
+
+**Row**: `{id, title, personal, titles: [HomeTitle]}`, or for `your_lists`: `{id, title, personal, lists: [HomeList]}`. At most 20 entries per row.
+Row ids, in this order:
+
+| id | What |
+|---|---|
+| `continue_watching` | Your titles with status `watching`, latest change first |
+| `up_next` | Your `want_to_watch` titles, latest change first |
+| `recently_rated` | Your ratings, newest first (a show once, at its latest season rating) |
+| `your_lists` | Your lists, public and private, most recently changed first |
+| `trending_movies`, `trending_tv` | TMDB trending this week |
+| `in_theaters` | TMDB now playing in your region |
+| `coming_soon` | TMDB upcoming in your region, future release dates only, soonest first |
+| `popular_tv` | TMDB popular TV |
+
+**HomeTitle**: `{tmdbId, type, title, year, posterUrl, status, score, releaseDate}`. `status` (`want_to_watch`, `watching`, `watched`, `dropped`) and `score`
+are yours, `null` when you have none. `releaseDate` is an ISO date on TMDB rows.
+
+**HomeList**: `{id, name, isPublic, itemCount, url, posterUrls}`. `posterUrls` are the first (up to 4) posters, in list order.
+
+TMDB rows use your metadata language; the region of that language (en: US, fr: FR, ...) picks what is in theaters and coming soon.
+They are cached for an hour. If TMDB fails, its rows are left out and `tmdb` says `unavailable` (`not_configured` without an API key);
+the request itself never fails because of TMDB.
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/home"
+```
+
 ## Errors
 
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `not_found` (404, also for other users' lists and tags),

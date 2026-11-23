@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(#{lists.title})}"></head>
+<body>
+<link rel="stylesheet" href="/home.css">
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='lists')}"></header>
+
+    <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
+    <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
+
+    <div class="lists-head">
+        <h1 th:text="#{lists.title}">Lists</h1>
+        <button type="button" class="primary lists-new" data-open-modal="createListModal">
+            <i data-lucide="list-plus" aria-hidden="true"></i>
+            <span th:text="#{lists.new}">New list</span>
+        </button>
+    </div>
+
+    <section class="lists-section" aria-labelledby="my-lists-title">
+        <h2 id="my-lists-title" th:text="#{lists.mine}">My lists</h2>
+        <div th:if="${#lists.isEmpty(myLists)}" class="empty-state" th:text="#{lists.mine.empty}">No lists yet.</div>
+        <div th:unless="${#lists.isEmpty(myLists)}" class="lists-grid">
+            <th:block th:each="card : ${myLists}">
+                <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+            </th:block>
+        </div>
+    </section>
+
+    <section class="lists-section" aria-labelledby="followed-lists-title">
+        <h2 id="followed-lists-title" th:text="#{lists.followed}">From people you follow</h2>
+        <div th:if="${#lists.isEmpty(followedLists)}" class="empty-state">
+            <span th:text="#{lists.followed.empty}">No public lists from people you follow yet.</span>
+            <a href="/community" class="link highlighted" th:text="#{lists.find.people}">Find people</a>
+        </div>
+        <div th:unless="${#lists.isEmpty(followedLists)}" class="lists-grid">
+            <th:block th:each="card : ${followedLists}">
+                <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+            </th:block>
+        </div>
+    </section>
+
+    <section class="lists-section" id="more-lists" aria-labelledby="other-lists-title">
+        <h2 id="other-lists-title" th:text="#{lists.others}">More public lists</h2>
+        <div th:if="${#lists.isEmpty(otherLists)}" class="empty-state" th:text="#{lists.others.empty}">No other public lists yet.</div>
+        <div th:unless="${#lists.isEmpty(otherLists)}" class="lists-grid">
+            <th:block th:each="card : ${otherLists}">
+                <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+            </th:block>
+        </div>
+        <a th:if="${moreHref != null}" th:href="${moreHref}" class="link flex gap centered lists-more">
+            <i data-lucide="chevrons-down" aria-hidden="true"></i>
+            <span th:text="#{lists.load.more}">Load more</span>
+        </a>
+    </section>
+
+    <div th:replace="~{fragments/create-list-modal :: createListModal}"></div>
+</div>
+</body>
+</html>

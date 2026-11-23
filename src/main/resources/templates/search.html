@@ -6,10 +6,14 @@
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='search')}"></header>
 
-    <h1 th:text="#{search.hero}">Find movies and TV shows.</h1>
+    <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
+    <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
+
+    <!--/* Fork: the header search covers the home page; this form stays on results pages as the type filter. */-->
+    <h1 th:if="${results != null or param.q != null}" th:text="#{search.hero}">Find movies and TV shows.</h1>
 
     <section class="panel">
-        <form th:action="@{/}" class="filter" method="get">
+        <form th:if="${results != null or param.q != null}" th:action="@{/}" class="filter" method="get">
             <input class="w-75" id="q" name="q" type="text" th:value="${query}" th:placeholder="#{search.placeholder}" autocomplete="off" th:aria-label="#{search.btn}">
             <select id="mediaType" name="mediaType" class="type-filter" th:aria-label="#{search.filter.type}">
                 <option value="" th:selected="${mediaType == null}" th:text="#{search.filter.any}">Any</option>
@@ -54,21 +58,12 @@
              th:data-page="${currentPage}">
         </div>
 
-        <div class="separator"></div>
+        <div th:if="${results != null}" class="separator"></div>
 
-        <div th:if="${results == null}">
-            <h2 th:if="${!#lists.isEmpty(trendingItems)}" th:text="#{search.trending.title}">Trending this week</h2>
-            <div th:if="${!#lists.isEmpty(trendingItems)}" class="grid trending">
-                <a th:each="item : ${trendingItems}"
-                   th:href="${item.type.name() == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
-                   th:title="${item.title}">
-                    <span class="type-tag" th:if="${item.type.name() == 'movie'}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
-                    <span class="type-tag" th:unless="${item.type.name() == 'movie'}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
-                    <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w185' + ${item.posterPath}}" th:alt="'Poster of ' + ${item.title}">
-                    <div th:unless="${item.posterPath != null}" class="poster-fallback" th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</div>
-                </a>
-            </div>
-        </div>
+        <!--/* Fork: home dashboard rows instead of the trending grid. */-->
+        <th:block th:if="${results == null and home != null}">
+            <div th:replace="~{fragments/home-dashboard :: dashboard(${home})}"></div>
+        </th:block>
     </section>
 </div>
 <script th:if="${hasMore}" th:src="@{/search.js}"></script>

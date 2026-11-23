@@ -37,3 +37,30 @@
   backdrop.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 })();
+
+// Fork: "/" focuses the header search (unless you're typing somewhere); Escape leaves it.
+(function () {
+  const input = document.getElementById('navSearchInput');
+  if (!input) return;
+
+  function isTyping(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTyping(e.target)) {
+      if (document.querySelector('.modal.visible')) return;
+      e.preventDefault();
+      input.focus();
+      input.select();
+    } else if (e.key === 'Escape' && document.activeElement === input) {
+      input.blur();
+    }
+  });
+
+  input.form.addEventListener('submit', (e) => {
+    if (!input.value.trim()) e.preventDefault();
+  });
+})();
