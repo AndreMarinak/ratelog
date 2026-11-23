@@ -27,15 +27,16 @@ data class GetHomeDashboard(
 
 /** Rows in display order. `apiName` is the row id in the JSON API and the HTML anchor. */
 enum class HomeRowKind(val apiName: String, val titleKey: String, val feed: DiscoverFeed? = null) {
-    // Trending movies leads the page (user preference), then the viewer's own rows, then the other TMDB rows.
+    // User preference: what's new leads the page (trending, in theaters, coming soon), then the viewer's own rows,
+    // then Popular TV.
     TRENDING_MOVIES("trending_movies", "home.row.trending.movies", DiscoverFeed.TRENDING_MOVIES),
+    TRENDING_TV("trending_tv", "home.row.trending.tv", DiscoverFeed.TRENDING_TV),
+    IN_THEATERS("in_theaters", "home.row.in.theaters", DiscoverFeed.NOW_PLAYING),
+    COMING_SOON("coming_soon", "home.row.coming.soon", DiscoverFeed.UPCOMING),
     CONTINUE_WATCHING("continue_watching", "home.row.continue.watching"),
     UP_NEXT("up_next", "home.row.up.next"),
     RECENTLY_RATED("recently_rated", "home.row.recently.rated"),
     YOUR_LISTS("your_lists", "home.row.your.lists"),
-    TRENDING_TV("trending_tv", "home.row.trending.tv", DiscoverFeed.TRENDING_TV),
-    IN_THEATERS("in_theaters", "home.row.in.theaters", DiscoverFeed.NOW_PLAYING),
-    COMING_SOON("coming_soon", "home.row.coming.soon", DiscoverFeed.UPCOMING),
     POPULAR_TV("popular_tv", "home.row.popular.tv", DiscoverFeed.POPULAR_TV);
 
     val isPersonal: Boolean get() = feed == null
@@ -67,7 +68,7 @@ data class HomeDashboard(
 }
 
 /**
- * The home page: rows in [HomeRowKind] order (trending movies, the viewer's own non-empty rows, then the other TMDB rows).
+ * The home page: rows in [HomeRowKind] order (trending / in theaters / coming soon, the viewer's own non-empty rows, popular TV).
  * A TMDB feed that fails just leaves its row out; the dashboard itself never fails.
  */
 @Service
