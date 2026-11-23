@@ -8,6 +8,7 @@
         <link rel="stylesheet" href="/title-page.css">
         <link rel="stylesheet" href="/title-info.css">
         <link rel="stylesheet" href="/tile-actions.css">
+        <link rel="stylesheet" href="/list-membership.css">
 
         <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
         <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
@@ -57,10 +58,7 @@
                             <span th:if="${show.overallScore != null}" class="title-action-score" th:title="#{title.panel.your.score}"
                                   th:text="${#strings.replace(#numbers.formatDecimal(show.overallScore, 1, 2), ',', '.')}">8.50</span>
                         </a>
-                        <button type="button" class="title-action" data-open-modal="addToListModal">
-                            <i data-lucide="list-plus" aria-hidden="true"></i>
-                            <span th:text="#{title.panel.add.to.list}">Add to list</span>
-                        </button>
+                        <button th:replace="~{fragments/add-to-list-modal :: addToListButton(${listMembership})}"></button>
                     </div>
                     <div th:replace="~{fragments/title-actions :: extras(${titleActions})}"></div>
 
@@ -131,6 +129,7 @@
     <script src="/title-page.js" defer></script>
     <script src="/tile-actions.js" defer></script>
     <script src="/title-actions.js" defer></script>
+    <script src="/list-membership.js" defer></script>
 </body>
 <script>
     document.querySelectorAll('.season-card.expandable').forEach(card => {

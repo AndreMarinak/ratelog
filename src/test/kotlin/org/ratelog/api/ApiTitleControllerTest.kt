@@ -10,15 +10,20 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.ratelog.ListName
 import org.ratelog.MediaType
 import org.ratelog.TmdbId
 import org.ratelog.api.media.MediaImporter
+import org.ratelog.customlist.CustomList
+import org.ratelog.customlist.CustomListItem
 import org.ratelog.extras.ExternalScores
 import org.ratelog.extras.gettitleinfo.GetTitleInfo
 import org.ratelog.extras.gettitleinfo.GetTitleInfoError
 import org.ratelog.extras.gettitleinfo.GetTitleInfoHandler
 import org.ratelog.extras.gettitleinfo.TitleInfo
 import org.ratelog.movie.MovieDescription
+import org.ratelog.test.InMemoryCustomListRepository
+import org.ratelog.test.InMemoryListMembershipRepository
 import org.ratelog.test.InMemoryMovieDescriptionRepository
 import org.ratelog.test.InMemoryMovieRepository
 import org.ratelog.test.InMemoryRatingRepository
@@ -44,11 +49,13 @@ class ApiTitleControllerTest {
     private val shows = InMemoryTvShowRepository()
     private val ratings = InMemoryRatingRepository()
     private val tvRatings = InMemoryTvRatingRepository()
+    private val lists = InMemoryCustomListRepository()
     private val controller = ApiTitleController(
         MediaImporter(tmdbClient, movies, InMemoryMovieDescriptionRepository(), shows, InMemoryTvDescriptionRepository()),
         getTitleInfoHandler,
         ratings,
         tvRatings,
+        InMemoryListMembershipRepository(lists),
     )
     private val user = UserFactory.aUser(id = 1)
 
@@ -148,6 +155,34 @@ class ApiTitleControllerTest {
         assertNull(dto.tmdbVoteAverage)
         assertNull(dto.externalScores)
         assertNull(dto.userRating)
+        assertEquals(emptyList<TitleListDto>(), dto.inLists)
+    }
+
+    @Test
+    fun `given the title is in some of your lists then inLists names them with its rank`() {
+        whenever(getTitleInfoHandler.handle(any())).thenReturn(GetTitleInfoError.NotAvailable.left())
+        controller.title(user, "movie", 603)
+        val matrix = movies.findByTmdbId(TmdbId(603))!!.id!!.value
+        fun list(name: String, createdAt: Long, owner: Long, vararg mediaIds: Long): CustomList {
+            val list = lists.save(CustomList(null, org.ratelog.user.User.Id(owner), ListName(name), false, createdAt))
+            mediaIds.forEachIndexed { i, id -> lists.addItem(CustomListItem(null, list.id!!, id, MediaType.movie, i + 1, createdAt)) }
+            return list
+        }
+        val sciFi = list("Sci-fi canon", 2_000, 1, 900, 901, matrix)
+        val rewatch = list("Rewatch", 3_000, 1, matrix)
+        list("Without it", 4_000, 1, 900)
+        list("Someone else's", 5_000, 2, matrix)
+
+        val dto = controller.title(user, "movie", 603)
+
+        assertEquals(
+            listOf(
+                TitleListDto(rewatch.id!!.value, "Rewatch", 1, "/list/${rewatch.id!!.value}"),
+                TitleListDto(sciFi.id!!.value, "Sci-fi canon", 3, "/list/${sciFi.id!!.value}"),
+            ),
+            dto.inLists,
+            "your own lists only, newest first",
+        )
     }
 
     @Test

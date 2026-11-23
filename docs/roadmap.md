@@ -44,6 +44,11 @@ lists (official lists and later list features) `V1120–1129`.
   Watching · Seen · Dropped, with Seen / Watching / Remove (Undo) on every tile. Lists get "Mark what you've seen" tick-off mode.
   "Upcoming · Dec 18" badges on tiles and title pages. Rating a show's season makes it Watching, Watched once every aired season
   is rated. All in place, no reloads. No migration (data model and API unchanged).
+- [x] **17. In your lists** (requested 2026-11-23): the title page's add-to-list sheet ticks the lists that already have the
+  title ("In 2 of your lists", its place as "#3"), lists with it first; a tap adds it or takes it out (removing asks first,
+  naming its rank) and the sheet stays open. The title page button reads "In 2 lists" once it's in any. "New list" moved to
+  the top of the sheet. All in place. API: `inLists` on `GET /api/v1/titles/{type}/{tmdbId}` ([docs/api.md](api.md#title-details-scores-and-trailers)).
+  No migration.
 
 ## Fixes and housekeeping done
 
