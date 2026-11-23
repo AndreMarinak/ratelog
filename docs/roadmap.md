@@ -22,7 +22,10 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
   show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
   Optional TV counterpart: "New season of a show you've watched".
-- [ ] **12. List progress**: on list pages show your status per poster, "You've watched 9 of 25", and "add the unwatched ones to my watchlist".
+- [x] **12. List progress**: on `/list/{id}` (yours or someone's public list) each poster shows its rank, your status and your score;
+  "You've seen 9 of 25" with a bar; All · Not seen · Seen tabs (`?show=unseen|seen`, ranks never renumber); "Add the N unseen to my watchlist"
+  (only titles with no status). "9/25 seen" on `/lists` cards, a back link above the title. API: `status`/`score`/`seen` per item and
+  `progress` on `GET /api/v1/lists/{id}` ([docs/api.md](api.md#list-progress)).
 - [ ] **13. Poster hover card**: hovering (or long-pressing on phones) a poster anywhere shows a small card with the year, basic
   scores (TMDB / IMDb, your rating) and quick actions: add to watchlist, add to a list. Requested 2026-11-23.
 

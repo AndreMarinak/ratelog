@@ -11,7 +11,10 @@
     </div>
     <span class="list-tile-name" th:text="${card.name}">List name</span>
     <span class="list-tile-meta">
-        <span th:text="#{lists.count(${card.itemCount})}">12 titles</span>
+        <span th:if="${card.seenCount == null or card.itemCount == 0}" th:text="#{lists.count(${card.itemCount})}">12 titles</span>
+        <span th:unless="${card.seenCount == null or card.itemCount == 0}" class="list-tile-seen"
+              th:classappend="${card.seenCount > 0} ? 'has-seen' : ''"
+              th:text="#{lists.seen(${card.seenCount}, ${card.itemCount})}">9/25 seen</span>
         <span th:if="${card.ownerUsername != null}" class="list-tile-owner" th:text="#{lists.by(${card.ownerUsername})}">by someone</span>
         <span th:if="${card.ownerUsername == null}" class="list-tile-visibility" th:classappend="${card.isPublic} ? 'public' : ''">
             <i th:data-lucide="${card.isPublic} ? 'globe' : 'lock'" aria-hidden="true"></i>

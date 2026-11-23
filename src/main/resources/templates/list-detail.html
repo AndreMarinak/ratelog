@@ -2,12 +2,16 @@
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head th:replace="~{fragments/head :: head(#{list.detail.title})}"></head>
 <body>
+<link rel="stylesheet" href="/home.css">
+<link rel="stylesheet" href="/watchlist.css">
+<link rel="stylesheet" href="/list-progress.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='lists')}"></header>
 
     <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
     <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
+    <th:block th:replace="~{fragments/list-progress :: top(${listBack})}"></th:block>
 
     <div th:if="${list != null}">
         <div class="flex separate gap-lg centered">
@@ -25,15 +29,18 @@
             </div>
         </div>
 
+        <th:block th:replace="~{fragments/list-progress :: summary(${listProgress}, ${list.name})}"></th:block>
+
         <div th:text="#{list.empty}" th:if="${#lists.isEmpty(list.items)}" class="empty-state"></div>
 
         <div class="list-grid">
-            <a th:each="item, iterStat : ${list.items}"
+            <a th:each="item, iterStat : ${list.items}" th:if="${listProgress == null or listProgress.shows(item.id.value)}"
                th:href="${item.mediaType == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
                class="list-card" th:data-item-id="${item.id.value}">
                 <div class="poster-frame">
                     <span class="type-tag" th:if="${item.mediaType == 'movie'}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
                     <span class="type-tag" th:unless="${item.mediaType == 'movie'}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
+                    <th:block th:replace="~{fragments/list-progress :: badges(${listProgress?.entry(item.id.value)})}"></th:block>
                     <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w342' + ${item.posterPath}}" th:srcset="|https://image.tmdb.org/t/p/w342${item.posterPath} 1x, https://image.tmdb.org/t/p/w500${item.posterPath} 2x|" th:alt="'Poster of ' + ${item.title}">
                     <div th:unless="${item.posterPath != null}" class="poster-fallback" th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</div>
                 </div>
@@ -54,8 +61,11 @@
         </div>
     </div>
 
-    <div th:if="${isOwner}" th:replace="~{fragments/edit-list-modal :: editListModal(${list})}"></div>
-    <div th:if="${isOwner}" th:replace="~{fragments/delete-list-modal :: deleteListModal(${list})}"></div>
+    <!--/* Fork: th:replace runs before th:if, so the condition must sit on a wrapper (else a missing list 500s). */-->
+    <th:block th:if="${isOwner}">
+        <div th:replace="~{fragments/edit-list-modal :: editListModal(${list})}"></div>
+        <div th:replace="~{fragments/delete-list-modal :: deleteListModal(${list})}"></div>
+    </th:block>
 </div>
     <script src="/confirm.js" defer></script>
 </body>

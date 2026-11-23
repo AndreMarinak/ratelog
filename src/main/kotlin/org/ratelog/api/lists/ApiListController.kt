@@ -19,6 +19,7 @@ import org.ratelog.customlist.create.CreateListError
 import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.delete.DeleteListCommand
 import org.ratelog.customlist.delete.DeleteListHandler
+import org.ratelog.customlist.progress.GetListProgressHandler
 import org.ratelog.customlist.removeitem.RemoveFromListCommand
 import org.ratelog.customlist.removeitem.RemoveFromListHandler
 import org.ratelog.customlist.update.UpdateListCommand
@@ -38,7 +39,23 @@ import org.springframework.web.bind.annotation.RestController
 
 data class ListSummaryDto(val id: Long, val name: String, val isPublic: Boolean, val itemCount: Int, val url: String)
 
-data class ListItemDto(val position: Int, val tmdbId: Int, val type: String, val title: String, val year: Int?, val posterUrl: String?)
+data class ListItemDto(
+    val position: Int,
+    val tmdbId: Int,
+    val type: String,
+    val title: String,
+    val year: Int?,
+    val posterUrl: String?,
+    /** The token user's status (`want_to_watch`, `watching`, `watched`, `dropped`), or null. */
+    val status: String? = null,
+    /** The token user's score, or null if unrated. */
+    val score: Double? = null,
+    /** Rated, or status `watched`. */
+    val seen: Boolean = false,
+)
+
+/** How many of the list's items the token user has seen. */
+data class ListProgressDto(val seen: Int, val total: Int)
 
 data class ListDetailDto(
     val id: Long,
@@ -46,6 +63,7 @@ data class ListDetailDto(
     val isPublic: Boolean,
     val url: String,
     val items: List<ListItemDto>,
+    val progress: ListProgressDto,
 )
 
 data class CreateListResponse(val list: ListDetailDto, val items: AddItemsResult?)
@@ -60,6 +78,7 @@ class ApiListController(
     private val removeFromListHandler: RemoveFromListHandler,
     private val addListItemsService: AddListItemsService,
     private val mediaImporter: MediaImporter,
+    private val getListProgressHandler: GetListProgressHandler,
 ) {
     @GetMapping
     fun lists(@CurrentUser user: User): List<ListSummaryDto> =
@@ -145,13 +164,33 @@ class ApiListController(
     }
 
     private fun detail(list: CustomList, user: User): ListDetailDto {
+        // The token user's progress: one marks query per media type, not one per title.
+        val progress = getListProgressHandler.progressOf(list, user.id!!).entries.associateBy { it.itemId }
         val items = list.items.sortedBy { it.position }.mapNotNull { item ->
             mediaImporter.findLocalById(item.mediaId, item.mediaType, user.metadataLang)?.let { media: org.ratelog.api.media.LocalMedia ->
                 val dto: TitleDto = media.toDto()
-                ListItemDto(item.position, dto.tmdbId, dto.type, dto.title, dto.year, dto.posterUrl)
+                val entry = progress[item.id]
+                ListItemDto(
+                    position = item.position,
+                    tmdbId = dto.tmdbId,
+                    type = dto.type,
+                    title = dto.title,
+                    year = dto.year,
+                    posterUrl = dto.posterUrl,
+                    status = entry?.status?.apiName,
+                    score = entry?.score,
+                    seen = entry?.seen ?: false,
+                )
             }
         }
-        return ListDetailDto(list.id!!.value, list.name.value, list.isPublic, "/list/${list.id.value}", items)
+        return ListDetailDto(
+            id = list.id!!.value,
+            name = list.name.value,
+            isPublic = list.isPublic,
+            url = "/list/${list.id.value}",
+            items = items,
+            progress = ListProgressDto(seen = items.count { it.seen }, total = items.size),
+        )
     }
 
     private fun checkBatchSize(items: List<ItemInput>) {
