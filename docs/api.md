@@ -187,6 +187,47 @@ the request itself never fails because of TMDB.
 
 ```bash
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/home"
+## Browse
+
+`GET /api/v1/browse` lists TMDB titles by filters, like the `/browse` page (and with the same parameters, so a
+`/browse?...` link's query string works here too). Every parameter is optional; any invalid value is a `400`.
+
+| Param | Values | Notes |
+|---|---|---|
+| `type` | `movie` (default), `tv` | `400 invalid_type` otherwise |
+| `decade` | `2010s` (or `2010`), `1870s`-`2030s`, `earlier` (= up to 1959) | |
+| `year` | `1874`-(this year + 10), or `upcoming` (movies only: not released yet) | a `year` outside `decade` replaces it |
+| `minRating` | number above 0 and below 10, e.g. `7` or `7.5` | TMDB vote average floor; needs 100 votes (movies) / 50 (TV) |
+| `genre` | TMDB genre id (`878`) or slug (`science-fiction`, `horror`, `action-adventure`...) | a genre from the other type maps to the nearest one (`action` on TV = Action & Adventure); none = `400` |
+| `provider` | TMDB watch provider id (`8` Netflix, `337` Disney+, `9` Prime Video...) | streaming (flatrate) in your region, from your metadata language (`en` = US, `es` = ES...) |
+| `language` | ISO 639-1 original language (`ko`, `ja`, `fr`...) | |
+| `runtime` | `short` (40-89 min), `medium` (90-150), `long` (over 150) | movies only |
+| `popular` | `week` (TMDB trending this week), `now` (by popularity), `alltime` (most voted) | overrides `sort` |
+| `sort` | `popularity` (default), `rating` (needs 300 votes for movies / 200 for TV), `newest` (up to today), `oldest`, `title` | |
+| `hideRated`, `hideWatchlist` | `true` / `false` (`1`/`0`) | leave out titles you rated / that are on your Want to watch list |
+| `page` | `1`-`500` | |
+
+```json
+{
+  "type": "movie",
+  "filters": {"decade": "1990s", "year": null, "minRating": 7.0, "genre": "science-fiction", "genreId": 878, "provider": null,
+              "language": null, "runtime": null, "popular": null, "sort": "rating", "hideRated": false, "hideWatchlist": false},
+  "page": 1, "nextPage": 2, "totalPages": 37, "totalResults": 731,
+  "ignored": [],
+  "results": [{"tmdbId": 603, "type": "movie", "title": "The Matrix", "year": 1999, "posterUrl": "https://image.tmdb.org/t/p/w342/...",
+               "tmdbVoteAverage": 8.2, "url": "/movie/603", "userScore": 9.0, "status": "watched"}]
+}
+```
+
+- Ask for `nextPage` to continue; it is `null` at the end. With `hideRated` / `hideWatchlist` (or `popular=week` plus filters)
+  a response can include titles from up to 3 TMDB pages, so `nextPage` may skip numbers. Results are about 20 per page, fewer when hidden.
+- `popular=week` reads TMDB's trending list: `genre`, `language`, `decade`/`year` and `minRating` are checked on its results, but
+  `provider` and `runtime` can't be, and come back in `ignored` (so does a `sort` or `decade` overridden by another parameter).
+- `userScore` / `status` are your own rating and watch status (null if none). Titles are titled in your metadata language.
+- TMDB pages are cached for about 45 minutes. Errors: `invalid_type`, `invalid_parameter` (400), `tmdb_not_configured` (503), `tmdb_error` (502).
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/browse?type=movie&decade=1980s&genre=horror&minRating=7&hideRated=true"
 ```
 
 ## Errors
