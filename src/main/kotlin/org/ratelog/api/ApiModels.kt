@@ -60,10 +60,10 @@ data class AddItemsRequest(val items: List<ItemInput> = emptyList())
 
 data class CreateListRequest(
     val name: String? = null,
-    /** Omitted = private, unless [isOfficial] (official lists are always public). */
+    /** Omitted = private, official or not. A private official list is hidden: only its owner sees it until it is public. */
     val isPublic: Boolean? = null,
     val items: List<ItemInput> = emptyList(),
-    /** Admin tokens only (others get 403). Makes the list official, and so public. */
+    /** Admin tokens only (others get 403). Makes the list official; it is shown to everyone only if it is also public. */
     val isOfficial: Boolean? = null,
     /** Fork: show ranks on the list page (default true); false = a plain collection. */
     val numbered: Boolean? = null,
@@ -72,7 +72,7 @@ data class CreateListRequest(
 data class UpdateListRequest(
     val name: String? = null,
     val isPublic: Boolean? = null,
-    /** Admin tokens only, on any list (others get 403). `true` also makes the list public; `false` leaves it public. */
+    /** Admin tokens only, on any list (others get 403). Never changes `isPublic`; send both to publish an official list. */
     val isOfficial: Boolean? = null,
     /** Fork: owner only, like name and visibility. */
     val numbered: Boolean? = null,

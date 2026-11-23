@@ -21,7 +21,7 @@
 </th:block>
 
 <!--/* All score badges in one row. */-->
-<section th:fragment="titleScores(info)" th:if="${info != null and (info.tmdbScore != null or info.hasScores or info.imdbUrl != null)}"
+<section th:fragment="titleScores(info)" th:if="${info != null and (info.tmdbScore != null or info.hasScores or info.imdbUrl != null or info.rtSearchUrl != null)}"
          class="title-info" th:aria-label="#{title.info.aria}">
     <div class="title-info-row">
         <span th:if="${info.tmdbScore != null}" class="score-badge tmdb"
@@ -47,6 +47,12 @@
                 <span class="score-value" th:text="|${info.rtAudience}%|">85%</span>
                 <span class="score-votes" th:text="#{title.info.rt.audience}">audience</span>
             </span>
+        </a>
+        <!--/* Fork: without MDBList's RT scores, a plain search link like IMDb's (user 2026-11-23). With scores, the badge above carries the same link. */-->
+        <a th:if="${!info.hasRt and info.rtSearchUrl != null}" class="score-badge rt rt-search" th:href="${info.rtSearchUrl}" target="_blank" rel="noopener noreferrer"
+           th:title="#{title.info.rt.search}">
+            <span class="score-source" th:text="#{title.info.rt}">Rotten Tomatoes®</span>
+            <i data-lucide="external-link" class="score-link-icon" aria-hidden="true"></i>
         </a>
         <span th:if="${info.metacritic != null}" class="score-badge metacritic">
             <span class="score-source">Metacritic</span>

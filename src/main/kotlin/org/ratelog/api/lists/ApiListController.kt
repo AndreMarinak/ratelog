@@ -135,7 +135,7 @@ class ApiListController(
         }
     }
 
-    /** Your lists, and official lists (any token can read those). */
+    /** Your lists, and public official lists (any token can read those). */
     @GetMapping("/{id}")
     fun list(@CurrentUser user: User, @PathVariable id: Long): ListDetailDto = detail(readableList(user, id), user)
 
@@ -145,8 +145,8 @@ class ApiListController(
         val official = body.isOfficial == true
         // Checked before anything is created, so a refused request leaves no list behind.
         if (official && !user.role.isAdminLike) throw forbidden(ADMIN_ONLY)
-        if (official && body.isPublic == false) throw officialMustBePublic()
-        val isPublic = official || body.isPublic == true
+        // Official never implies public (2026-11-23): an official list created private is hidden until made public.
+        val isPublic = body.isPublic == true
         val list = createListHandler.handle(CreateListCommand(user.id!!, body.name.orEmpty(), isPublic)).fold(
             { error ->
                 throw when (error) {
@@ -177,18 +177,20 @@ class ApiListController(
         val isAdmin = user.role.isAdminLike
         val official = officialLists.isOfficial(listId)
         val changesOfficial = body.isOfficial != null && body.isOfficial != official
+        // An admin can mark any list and un-mark any official one, hidden (private) ones included.
+        val adminReach = isAdmin && (body.isOfficial == true || (official && body.isOfficial == false))
 
-        // Others' lists stay hidden (404) unless they are official, or an admin is marking one official.
-        if (!isOwner && !official && !(isAdmin && body.isOfficial == true)) throw notFound("List $id not found")
+        // Others' lists stay hidden (404) unless they are public official lists, or an admin is marking / un-marking.
+        if (!isOwner && !(official && list.isPublic) && !adminReach) throw notFound("List $id not found")
         if (changesOfficial && !isAdmin) throw forbidden(ADMIN_ONLY)
         val editsList = body.name != null || body.isPublic != null
         if ((editsList || body.numbered != null) && !isOwner) {
             throw forbidden("Only the list's owner can change its name, visibility or numbering")
         }
-        if ((body.isOfficial ?: official) && body.isPublic == false) throw officialMustBePublic()
         if (body.name != null && ListName.parse(body.name).isLeft()) throw badRequest("invalid_name", "name must be 1-100 characters")
 
-        // Un-mark before a visibility change (official lists can't go private), mark after it.
+        // The mark and the visibility are independent (official lists can be private since 2026-11-23): neither
+        // step changes the other, so the order doesn't matter.
         if (changesOfficial && body.isOfficial == false) setOfficial(listId, user, false)
         if (editsList) {
             updateListHandler.handle(
@@ -298,24 +300,27 @@ class ApiListController(
     }
 
     /**
-     * For changes. Other users' lists are reported as missing so list ids can't be probed; official lists are
-     * readable by everyone, so changing someone else's is a plain 403.
+     * For changes. Other users' lists are reported as missing so list ids can't be probed; public official lists are
+     * readable by everyone, so changing someone else's is a plain 403. A hidden (private) official list is a 404.
      */
     private fun ownedList(user: User, id: Long): CustomList {
         val list = customListRepository.findById(CustomList.Id(id)) ?: throw notFound("List $id not found")
         if (list.userId != user.id) {
-            if (officialLists.isOfficial(list.id!!)) throw forbidden("Only the list's owner can change it")
+            if (isSharedOfficial(list)) throw forbidden("Only the list's owner can change it")
             throw notFound("List $id not found")
         }
         return list
     }
 
-    /** Your lists and every official list. */
+    /** Your lists and every public official list. */
     private fun readableList(user: User, id: Long): CustomList {
         val list = customListRepository.findById(CustomList.Id(id)) ?: throw notFound("List $id not found")
-        if (list.userId != user.id && !officialLists.isOfficial(list.id!!)) throw notFound("List $id not found")
+        if (list.userId != user.id && !isSharedOfficial(list)) throw notFound("List $id not found")
         return list
     }
+
+    /** Official and public: what every account sees. A private official list is hidden, its owner's only. */
+    private fun isSharedOfficial(list: CustomList): Boolean = list.isPublic && officialLists.isOfficial(list.id!!)
 
     private fun setOfficial(listId: CustomList.Id, user: User, official: Boolean) {
         setListOfficialHandler.handle(SetListOfficial(listId, user.id!!, official)).onLeft { error ->
@@ -331,9 +336,6 @@ class ApiListController(
             throw notFound("List ${listId.value} not found")
         }
     }
-
-    private fun officialMustBePublic() =
-        badRequest("official_list_public", "Official lists are always public: send \"isOfficial\": false first (admin tokens only)")
 
     private fun detail(list: CustomList, user: User): ListDetailDto {
         // The token user's progress: one marks query per media type, not one per title.

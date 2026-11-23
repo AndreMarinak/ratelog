@@ -90,11 +90,11 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 ### Official lists
 
 Admin-curated lists that **every account** sees (Lists tab, Discover, `/lists/official`), each person tracking their own
-"seen X of Y". Added in this fork. Official lists are always public.
+"seen X of Y". Added in this fork. Only **public** official lists are shown to everyone; a private one is **hidden** (see below).
 
-- **Reading:** any token can `GET /api/v1/lists/{id}` an official list, whoever owns it; `items` and `progress` are the
-  token user's own marks. Other people's ordinary lists are still `404`, public or not.
-- **Listing:** `GET /api/v1/lists/official` returns all of them, most recently active first (created, or a title added):
+- **Reading:** any token can `GET /api/v1/lists/{id}` a public official list, whoever owns it; `items` and `progress` are the
+  token user's own marks. Other people's ordinary lists, and their hidden official lists, are still `404`, public or not.
+- **Listing:** `GET /api/v1/lists/official` returns every public one, most recently active first (created, or a title added):
   ```json
   [{"id": 12, "name": "AFI's 100 Years...100 Movies", "isPublic": true, "isOfficial": true, "itemCount": 100,
     "url": "/list/12", "owner": "admin", "progress": {"seen": 37, "total": 100}}]
@@ -104,20 +104,30 @@ Admin-curated lists that **every account** sees (Lists tab, Discover, `/lists/of
   **Admin tokens only** (role ADMIN or SUPERADMIN, see `GET /api/v1/me`), and on **any** list, including other people's
   private ones. Anyone else changing it gets `403 forbidden` and nothing changes; sending the value it already has is fine
   for any token (so a `GET` response can be sent back as is). The web page has the same switch under the list title, for admins.
-- **Official implies public:** marking makes the list public. While it is official it can't be made private: `isPublic: false`
-  is `400 official_list_public` (send `{"isOfficial": false, "isPublic": false}` to do both; un-marking runs first), and the
-  web edit form keeps it public. Un-marking leaves it public; the owner can make it private again.
-- **Changing an official list** (name, visibility, items, delete) is still the owner's job: other tokens get `403 forbidden`
-  (not `404`, since everyone can read it). An admin can un-mark someone else's list but not rename it. Deleting an official
-  list removes it from the official lists too.
+- **Hidden official lists (since 2026-11-23):** `isOfficial` and `isPublic` are independent. Marking or un-marking **never
+  changes `isPublic`**; a private official list is hidden: only its owner can read it (the site shows them "Official ·
+  Hidden"), and it is missing from `GET /api/v1/lists/official`, the Lists tab and Discover until it is made public. The owner
+  hides or shows it with `PATCH {"isPublic": false}` / `{"isPublic": true}`. `POST` with `"isOfficial": true` and no `isPublic`
+  creates a **hidden** one (private is the default for every list); send `"isPublic": true` to publish it at once. The old
+  `400 official_list_public` error no longer exists.
+- **Changing an official list** (name, visibility, items, delete) is still the owner's job: other tokens get `403 forbidden` on a
+  public official list (not `404`, since everyone can read it) and `404` on a hidden one. An admin can un-mark someone else's list
+  (hidden ones too) but not rename it. Deleting an official list removes it from the official lists too.
 
 ```bash
-# Mark every list named in ids.txt official (admin token). Lists show newest activity first.
+# Mark every list named in ids.txt official and public (admin token, your own lists). Lists show newest activity first.
+# Without "isPublic": true a private list stays hidden.
 while read -r id; do
   curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
-    -d '{"isOfficial": true}' "$RATELOG_URL/api/v1/lists/$id" > /dev/null
+    -d '{"isOfficial": true, "isPublic": true}' "$RATELOG_URL/api/v1/lists/$id" > /dev/null
 done < ids.txt
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/official"
+
+# Hide an official list for now (it stays official), then publish it again.
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"isPublic": false}' "$RATELOG_URL/api/v1/lists/12"
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"isPublic": true}' "$RATELOG_URL/api/v1/lists/12"
 ```
 
 ### List order
@@ -350,8 +360,8 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?
 ## Errors
 
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `forbidden` (403: changing `isOfficial`
-without an admin token, or changing someone else's official list), `not_found` (404, also for other users' lists, except official ones, and tags),
-`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `official_list_public`, `not_in_list` (400),
+without an admin token, or changing someone else's public official list), `not_found` (404, also for other users' lists, except public official ones, and tags),
+`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `not_in_list` (400; `official_list_public` was removed 2026-11-23),
 `tag_exists` (409), `too_many_items` (413),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
 

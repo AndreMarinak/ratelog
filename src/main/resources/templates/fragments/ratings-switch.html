@@ -3,10 +3,13 @@
 <body>
 <!--
     Fork: the Movies | TV Shows switch that joins the two ranking pages under one "Ratings" tab.
-    Included once at the top of movies.html and tvshows.html; the filters below it stay per page.
+    Included once at the top of movies.html and tvshows.html; the filters below it stay per page (ratings-filters.js
+    makes them apply on change, with an ✕ per filter).
 -->
 <nav th:fragment="ratingsSwitch(current)" class="ratings-switch" th:aria-label="#{ratings.switch.aria}">
     <link rel="stylesheet" href="/ratings.css">
+    <!--/* Filters apply on change and get an ✕ each (fork, 2026-11-23); the label's {0} is filled in by the script. */-->
+    <script src="/ratings-filters.js" defer th:data-clear-label="#{ratings.filters.clear}"></script>
     <a href="/movies" class="ratings-switch-link" th:classappend="${current == 'movies'} ? 'active' : ''"
        th:attr="aria-current=${current == 'movies'} ? 'page' : null">
         <i data-lucide="film" aria-hidden="true"></i>

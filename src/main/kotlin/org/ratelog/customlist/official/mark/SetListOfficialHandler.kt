@@ -29,14 +29,18 @@ data class ListOfficialChange(
     val official: Boolean,
     /** False when the list already was (or wasn't) official. */
     val changed: Boolean,
-    /** Marking made a private list public. */
-    val madePublic: Boolean,
+    /**
+     * The list's visibility, which neither marking nor un-marking changes. A private official list is hidden: only its
+     * owner sees it (with an "Official · Hidden" badge) until they make it public.
+     */
+    val isPublic: Boolean,
 )
 
 /**
- * Marks a list official (which also makes it public, so every visibility check just works) or un-marks it
- * (which leaves it public; the owner can make it private again). The actor's role is read from the database,
- * not the session, so a demoted admin's open session can't keep doing it.
+ * Marks a list official or un-marks it. Neither touches its visibility (2026-11-23; before, marking made the list
+ * public): only public official lists are shown to everyone, so a private one is a hidden draft, and an admin marking
+ * someone else's private list doesn't publish it. The actor's role is read from the database, not the session, so a
+ * demoted admin's open session can't keep doing it.
  */
 @Service
 class SetListOfficialHandler(
@@ -51,14 +55,7 @@ class SetListOfficialHandler(
         ensure(actor != null && actor.role.isAdminLike) { SetListOfficialError.NotAdmin }
         val list = customListRepository.findById(command.listId) ?: raise(SetListOfficialError.ListNotFound)
 
-        if (command.official) {
-            val madePublic = !list.isPublic
-            if (madePublic) customListRepository.save(list.copy(isPublic = true))
-            val changed = officialLists.mark(command.listId, clock.millis())
-            ListOfficialChange(command.listId, official = true, changed = changed, madePublic = madePublic)
-        } else {
-            val changed = officialLists.unmark(command.listId)
-            ListOfficialChange(command.listId, official = false, changed = changed, madePublic = false)
-        }
+        val changed = if (command.official) officialLists.mark(command.listId, clock.millis()) else officialLists.unmark(command.listId)
+        ListOfficialChange(command.listId, official = command.official, changed = changed, isPublic = list.isPublic)
     }
 }

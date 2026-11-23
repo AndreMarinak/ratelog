@@ -12,9 +12,8 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Aired seasons are approximate for shows with three or more unaired seasons** (`AiredSeasons` only sees the last season's date and the next future date). Needs per-season air dates stored, or a TMDB call, to be exact.
 - **Upstream follow controllers redirect to the raw `Referer`** (`/movie/follow`, `/tvshow/follow`). CSRF protects them, but `BackPath` would be safer; left as upstream code.
 - **Owner-only modals on the profile page use `th:if` + `th:replace` on one element** (upstream, `profile.html`: Letterboxd import and create-list modals). `th:replace` runs before `th:if`, so they render on other people's profiles too. Harmless (hidden, and the server checks ownership), but the same pattern made the list page 500 (see Fixed). Fix: wrap in `<th:block th:if>`.
-- **The API can't read progress on other people's public lists:** `GET /api/v1/lists/{id}` only serves your own lists and official lists (other lists are 404 by design), while the web page shows your progress on any public list.
-- **Unchecking "Public" on an official list does nothing, silently** (upstream's edit modal): official lists stay public, so the save keeps it public without a message. Un-mark it first. Idea: disable the checkbox with a hint while the list is official (an upstream template edit).
-- **The web switch can't mark another user's private list**: upstream's list page refuses to open it, even for admins. Use `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}`.
+- **The API can't read progress on other people's public lists:** `GET /api/v1/lists/{id}` only serves your own lists and public official lists (other lists are 404 by design), while the web page shows your progress on any public list.
+- **The web switch can't mark another user's private list**: upstream's list page refuses to open it, even for admins. Use `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}` (it stays private, i.e. hidden, until its owner makes it public).
 - **Title matcher is strict with same-name knockoffs.** Aladdin (1992), Mulan (1998), Hercules (1997), Pocahontas (1995), The Hunchback of Notre Dame (1996) and Strange World (2022) came back `ambiguous` because TMDB has budget animated films with the same title and year. TMDB also dates some films differently (Hamilton 2025, Snow White 1938). Workaround: send `tmdbId`. Idea: tie-break by TMDB vote count when one candidate dwarfs the others.
 - **TMDB release-date changes break year matching.** Hamilton (2020) is dated 2025 on TMDB after its theatrical re-release, outside the ±1 year slack. Workaround: `tmdbId`.
 - **Old Letterboxd imports look "detailed":** before quick rating existed, imports stored the same score in all five categories. They can't be told apart from a real detailed rating with equal scores, so they were not converted.
@@ -51,6 +50,19 @@ Problems found while building and running the fork: what happened, the cause, an
   section carried the `<link>`s for `home.css` / `title-related.css`, and `title-related.js` replaces that section with the fetched
   rows, so the styles were removed with it and the posters stacked as a plain list. The links now sit beside the section, and a
   template test checks they come before it. Rule for any swapped-in fragment: keep its styles outside the element that gets replaced.
+- **Unchecking "Public" on an official list did nothing, silently** (open since official lists; fixed 2026-11-23): the
+  `OfficialListsStayPublicRepository` decorator turned every save of an official list back to public. With official lists allowed
+  to be private (hidden), the decorator is gone and the edit modal's checkbox works; the list then reads "Official · Hidden".
+- **An admin marking someone else's private list official made it public** (audit-style side effect of "official implies
+  public", via `PATCH /api/v1/lists/{id}`): marking and un-marking no longer change visibility, so the owner's choice stands.
+- **Full-screen loader on every navigation** (user, 2026-11-23, on the watchlist): upstream's `beforeunload` overlay covered the
+  page for every link, even fast ones. Replaced by a thin top bar that only appears after 400 ms.
+- **Ratings count dropdown cut its number off on phones** (found in the 360px screenshots, 2026-11-23): the phone filter grid gives
+  the count a quarter of the row (~76px at 360px), which leaves ~16px of text once the chevron or ✕ is in it ("25" showed as
+  "2", and "100" never fit, also before). With JS the count is now a fixed 96px; the no-JS grid is unchanged.
+- **Headless Chrome hangs on a screenshot taken while a navigation is pending** (browser checks, not the app): a
+  `page.screenshot` between a click and the next page's commit timed out after the protocol timeout. Check the progress bar by
+  sampling it in the old page (`requestAnimationFrame` into `sessionStorage`, read on the new page) or on in-place loads instead.
 - **Unknown URLs answered with a JSON 500** (upstream, found 2026-11-23 while checking the trailer change): logged in, `/no-such-page`,
   `/movie/abc` or a missing `.css` returned `{"message":"Internal server error"}`. Upstream's `GlobalExceptionHandler` catches every
   `Exception`, including Spring's `NoResourceFoundException`. `system/NotFoundAdvice.kt` (ordered before it) now answers a "Page not

@@ -29,5 +29,6 @@ class OfficialListBackLinkInterceptor : HandlerInterceptor {
 class OfficialListsWebConfig : WebMvcConfigurer {
     override fun addInterceptors(registry: InterceptorRegistry) {
         registry.addInterceptor(OfficialListBackLinkInterceptor()).addPathPatterns("/list/*")
+        registry.addInterceptor(OfficialListVisibilityInterceptor()).addPathPatterns("/list/*")
     }
 }

@@ -15,7 +15,10 @@ data class ListCardView(
     val seenCount: Int? = null,
     /** Shows the "Official" badge in place of the owner / visibility (fork, official lists). */
     val isOfficial: Boolean = false,
-)
+) {
+    /** A private official list: only its owner sees it, badged "Official · Hidden" (only public official lists are shown to everyone). */
+    val isHiddenOfficial: Boolean get() = isOfficial && !isPublic
+}
 
 fun ListSummary.toCard(showOwner: Boolean, seenCount: Int? = null) = ListCardView(
     href = "/list/${id.value}",

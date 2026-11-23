@@ -45,13 +45,14 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
   While a list is official, every save keeps it public: a `@Primary` decorator on `CustomListRepository`
   (`OfficialListsStayPublicRepository`, same pattern as the auto-Watched rating repositories) covers upstream's edit form, the API
   and any future path. The API answers `isPublic: false` on an official list with `400 official_list_public` instead of ignoring it.
-  Un-marking leaves the list public; the owner can make it private again.
+  Un-marking leaves the list public; the owner can make it private again. *(Superseded 2026-11-23 by "Official lists can be
+  hidden" below: the decorator and `official_list_public` are gone.)*
 - **Only ADMIN / SUPERADMIN mark lists official, on any list.** The handler reads the role from the database, not the session, so a
   demoted admin's open session can't keep doing it. The web switch shows on lists the admin can open; the API reaches any list id
-  (including someone else's private list, which marking makes public). Changing an official list's name, visibility or titles stays
-  the owner's: an admin can un-mark it but not edit it.
+  (including someone else's private list, which stays private: see "Official lists can be hidden"). Changing an official list's name,
+  visibility or titles stays the owner's: an admin can un-mark it but not edit it.
 - **API visibility:** official lists are readable by any token (`GET /api/v1/lists/{id}`), with the token user's own progress; other
-  users' ordinary lists stay `404`. Changes to someone else's official list are `403 forbidden` rather than `404`, since the id is no
+  users' ordinary lists stay `404`. *(Since 2026-11-23 only public official lists; a hidden one is `404` like any private list.)* Changes to someone else's official list are `403 forbidden` rather than `404`, since the id is no
   secret. Changing `isOfficial` needs an admin token, but sending the value it already has is a no-op for anyone, so a script can
   send a `GET` response back without tripping over the field.
 - **The Lists tab shows official lists as a row, not a grid** (home "Your lists" collage cards, up to 20, "See all N" to
@@ -72,8 +73,8 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
   still shows when every TMDB row failed. The model value is a Thymeleaf `LazyContextVariable`, loaded only when the landing renders
   the row, so the grid, "Load more" fragments and the many `/discover/row` fetches run no extra queries.
 - **One include per template**: `lists.html` (the row), `list-detail.html` (badge + admin switch under the title) and
-  `fragments/discover-rows.html` (after the first row). The switch posts a CSRF form, asks first (`data-confirm`: marking says the
-  list becomes public) and redirects back with a flash message.
+  `fragments/discover-rows.html` (after the first row). The switch posts a CSRF form, asks first (`data-confirm`: since 2026-11-23
+  it says whether every account will see the list or it stays hidden) and redirects back with a flash message.
 - **Seen / Watchlist instead of four statuses** (user, 2026-11-23: "what's the point of want to watch / watching / watched / dropped when I have lists and ratings?"). The UI is Letterboxd-simple; the data model and `/api/v1/statuses` are unchanged (one status per title, plus the rating). **Seen** = status Watched, or rated; **Watchlist** = Want to watch. Watching / Dropped only show for TV (a small control), plus a "Marked Dropped · Clear" chip on a movie that still has one from before.
 - **A rated movie stays Seen; tapping Seen explains instead of un-seeing.** Un-seeing it would mean deleting the rating (destructive), and keeping the rating while clearing Watched would change nothing visible (rated still counts as seen everywhere). So the toggle is locked on with a "Rated" note, and a tap says "You rated it, so it counts as seen. Delete the rating to un-see it." Letterboxd behaves the same way. Seen from Want to watch / Watching / Dropped sets Watched; un-seeing clears the status to none (it never restores the old one).
 - **Shows: the status decides, not "has a rated season".** With the new TV rule (below) a show with one rated season is Watching, so showing it as Seen would contradict that. For shows, Seen = Watched, or rated with no status at all (ratings from before statuses existed); Watching / Want to watch / Dropped win over rated seasons. Shows are never locked: un-seeing a show with rated seasons moves it back to Watching. List progress (`/list/{id}`, the `/lists` card counts and the API's `seen`) uses the same rule, so the tick-off counts and the tiles agree. Movies keep "rated or Watched".
@@ -202,6 +203,25 @@ series maybe those as well but also other ones?" Code: `org.ratelog.recommendati
   titles per `PUT` (no TMDB lookups). Same visibility rules as the other list endpoints: an official list is readable by any
   token, changes are `403` for anyone but the owner, other people's lists are `404`.
 
+- **Official lists can be hidden** (user, 2026-11-23: "admin account should be able to make official lists not public"; replaces
+  "Official implies public"). The official mark and the list's visibility are independent: a **private official list is hidden**, a
+  draft only its owner can open, listed nowhere but the owner's own "My lists" / home row, where it reads **"Official · Hidden"**
+  (muted, eye-off icon; the list page says "Official list · Hidden" with a one-line hint, since phones have no tooltip). Only
+  **public** official lists are shown to everyone: the Lists tab row, `/lists/official`, the Discover row,
+  `GET /api/v1/lists/official`, and the "any token can read it" rule (the SQL already filtered `is_public`, now the API's read and
+  403-vs-404 checks do too). The owner hides / shows it with upstream's edit modal (Public checkbox) or `isPublic` in the API, so
+  no new control was needed and the open "unchecking Public does nothing" bug is gone with the decorator that caused it.
+  - **Marking and un-marking never touch visibility.** Marking a private list keeps it private (hidden) instead of publishing it;
+    the confirmation and the flash say so ("It stays hidden until you make it public"). This also fixes the audit-style issue that
+    an admin marking someone else's private list (API) made it public as a side effect. Why not "mark = publish" with an opt-out:
+    one rule (visibility is the owner's checkbox, the mark is the admin's) is easier to predict, and a hidden official list is
+    harmless: nothing changes until the owner publishes it.
+  - **API:** `isPublic: false` is accepted on official lists; `400 official_list_public` no longer exists. `POST /api/v1/lists`
+    with `isOfficial: true` and no `isPublic` makes a **private** (hidden) official list, the same default as every list, so a
+    script that wants it shown sends `isPublic: true` too. Another user's hidden official list is `404` for reads and changes (not
+    `403`): its id is nobody else's business. Admins can still un-mark any official list, hidden ones included.
+  - The live site's 14 official lists are all public, so nothing changes for them.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -239,7 +259,8 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
 | Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
 | Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
-| Ratings Movies / TV switch and filter form | page load | **page load kept**: different page / explicit Search |
+| Ratings Movies / TV switch | page load | **page load kept**: a different page |
+| Ratings filters (genre, score type, name, count) | page load on Search | **in place with URL + Back** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
 
 ## Deployment (Railway)
@@ -285,3 +306,34 @@ Plain form posts still redirect back with a flash message, so both paths share o
 - **Where to watch shows logo + provider name** (a lone 28px logo read as decoration) and the **JustWatch credit** ("Streaming data by JustWatch", linked) that TMDB requires wherever its watch-provider data appears.
 - **Search results are a poster grid** reusing the home tiles (`static/search-results.css`, tiles from `home.css`): ~155px tiles at desktop width (`auto-fill, minmax(148px, 1fr)`), 3 per row on phones; title + year under the poster, the overview is no longer shown on tiles. Infinite-scroll pages build the same markup.
 - **Phone bottom sheets hug their content** (`height: auto`, still capped at 92dvh): upstream made phone modals full height, which left the add-to-list sheet mostly empty.
+- **Ratings filters apply at once, with an ✕ per filter** (user, 2026-11-23: "if I clicking things on dropdown should just auto
+  do it not require me to click search, also once select something allow an easy x without having to click dropdown (x on each
+  dropdown when something selected)"). On `/movies` and `/tvshows` (`static/ratings-filters.js`, loaded by the Movies | TV Shows
+  switch so the upstream templates are untouched):
+  - **In place, with the URL pushed**, not a page load: the page is fetched and the ranking under the form swapped, so the
+    dropdown you just used keeps focus, the page doesn't flash or jump, and Back / Forward step through filters (`popstate`
+    reloads the ranking and sets the dropdowns back). Same pattern as the list page tabs (`list-filter.js`). The URL only carries
+    filters that are set (`/movies?category=27`, not `?category=27&ratingCategory=&name=&limit=10`). Any failed fetch loads the URL.
+  - **The name field applies after a 450 ms pause, or on Enter / leaving the field**, so typing "dune" doesn't reload four times;
+    one typing burst is one history entry (later pauses replace it), so Back doesn't walk through "d", "du", "dun".
+  - **✕ inside the field, in the chevron's place**, on every filter with a value (the count's ✕ only when it isn't the default 10):
+    one tap clears just that filter. It replaces the chevron rather than sitting beside it because at 360px the genre field is
+    ~160px wide and a second icon would cut "Science Fiction" short; tapping the rest of the field still opens the dropdown. A set
+    filter also gets an accent border. The ✕ has an `aria-label` "Remove filter: Horror".
+  - **No-JS path unchanged:** the controls are wrapped and the ✕s added by the script; the Search button is only hidden once the
+    script runs (`form.is-live`). Phones keep two rows: genre | score type, then name | count; the count is a fixed 96px
+    (the no-JS grid gives it a quarter of the row, ~76px at 360px, which cut "25" / "100" off once the ✕ was in it).
+- **No full-screen loader** (user, 2026-11-23: "for the watchlist why does there need to be a loading animation that covers whole
+  screen"). Upstream covered the page with a blurred overlay and a pulsing logo on every navigation (`beforeunload`), so even fast
+  page loads flashed it. `fragments/loader.html` is now a 3px accent bar along the top edge (`.nav-progress`, `pointer-events:
+  none`), shown only when a navigation takes longer than 400 ms (most local page loads finish well before, so they show
+  nothing) and hidden on `pageshow` (bfcache) or after 15 s (a download link never unloads the page). The in-place Ratings
+  filters use the same bar (`Loader.start()` / `Loader.stop()`). Every template keeps its one include line, so upstream merges stay
+  small; the thin bar was chosen over removing the indicator entirely so a slow TMDB-backed page (title pages, Discover) still
+  shows that the tap registered. `prefers-reduced-motion` gets a static bar.
+- **Rotten Tomatoes search link next to IMDb's** (user, 2026-11-23: "how the IMDb search thing is there can u add a rotten
+  tomatoes through search url"). Title pages (movies and TV) show a "Rotten Tomatoes® ↗" badge styled like the IMDb link
+  (external-link icon, new tab, `rel="noopener noreferrer"`) whenever the English title is known. It links to RT's own search
+  (`rottentomatoes.com/search?search=<title>`) because there is no free way to resolve RT's page id (see "External scores via
+  MDBList"); the app never fetches RT. When MDBList has RT scores, the existing score badge is already that link, so the plain
+  badge is left out and there is never a second RT badge.

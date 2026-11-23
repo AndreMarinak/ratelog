@@ -65,4 +65,4 @@ The user wants Claude to build lists from research ("best heist films", "underra
    Items keep the order sent (ranked lists: send them in rank order). Fix the order later with `"position"` on an item, `PATCH .../items/{type}/{tmdbId}` or `PUT .../order`; unranked collections get `"numbered": false`.
 4. Read `unresolved` in the response. For `ambiguous`/`not_found`, pick the right entry from `candidates` (or `GET /api/v1/search?q=...`) and re-send it as `{"tmdbId": ..., "type": ...}`. Never guess silently; tell the user about anything you couldn't place.
 5. Report the summary and the list URL (`$RATELOG_URL/list/{id}`).
-6. Researched site-wide lists go on the **admin** account and only the main ones are marked official (`PATCH /api/v1/lists/{id}` `{"isOfficial": true}`); the user's second account (`andre`) only gets lists the user asks for.
+6. Researched site-wide lists go on the **admin** account and only the main ones are marked official (`PATCH /api/v1/lists/{id}` `{"isOfficial": true, "isPublic": true}`: marking alone never publishes, and a private official list stays hidden); the user's second account (`andre`) only gets lists the user asks for.
