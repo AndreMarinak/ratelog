@@ -567,3 +567,73 @@
     max-width: calc(100vw - 32px);
   }
 }
+
+/*
+ * Phone, compact (user feedback 2026-11-23: "takes up too much space on mobile, I like the UX of it").
+ * The type toggle and the six menus flow as small chips in ~2 short rows instead of a 3x2 grid of big buttons.
+ * "Find a title" is hidden: the header's search field (always visible on phones) does the same thing.
+ * .bb-menus becomes display: contents, so every panel anchors to .bb-main and opens full width right under the bar.
+ */
+@media (max-width: 720px) {
+  .browse-bar {
+    margin: 0 0 16px;
+  }
+
+  .bb-main {
+    position: relative;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .bb-find {
+    display: none;
+  }
+
+  .bb-type {
+    width: auto;
+    padding: 2px;
+  }
+
+  .bb-type-link {
+    flex: 0 0 auto;
+    padding: 4px 12px;
+    font-size: 0.92rem;
+  }
+
+  .bb-menus {
+    display: contents;
+  }
+
+  .bb-menus > .bb-menu {
+    position: static;
+  }
+
+  .bb-menus .bb-trigger {
+    width: auto;
+    height: 32px;
+    padding: 0 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.92rem;
+
+    svg,
+    i {
+      display: none;
+    }
+  }
+
+  .bb-menus > .bb-menu[open] > .bb-trigger {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.09);
+  }
+
+  .bb-menus > .bb-menu > .bb-panel,
+  .bb-menus > .bb-menu:nth-child(n+4) > .bb-panel {
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    max-height: 60vh;
+  }
+}

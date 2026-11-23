@@ -155,8 +155,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 
 ## Home
 
-The home dashboard as JSON: the same rows as the web home page (`/`). Your own rows come first and only when they have something in them,
-then rows from TMDB.
+The home dashboard as JSON: the same rows as the web home page (`/`), in the same order: trending movies first, then your own rows (only when they have something in them),
+then the other TMDB rows.
 
 | Method | Path | Body / params | Returns |
 |---|---|---|---|

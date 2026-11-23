@@ -80,7 +80,7 @@ class GetHomeDashboardHandlerTest {
         customLists.save(CustomList(id = null, userId = owner, name = ListName(name), isPublic = isPublic, createdAtEpochMs = 1))
 
     @Test
-    fun `rows come in order, personal first, then TMDB`() {
+    fun `rows come in order, trending movies first, then personal, then the other TMDB rows`() {
         home.setStatusTitles(me, WatchStatus.WATCHING, listOf(local(1, "Severance", MediaType.tvshow)))
         home.setStatusTitles(me, WatchStatus.WANT_TO_WATCH, listOf(local(2, "Heat")))
         home.setRecentlyRated(me, listOf(local(3, "Alien", score = 9.0)))
@@ -94,6 +94,8 @@ class GetHomeDashboardHandlerTest {
         val dashboard = handle()
 
         assertEquals(HomeRowKind.entries.toList(), dashboard.rows.map { it.kind })
+        assertEquals(HomeRowKind.TRENDING_MOVIES, dashboard.rows.first().kind)
+        assertEquals(HomeRowKind.CONTINUE_WATCHING, dashboard.rows[1].kind)
         assertEquals(DiscoverState.OK, dashboard.discover)
         assertTrue(dashboard.hasPersonalRows)
         assertEquals(listOf("Heists"), dashboard.rows.single { it.kind == HomeRowKind.YOUR_LISTS }.lists.map { it.name })
@@ -107,7 +109,7 @@ class GetHomeDashboardHandlerTest {
 
         val dashboard = handle()
 
-        assertEquals(listOf(HomeRowKind.UP_NEXT, HomeRowKind.TRENDING_MOVIES), dashboard.rows.map { it.kind })
+        assertEquals(listOf(HomeRowKind.TRENDING_MOVIES, HomeRowKind.UP_NEXT), dashboard.rows.map { it.kind })
     }
 
     @Test

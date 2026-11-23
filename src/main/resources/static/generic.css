@@ -37,6 +37,9 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  /* Fork: solid dark canvas so phone overscroll / toolbar resizes never show white behind the page. */
+  background-color: var(--bg);
+  color-scheme: dark;
 }
 
 body {
