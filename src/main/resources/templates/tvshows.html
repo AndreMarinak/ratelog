@@ -71,7 +71,7 @@
                 <div th:text="#{tvshows.empty.filter}" th:if="${#lists.isEmpty(tops)}" class="empty-state"></div>
                 <a th:href="@{'/tv/' + ${s.tmdbId}}" th:each="s, iterStat : ${tops}" class="card flex separate">
                     <div class="flex gap-lg">
-                        <img th:src="@{'https://image.tmdb.org/t/p/w185' + ${s.posterPath}}" th:alt="'Poster of ' + ${s.name}">
+                        <img th:src="@{'https://image.tmdb.org/t/p/w185' + ${s.posterPath}}" th:srcset="|https://image.tmdb.org/t/p/w185${s.posterPath} 1x, https://image.tmdb.org/t/p/w342${s.posterPath} 2x|" th:alt="'Poster of ' + ${s.name}">
                         <div>
                             <h4>
                                 <span class="rank" th:text="${s.rank}">#1</span>

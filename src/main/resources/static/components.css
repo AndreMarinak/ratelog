@@ -717,3 +717,175 @@ form.inline {
   color: #e89a72;
   border: 1px solid rgba(230, 120, 60, 0.4);
 }
+/* ===== Fork: title page layout ===== */
+.title-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+  width: 100%;
+}
+
+.title-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 88px;
+
+  img.detail {
+    width: 100%;
+    max-width: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+}
+
+.title-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+
+  .title-overview {
+    margin: 0;
+    line-height: 1.6;
+    max-width: 70ch;
+  }
+
+  .separator {
+    margin: 4px 0;
+  }
+}
+
+.title-section-label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft, #a79d93);
+  margin-bottom: 8px;
+}
+
+.title-section-heading {
+  margin: 8px 0 0;
+  font-size: 1.15rem;
+}
+
+.title-providers .watch-provider img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+@media (max-width: 760px) {
+  .title-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .title-aside {
+    position: static;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+
+    img.detail {
+      width: 40%;
+      max-width: 180px;
+    }
+  }
+}
+
+/* ===== Fork: modals never taller than the screen ===== */
+.modal > div:first-child {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 600px) {
+  .modal {
+    align-items: flex-end;
+  }
+
+  .modal > div:first-child,
+  .modal.medium > div:first-child,
+  .modal.large > div:first-child {
+    width: 100%;
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ===== Fork: create a list from the add-to-list modal ===== */
+.list-create-inline {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+
+  .flex {
+    align-items: stretch;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ===== Fork: rating modals: Save always visible, tighter on short screens ===== */
+#rateMovieModal button.primary[type="submit"],
+#rateTvShowModal button.primary[type="submit"] {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 -16px 18px -6px rgba(24, 20, 18, 0.95);
+}
+
+@media (max-height: 1000px), (max-width: 600px) {
+  #rateMovieModal .rate-slider,
+  #rateTvShowModal .rate-slider {
+    padding: 2px 0 0;
+  }
+
+  #rateMovieModal .rate-slider-header,
+  #rateTvShowModal .rate-slider-header {
+    margin-bottom: 4px;
+  }
+
+  #rateMovieModal .rate-slider-value,
+  #rateTvShowModal .rate-slider-value {
+    font-size: 1.1rem;
+  }
+
+  #rateMovieModal .rate-slider-marks,
+  #rateTvShowModal .rate-slider-marks {
+    margin-top: 2px;
+    font-size: 0.7rem;
+  }
+
+  #rateMovieModal textarea,
+  #rateTvShowModal textarea {
+    min-height: 72px;
+    height: 72px;
+  }
+}
+
+/* External-score badge without a number is a plain link (e.g. IMDb before MDBList is configured). */
+.score-badge .score-link-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+}
+
+/* Quick rating score inside the "Your rating" card */
+.rating-detail-card .quick-score {
+  font-size: 2rem;
+  line-height: 1;
+  margin: 4px 0 0;
+}

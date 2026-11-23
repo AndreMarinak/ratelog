@@ -1,0 +1,51 @@
+# Design decisions
+
+Why this fork is built the way it is. Newest decisions go at the bottom of each section. Related: [roadmap.md](roadmap.md), [bugs-and-issues.md](bugs-and-issues.md), [api.md](api.md).
+
+## Product direction
+
+- **Fork Ratelog instead of building from scratch or adopting Floppy/Scrob/Yamtrack.** The user preferred Ratelog's Letterboxd-like look and its five-category rating. Missing features (API, watchlist, tags...) are added in the fork; upstream updates are merged from `upstream/master`.
+- **Movies and TV, streaming-first.** No Plex/Jellyfin integration and no media-server features; logging is manual, bulk lists come from Claude via the API.
+- **No MCP connector.** The user only wants a JSON API that Claude can call; a connector was explicitly declined.
+- **Upstream branding removed, credit kept.** The Buy Me a Coffee button and its third-party script were removed. AGPL-3.0 requires keeping the license and a link to the running code's source, so the profile footer links to this fork and the README credits golmenero/ratelog.
+
+## Codebase conventions
+
+- **Fork migrations are numbered `V1000+`** with `spring.flyway.out-of-order: true`. Upstream uses `V1..V21` and will keep adding `V22, V23...`; separate ranges mean no collisions, and out-of-order lets lower numbers apply after higher ones (verified when `V1010` applied after `V1030` on a copy of production).
+- **Reserved migration ranges per feature** (see roadmap) so parallel work never collides.
+- **Prefer new files over editing upstream files.** Model data for upstream pages is added with `@ControllerAdvice(assignableTypes = ...)` or interceptors instead of editing upstream controllers; templates get one `th:replace` include line per feature. Keeps upstream merges small.
+- **Parallel development in git worktrees** (`../ratelog-worktrees/<feature>`), one agent per feature, append-only `messages.properties` sections per feature, merged and tested on `master` one at a time.
+
+## API (`/api/v1`)
+
+- **Separate stateless security chain** (`ApiSecurityConfig`, `@Order(1)`, matcher `/api/v1/**`): token auth only, no sessions, no CSRF. The browser chain is untouched; a logged-in browser session does *not* authenticate API calls.
+- **Tokens:** `rl_` + 32 random bytes (base64url), stored as SHA-256 hashes, shown once, revocable at `/settings/api`. Accepted as `Authorization: Bearer` or `X-API-Key`. Last-used time is written at most once a minute.
+- **Other users' lists return 404, not 403**, so ids can't be probed.
+- **Batch item import never fails as a whole:** each item is `added`, `alreadyInList` or `unresolved` (with a reason and candidates). Max 100 items per request.
+- **Strict title matching** (`TitleMatcher`): exact normalized title (case, accents, punctuation, leading article, `&`/`and`) against the English or original title; with a year, exact year wins, else ±1 year if only one fits; otherwise `ambiguous`/`not_found` with candidates. Rationale: a wrong title silently added is worse than asking. Real cases: Aladdin (1992) and Mulan (1998) have same-name/same-year knockoffs on TMDB; Hamilton's TMDB date moved to its 2025 re-release.
+- **`type` is required with `tmdbId`** because TMDB movie and TV ids are separate namespaces.
+- **API never logs TMDB exception messages** (they contain the `api_key` URL); TMDB failures map to `tmdb_error` / `tmdb_not_configured`.
+
+## Features
+
+- **Quick rating:** category columns nullable; a rating is either all five categories or none (+ score), enforced in handlers and by DB CHECK constraints. Category rankings exclude quick ratings; overall rankings include them. Letterboxd imports create quick ratings.
+- **Statuses are separate from upstream's "follow"** (follow = release alerts). Rating a title auto-sets Watched (from none / Want to watch / Watching) via a repository wrapper, so upstream rating handlers stay untouched.
+- **Tags are per user**; the Top-page tag filter narrows the list but keeps overall ranks (same as the genre filter).
+- **External scores via MDBList.** There's no free official source: Rotten Tomatoes licenses only to partners and bans scraping; IMDb's API costs ~$400k/yr; OMDb lacks RT audience scores and TV. MDBList returns IMDb, RT critics/audience, Metacritic and Letterboxd in one call (free 1,000/day). Cached per title (daily for new releases, weekly within a year, monthly older, 7 days for "no data"), process-wide backoff on 429. RT is labeled "Rotten Tomatoes®" and linked; the app never scrapes RT itself. Fine for a private, login-only household instance; not for a public site.
+- **Quick watchlist toggle by TMDB id** (`POST /watchlist/toggle`): poster tiles only know TMDB ids, so the endpoint saves the title locally if needed. The bookmark only toggles *Want to watch*; Watching/Watched/Dropped are left alone (changed on the title page).
+- **"New list" inside the add-to-list modal** creates the list and adds the title in one step, then opens the list (same destination as adding to an existing list).
+- **Confirmation before destructive one-click actions** (remove from list, remove tag, revoke token) uses a `data-confirm` attribute + native `confirm()` (`static/confirm.js`): works inside modals and without extra UI code.
+
+## Deployment (Railway)
+
+- **Dockerfile build, `/api/health` healthcheck, `PORT=8080` pinned** to match the domain's target port; `server.forward-headers-strategy=framework` so redirects use https behind the proxy.
+- **`ADMIN_PASSWORD`** replaces the seeded `admin`/`admin` password at startup, but only while the default is still active and only if 12+ characters; it never overwrites a password changed in the UI.
+- **`TMDB_API_KEY` env var always wins** over the value stored in Admin > Configuration (upstream only read it on first start). Obvious placeholders (`<...>`, `REPLACE_ME`, whitespace) are refused with a warning. To manage the key in the UI instead, remove the variable.
+- **Readable TMDB error page** instead of a raw JSON 500 when TMDB rejects the key or is down.
+
+## UI
+
+- **Title pages use a two-column layout:** poster (+ where to watch) in a sticky left column; overview, genres, actions, scores/trailer, watchlist status, tags, your rating and seasons in the right column. Single column on phones.
+- **Modals are capped to the viewport** (`max-height: 100dvh - 32px`, internal scroll) and become bottom sheets on phones.
+- **Poster sizes match display size:** tiles `w342` (+ `w500` for 2x screens), title poster `w500` (+ `w780`), ranked-list thumbnails `w185` (+ `w342`), provider logos `w92`. Upstream used `w185` tiles stretched to ~230px, which looked blurry.
+- **Home posters at near-full brightness** with a bottom gradient behind titles (upstream dimmed them to 60%).

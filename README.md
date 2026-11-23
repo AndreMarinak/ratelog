@@ -9,7 +9,7 @@
 </p>
 
 > **Personal fork** of [golmenero/ratelog](https://github.com/golmenero/ratelog) (AGPL-3.0), with a JSON API for importing lists,
-> watchlist/statuses, custom tags and more. See [ROADMAP.md](ROADMAP.md), [docs/api.md](docs/api.md) and [docs/deploy-railway.md](docs/deploy-railway.md).
+> watchlist/statuses, custom tags and more. See [docs/roadmap.md](docs/roadmap.md), [docs/api.md](docs/api.md) and [docs/deploy-railway.md](docs/deploy-railway.md).
 
 ---
 

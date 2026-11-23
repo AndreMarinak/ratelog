@@ -9,7 +9,7 @@
                 <i data-lucide="x"></i>
             </button>
         </div>
-        <div th:text="#{list.no.lists}" th:if="${#lists.isEmpty(userLists)}" class="empty-state"></div>
+        <div th:text="#{list.add.none.yet}" th:if="${#lists.isEmpty(userLists)}" class="empty-state"></div>
         <div th:unless="${#lists.isEmpty(userLists)}" class="list-selection">
             <form th:each="list : ${userLists}" th:action="@{'/list/' + ${list.id.value} + '/item'}" method="post" class="list-selection-item">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -20,6 +20,18 @@
                 </button>
             </form>
         </div>
+        <!-- Fork: create a new list and add this title to it in one step. -->
+        <form th:action="@{/list/new-with-item}" method="post" class="list-create-inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="mediaId" th:value="${mediaId}" />
+            <input type="hidden" name="mediaType" th:value="${mediaType}" />
+            <label for="newListName" class="title-section-label" th:text="#{list.add.new.heading}">Or start a new list</label>
+            <div class="flex gap">
+                <input id="newListName" type="text" name="name" required maxlength="100"
+                       th:placeholder="#{list.add.new.placeholder}" placeholder="New list name" />
+                <button type="submit" class="primary" th:text="#{list.add.new.submit}">Create &amp; add</button>
+            </div>
+        </form>
     </div>
 </div>
 </body>

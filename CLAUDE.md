@@ -2,7 +2,7 @@
 
 Fork of [golmenero/ratelog](https://github.com/golmenero/ratelog): self-hosted, Letterboxd-style ratings for movies and TV.
 Kotlin 2.4 + Spring Boot 3.5 (Thymeleaf server-rendered UI, Spring Data JDBC, Flyway, PostgreSQL), Arrow `Either` for errors, TMDB for metadata.
-Fork features are tracked in [ROADMAP.md](ROADMAP.md).
+Fork features are tracked in [docs/roadmap.md](docs/roadmap.md); design decisions in [docs/design-decisions.md](docs/design-decisions.md); bugs/issues in [docs/bugs-and-issues.md](docs/bugs-and-issues.md). **Keep all documentation under `docs/`** and update those files in the same commit as the related change.
 
 ## Build and test
 

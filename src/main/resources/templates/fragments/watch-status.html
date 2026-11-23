@@ -4,6 +4,7 @@
        both added by WatchStatusModelAdvice. Clicking the active status clears it. */-->
 <div th:fragment="watchStatus(mediaType, mediaId)" class="watch-status">
     <link rel="stylesheet" href="/watchlist.css">
+    <span class="title-section-label" th:text="#{status.control.heading}">Your watchlist</span>
     <form th:action="@{/status}" method="post" class="status-segmented" role="group" th:aria-label="#{status.control.label}">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" name="mediaType" th:value="${mediaType}" />

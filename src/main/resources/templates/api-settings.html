@@ -46,7 +46,7 @@
                 <span th:text="${token.lastUsedAt} ?: #{api.token.never}">never</span>
             </div>
         </div>
-        <form th:action="@{'/settings/api/tokens/' + ${token.id} + '/revoke'}" method="post">
+        <form th:action="@{'/settings/api/tokens/' + ${token.id} + '/revoke'}" method="post" th:data-confirm="#{api.token.revoke.confirm(${token.name})}">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <button type="submit" class="link secondary" th:aria-label="#{api.token.revoke}" th:title="#{api.token.revoke}">
                 <i data-lucide="trash"></i>
@@ -58,5 +58,6 @@
     .api-new-token, .api-create-form, .api-token-row { margin-top: 1rem; }
     .api-new-token input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 </style>
+    <script src="/confirm.js" defer></script>
 </body>
 </html>

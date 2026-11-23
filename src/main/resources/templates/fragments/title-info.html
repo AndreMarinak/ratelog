@@ -29,6 +29,7 @@
         <a th:if="${info.imdbUrl != null}" class="score-badge imdb" th:href="${info.imdbUrl}" target="_blank" rel="noopener noreferrer"
            th:title="${info.imdbVotes != null} ? #{title.info.votes(${info.imdbVotes})} : null">
             <span class="score-source">IMDb</span>
+            <i th:if="${info.imdbRating == null}" data-lucide="external-link" class="score-link-icon" aria-hidden="true"></i>
             <span th:if="${info.imdbRating != null}" class="score-value"><i data-lucide="star"></i><span th:text="${info.imdbRating}">8.7</span></span>
             <span th:if="${info.imdbRating != null and info.imdbVotes != null}" class="score-votes" th:text="|(${info.imdbVotes})|">(2.1M)</span>
         </a>

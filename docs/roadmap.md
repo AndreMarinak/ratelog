@@ -1,7 +1,7 @@
 # Fork roadmap
 
 Goal: a self-hosted, Letterboxd-style tracker for movies and TV that Claude can fill with researched lists.
-Base: [golmenero/ratelog](https://github.com/golmenero/ratelog). Conventions: [CLAUDE.md](CLAUDE.md).
+Base: [golmenero/ratelog](https://github.com/golmenero/ratelog). Conventions: [CLAUDE.md](../CLAUDE.md).
 
 Reserved migration numbers (so parallel work never collides): API tokens `V1000`, quick rating `V1010–1019`,
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
@@ -9,8 +9,8 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 
 ## Build now (in suggested order)
 
-- [x] **1. API for Claude**: token auth (`/settings/api`), lists CRUD, add titles by TMDB id or by title + year with strict matching. See [docs/api.md](docs/api.md). No MCP connector.
-- [x] **2. Optional quick rating**: one 0–10 score as an alternative to the 5 category sliders. Rankings must handle both kinds. API: `/api/v1/ratings` ([docs/api.md](docs/api.md#ratings)).
+- [x] **1. API for Claude**: token auth (`/settings/api`), lists CRUD, add titles by TMDB id or by title + year with strict matching. See [docs/api.md](api.md). No MCP connector.
+- [x] **2. Optional quick rating**: one 0–10 score as an alternative to the 5 category sliders. Rankings must handle both kinds. API: `/api/v1/ratings` ([docs/api.md](api.md#ratings)).
 - [x] **3. Watchlist and statuses**: Want to watch, Watching, Watched, Dropped on every title; `/watchlist` page; rating auto-sets Watched. API: `/api/v1/statuses`.
 - [x] **4. Custom tags and categories**: user-defined tags with colors on title pages, `/tags` management, tag filter on Top pages, tags during list import. API: `/api/v1/tags`.
 - [ ] **5. Watch diary and history**: log each watch with a date, including rewatches. Timeline/history page.
@@ -18,12 +18,17 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
 - [x] **9. External scores and trailers on title pages**: TMDB score, runtime and click-to-load trailers from TMDB; IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores via MDBList (optional `MDBLIST_API_KEY`), cached in `title_extras`. Also `GET /api/v1/titles/{type}/{tmdbId}`.
-- [ ] **10. Home dashboard + Lists tab** (in progress): scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV) and a Lists tab (`/lists`: mine + public lists).
+- [ ] **10. Home dashboard + Lists tab + Browse** (in progress): scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV) and a Lists tab (`/lists`: mine + public lists).
 
 ## Fixes and housekeeping done
 
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
+
+- [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
+  show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
+  Optional TV counterpart: "New season of a show you've watched".
+- [ ] **12. List progress**: on list pages show your status per poster, "You've watched 9 of 25", and "add the unwatched ones to my watchlist".
 
 ## Later (todo)
 

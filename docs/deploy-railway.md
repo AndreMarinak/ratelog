@@ -36,3 +36,15 @@ Check the Deploy Logs for `Started RatelogApplicationKt` or the first `Caused by
 - Deploy logs should show Flyway migrating to version `1000+` and `Started RatelogApplicationKt`.
 - `https://<your-domain>/api/health` returns `{"status":"ok"}`.
 - If logs warn that `admin` still uses the default password, `ADMIN_PASSWORD` was missing or under 12 characters: fix it and redeploy, or change the password in the UI right away.
+
+## Reset the admin password
+
+If you're locked out (e.g. `ADMIN_PASSWORD` was set to the wrong text on first start):
+1. Generate a bcrypt hash for a new temporary password (Claude can do this; Spring's `BCrypt.hashpw(password, BCrypt.gensalt(10))`).
+2. Railway → **Postgres** service → **Console** → `psql -U $PGUSER -d $PGDATABASE`, then at the `railway=#` prompt
+   (not in the shell, which would mangle the `$` signs):
+   ```sql
+   UPDATE users SET password_hash = '<bcrypt hash>' WHERE username = 'admin';
+   ```
+   Expect `UPDATE 1`, then `\q`.
+3. Log in with the temporary password and immediately change it (Profile → pencil).

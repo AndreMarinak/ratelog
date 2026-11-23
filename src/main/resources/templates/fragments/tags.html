@@ -95,7 +95,7 @@
     <span th:each="tag : ${tt.assigned}" class="tag-chip" th:classappend="${tag.color != null} ? 'colored'" th:style="${tag.style}">
         <span class="tag-dot" th:if="${tag.color != null}" aria-hidden="true"></span>
         <a th:href="@{/tags/{id}(id=${tag.id})}" th:text="${tag.name}">comfort watch</a>
-        <form th:action="@{/tags/{id}/unassign(id=${tag.id})}" method="post">
+        <form th:action="@{/tags/{id}/unassign(id=${tag.id})}" method="post" th:data-confirm="#{tags.remove.confirm(${tag.name})}">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <input type="hidden" name="mediaType" th:value="${mediaType}" />
             <input type="hidden" name="mediaId" th:value="${mediaId}" />
