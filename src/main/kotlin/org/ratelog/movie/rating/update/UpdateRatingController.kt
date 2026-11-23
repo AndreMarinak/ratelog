@@ -18,11 +18,12 @@ class UpdateRatingController(
         @CurrentUser user: User,
         @RequestParam("movieId") movieId: Long,
         @RequestParam("tmdbId") tmdbId: Int,
-        @RequestParam("directing") directing: Double,
-        @RequestParam("cinematography") cinematography: Double,
-        @RequestParam("acting") acting: Double,
-        @RequestParam("soundtrack") soundtrack: Double,
-        @RequestParam("screenplay") screenplay: Double,
+        @RequestParam("directing", required = false) directing: Double?,
+        @RequestParam("cinematography", required = false) cinematography: Double?,
+        @RequestParam("acting", required = false) acting: Double?,
+        @RequestParam("soundtrack", required = false) soundtrack: Double?,
+        @RequestParam("screenplay", required = false) screenplay: Double?,
+        @RequestParam("score", required = false) score: Double?,
         @RequestParam("reviewTitle", required = false) reviewTitle: String?,
         @RequestParam("reviewText", required = false) reviewText: String?,
         redirectAttributes: RedirectAttributes
@@ -37,6 +38,7 @@ class UpdateRatingController(
             screenplay = screenplay,
             reviewTitle = reviewTitle?.takeIf { it.isNotBlank() },
             reviewText = reviewText?.takeIf { it.isNotBlank() },
+            score = score,
         ).let(handler::handle)
             .mapLeft(::mapError)
             .fold(
@@ -52,6 +54,7 @@ class UpdateRatingController(
 
     private fun mapError(error: UpdateRatingHandlerError): String = when (error) {
         UpdateRatingHandlerError.InvalidRatingValue -> "error.rating.invalid"
+        UpdateRatingHandlerError.InvalidRatingCombination -> "error.rating.combination"
         UpdateRatingHandlerError.RatingNotFound -> "error.rating.update.failed"
         UpdateRatingHandlerError.InvalidReviewTitle -> "error.review.title.invalid"
         UpdateRatingHandlerError.InvalidReviewText -> "error.review.text.invalid"

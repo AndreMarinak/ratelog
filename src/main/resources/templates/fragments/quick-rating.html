@@ -1,0 +1,23 @@
+<!-- Quick rating (fork): the Quick / Detailed switch and the single score slider used by the rate modals,
+     and the label shown instead of the category bars for a quick rating. Behaviour lives in /rating-mode.js. -->
+
+<div th:fragment="ratingModeToggle" class="rating-mode-toggle" role="group" th:aria-label="#{rating.mode.label}">
+    <button type="button" class="rating-mode-option" data-rating-mode-option="quick" aria-pressed="false">
+        <i data-lucide="zap" aria-hidden="true"></i>
+        <span th:text="#{rating.mode.quick}">Quick</span>
+    </button>
+    <button type="button" class="rating-mode-option active" data-rating-mode-option="detailed" aria-pressed="true">
+        <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+        <span th:text="#{rating.mode.detailed}">Detailed</span>
+    </button>
+    <script src="/rating-mode.js"></script>
+</div>
+
+<div th:fragment="quickScorePanel" data-rating-mode-panel="quick" hidden>
+    <div th:replace="~{fragments/rate-slider :: rateSlider('score', 'rating.quick.score')}"></div>
+</div>
+
+<p th:fragment="quickRatingLabel(show)" th:if="${show}" class="quick-rating-label">
+    <i data-lucide="zap" aria-hidden="true"></i>
+    <span th:text="#{rating.quick.label}">Quick rating</span>
+</p>

@@ -16,6 +16,7 @@ import org.ratelog.test.InMemoryMovieDescriptionRepository
 import org.ratelog.test.InMemoryMovieRepository
 import org.ratelog.test.InMemoryRatingRepository
 import org.ratelog.test.MovieFactory
+import org.ratelog.test.RatingFactory
 import org.ratelog.tmdb.TmdbClient
 import org.ratelog.user.User
 import java.time.LocalDate
@@ -197,5 +198,36 @@ class DetailMovieHandlerTest {
         handler.handle(query)
 
         verify(tmdbClient, org.mockito.kotlin.never()).movieTranslations(TmdbId(123), Title("a-title"))
+    }
+
+    @Test
+    fun `should flag a quick rating and leave the category fields empty`() {
+        val tmdbMovie = MovieFactory.aMovie(id = 123, tmdbId = 123, originalTitle = "Test Movie")
+        movieRepository.save(tmdbMovie)
+        movieDescriptionRepository.saveAll(listOf(MovieDescription(null, TmdbId(123), Lang.en, Title("Test Movie"), null)))
+        ratingRepository.save(RatingFactory.aQuickRating(movieId = Movie.Id(123), userId = User.Id(1), score = 8.5))
+        whenever(tmdbClient.movieDetails(TmdbId(123))).thenReturn(tmdbMovie.right())
+
+        val detail = handler.handle(GetMovieDetail(User.Id(1), TmdbId(123), Lang.en)).getOrNull()!!
+
+        assertTrue(detail.isRated)
+        assertTrue(detail.quickRating)
+        assertEquals(8.5, detail.score)
+        assertNull(detail.directing)
+        assertNull(detail.screenplay)
+    }
+
+    @Test
+    fun `should not flag a detailed rating as quick`() {
+        val tmdbMovie = MovieFactory.aMovie(id = 123, tmdbId = 123, originalTitle = "Test Movie")
+        movieRepository.save(tmdbMovie)
+        movieDescriptionRepository.saveAll(listOf(MovieDescription(null, TmdbId(123), Lang.en, Title("Test Movie"), null)))
+        ratingRepository.save(RatingFactory.aRating(movieId = Movie.Id(123), userId = User.Id(1), directing = 7.0))
+        whenever(tmdbClient.movieDetails(TmdbId(123))).thenReturn(tmdbMovie.right())
+
+        val detail = handler.handle(GetMovieDetail(User.Id(1), TmdbId(123), Lang.en)).getOrNull()!!
+
+        assertFalse(detail.quickRating)
+        assertEquals(7.0, detail.directing)
     }
 }

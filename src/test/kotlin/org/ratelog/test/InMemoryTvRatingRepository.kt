@@ -1,6 +1,7 @@
 package org.ratelog.test
 
 import org.ratelog.Rank
+import org.ratelog.RatingCategory
 import org.ratelog.tvshow.TvShow
 import org.ratelog.tvshow.rating.TvRating
 import org.ratelog.tvshow.rating.TvRatingRepository
@@ -21,21 +22,17 @@ class InMemoryTvRatingRepository: TvRatingRepository {
         limit: Int,
         name: String?,
         ratingCategory: String?
-    ): List<Pair<Rank, TvRating>> =
-        store.values
+    ): List<Pair<Rank, TvRating>> {
+        // Mirrors TvRatingDAO.findRankedRows: a category is averaged over detailed seasons,
+        // shows with only quick seasons are skipped for a category ranking, nulls sort last.
+        val category = RatingCategory.parse(ratingCategory)
+        return store.values
             .filter { it.userId == userId }
-            .sortedByDescending {
-                when (ratingCategory) {
-                    "directing" -> it.seasonRatings.map { sr -> sr.directing.value }.average()
-                    "cinematography" -> it.seasonRatings.map { sr -> sr.cinematography.value }.average()
-                    "acting" -> it.seasonRatings.map { sr -> sr.acting.value }.average()
-                    "soundtrack" -> it.seasonRatings.map { sr -> sr.soundtrack.value }.average()
-                    "screenplay" -> it.seasonRatings.map { sr -> sr.screenplay.value }.average()
-                    else -> it.score?.value ?: 0.0
-                }
-            }
+            .filter { category == null || it.rankingScore(category) != null }
+            .sortedByDescending { it.rankingScore(category)?.value ?: Double.NEGATIVE_INFINITY }
             .take(limit)
             .mapIndexed { index, rating -> Pair(Rank(index + 1), rating) }
+    }
 
     override fun save(rating: TvRating) {
         val ratingToSave = if (rating.id == null) {

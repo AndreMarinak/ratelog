@@ -118,15 +118,16 @@
       if (!overall) return;
 
       function updateOverall() {
-        const values = Array.from(sliders).map((s) => parseFloat(s.dataset.value) || 0);
+        // Sliders in a hidden panel (the inactive Quick/Detailed mode) don't count.
+        const active = Array.from(sliders).filter((s) => !s.closest('[hidden]'));
+        if (!active.length) return;
+        const values = active.map((s) => parseFloat(s.dataset.value) || 0);
         const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
         overall.textContent = avg.toFixed(2);
       }
 
       const observer = new MutationObserver(updateOverall);
-      sliders.forEach((s) => {
-        observer.observe(s, { attributes: true, attributeFilter: ['data-value'] });
-      });
+      observer.observe(modal, { attributes: true, subtree: true, attributeFilter: ['data-value', 'hidden'] });
       updateOverall();
     });
   }

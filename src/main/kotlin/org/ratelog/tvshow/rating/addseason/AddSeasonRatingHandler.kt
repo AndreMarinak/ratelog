@@ -3,6 +3,8 @@ package org.ratelog.tvshow.rating.addseason
 import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import org.ratelog.RatingInput
+import org.ratelog.RatingInputError
 import org.ratelog.Review
 import org.ratelog.Score
 import org.ratelog.SeasonNumber
@@ -14,17 +16,19 @@ import org.springframework.stereotype.Component
 import java.time.Instant
 import org.springframework.transaction.annotation.Transactional
 
+/** Either all five categories (detailed) or only [score] (quick rating). */
 data class AddSeasonRating(
     val tvShowId: TvShow.Id,
     val seasonNumber: SeasonNumber,
     val userId: User.Id,
-    val directing: Score,
-    val cinematography: Score,
-    val acting: Score,
-    val soundtrack: Score,
-    val screenplay: Score,
+    val directing: Score?,
+    val cinematography: Score?,
+    val acting: Score?,
+    val soundtrack: Score?,
+    val screenplay: Score?,
     val reviewTitle: String?,
     val reviewText: String?,
+    val score: Score? = null,
 )
 
 @Component
@@ -33,15 +37,19 @@ class AddSeasonRatingHandler(
 ) {
     @Transactional
     fun handle(command: AddSeasonRating): Either<AddSeasonRatingHandlerError, Unit> = either {
-        listOf(
-            command.directing,
-            command.cinematography,
-            command.acting,
-            command.soundtrack,
-            command.screenplay
-        ).forEach { score ->
-            ensure(score.value in 0.0..10.0) { AddSeasonRatingHandlerError.InvalidRatingValue }
-        }
+        val input = RatingInput.parse(
+            command.score?.value,
+            command.directing?.value,
+            command.cinematography?.value,
+            command.acting?.value,
+            command.soundtrack?.value,
+            command.screenplay?.value,
+        ).mapLeft { error ->
+            when (error) {
+                RatingInputError.OutOfRange -> AddSeasonRatingHandlerError.InvalidRatingValue
+                RatingInputError.InvalidCombination -> AddSeasonRatingHandlerError.InvalidRatingCombination
+            }
+        }.bind()
 
         val tvRating = tvRatingRepository.findByTvShowIdAndUserId(command.tvShowId, command.userId) ?: TvRating.create(command.tvShowId, command.userId, Instant.now())
 
@@ -53,11 +61,7 @@ class AddSeasonRatingHandler(
 
         tvRating.addSeasonRating(
             seasonNumber = command.seasonNumber,
-            directing = command.directing,
-            cinematography = command.cinematography,
-            acting = command.acting,
-            soundtrack = command.soundtrack,
-            screenplay = command.screenplay,
+            input = input,
             createdAt = Instant.now(),
             review = review,
         ).let(tvRatingRepository::save)

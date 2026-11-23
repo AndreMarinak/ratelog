@@ -18,11 +18,12 @@ class AddRatingController(
         @CurrentUser user: User,
         @RequestParam("movieId") movieId: Long,
         @RequestParam("tmdbId") tmdbId: Int,
-        @RequestParam("directing") directing: Double,
-        @RequestParam("cinematography") cinematography: Double,
-        @RequestParam("acting") acting: Double,
-        @RequestParam("soundtrack") soundtrack: Double,
-        @RequestParam("screenplay") screenplay: Double,
+        @RequestParam("directing", required = false) directing: Double?,
+        @RequestParam("cinematography", required = false) cinematography: Double?,
+        @RequestParam("acting", required = false) acting: Double?,
+        @RequestParam("soundtrack", required = false) soundtrack: Double?,
+        @RequestParam("screenplay", required = false) screenplay: Double?,
+        @RequestParam("score", required = false) score: Double?,
         @RequestParam("reviewTitle", required = false) reviewTitle: String?,
         @RequestParam("reviewText", required = false) reviewText: String?,
         redirectAttributes: RedirectAttributes
@@ -37,6 +38,7 @@ class AddRatingController(
             screenplay = screenplay,
             reviewTitle = reviewTitle?.takeIf { it.isNotBlank() },
             reviewText = reviewText?.takeIf { it.isNotBlank() },
+            score = score,
         ).let(handler::handle)
             .mapLeft(::mapError)
             .fold(
@@ -52,6 +54,7 @@ class AddRatingController(
 
     private fun mapError(error: AddRatingHandlerError): String = when (error) {
         AddRatingHandlerError.InvalidRatingValue -> "error.rating.invalid"
+        AddRatingHandlerError.InvalidRatingCombination -> "error.rating.combination"
         AddRatingHandlerError.RatingAlreadyExists -> "error.rating.exists.movie"
         AddRatingHandlerError.MovieNotFound -> "error.load.movie"
         AddRatingHandlerError.InvalidReviewTitle -> "error.review.title.invalid"

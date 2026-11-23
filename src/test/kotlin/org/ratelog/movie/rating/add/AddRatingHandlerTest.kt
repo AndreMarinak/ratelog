@@ -294,4 +294,83 @@ class AddRatingHandlerTest {
         assertTrue(result.isLeft())
         assertEquals(AddRatingHandlerError.InvalidReviewTitle, result.fold({ it }, { fail("Should not return success") }))
     }
+
+    private fun quickCommand(score: Double?, directing: Double? = null, reviewText: String? = null) = AddRating(
+        movieId = Movie.Id(1),
+        userId = User.Id(1),
+        directing = directing,
+        cinematography = null,
+        acting = null,
+        soundtrack = null,
+        screenplay = null,
+        reviewTitle = null,
+        reviewText = reviewText,
+        score = score,
+    )
+
+    @Test
+    fun `should add a quick rating with only the overall score`() {
+        val result = handler.handle(quickCommand(score = 8.5, reviewText = "Loved it"))
+
+        assertTrue(result.isRight())
+        val saved = ratingRepository.findByMovieIdAndUserId(Movie.Id(1), User.Id(1))!!
+        assertTrue(saved.isQuick)
+        assertEquals(8.5, saved.score!!.value)
+        assertNull(saved.directing)
+        assertNull(saved.screenplay)
+        assertNull(saved.categories)
+        assertEquals("Loved it", saved.review!!.text!!.value)
+    }
+
+    @Test
+    fun `should keep a detailed rating detailed with the average as score`() {
+        val command = AddRating(
+            movieId = Movie.Id(1), userId = User.Id(1),
+            directing = 6.0, cinematography = 6.0, acting = 7.0, soundtrack = 8.0, screenplay = 8.0,
+            reviewTitle = null, reviewText = null,
+        )
+
+        handler.handle(command)
+
+        val saved = ratingRepository.findByMovieIdAndUserId(Movie.Id(1), User.Id(1))!!
+        assertFalse(saved.isQuick)
+        assertEquals(7.0, saved.score!!.value)
+        assertEquals(6.0, saved.directing!!.value)
+    }
+
+    @Test
+    fun `should return InvalidRatingValue when the quick score is out of range`() {
+        val result = handler.handle(quickCommand(score = 10.5))
+
+        assertEquals(AddRatingHandlerError.InvalidRatingValue, result.leftOrNull())
+        assertNull(ratingRepository.findByMovieIdAndUserId(Movie.Id(1), User.Id(1)))
+    }
+
+    @Test
+    fun `should return InvalidRatingCombination when only some categories are sent`() {
+        val command = AddRating(
+            movieId = Movie.Id(1), userId = User.Id(1),
+            directing = 6.0, cinematography = 6.0, acting = null, soundtrack = null, screenplay = null,
+            reviewTitle = null, reviewText = null,
+        )
+
+        val result = handler.handle(command)
+
+        assertEquals(AddRatingHandlerError.InvalidRatingCombination, result.leftOrNull())
+        assertNull(ratingRepository.findByMovieIdAndUserId(Movie.Id(1), User.Id(1)))
+    }
+
+    @Test
+    fun `should return InvalidRatingCombination when a score is sent with categories`() {
+        val result = handler.handle(quickCommand(score = 8.0, directing = 7.0))
+
+        assertEquals(AddRatingHandlerError.InvalidRatingCombination, result.leftOrNull())
+    }
+
+    @Test
+    fun `should return InvalidRatingCombination when no score at all is sent`() {
+        val result = handler.handle(quickCommand(score = null))
+
+        assertEquals(AddRatingHandlerError.InvalidRatingCombination, result.leftOrNull())
+    }
 }

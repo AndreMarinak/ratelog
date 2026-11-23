@@ -51,14 +51,16 @@ data class SeasonInfo(
     val rating: SeasonRatingInfo?,
 )
 
+/** Category fields are null for a quick rating ([quickRating]). */
 data class SeasonRatingInfo(
     val seasonNumber: Int,
-    val directing: Double,
-    val cinematography: Double,
-    val acting: Double,
-    val soundtrack: Double,
-    val screenplay: Double,
+    val directing: Double?,
+    val cinematography: Double?,
+    val acting: Double?,
+    val soundtrack: Double?,
+    val screenplay: Double?,
     val score: Double,
+    val quickRating: Boolean,
     val reviewTitle: String?,
     val reviewText: String?,
 )
@@ -102,12 +104,13 @@ class DetailTvShowHandler(
                 val ratingInfo = seasonRating?.let { sr ->
                     SeasonRatingInfo(
                         seasonNumber = sr.seasonNumber.value,
-                        directing = sr.directing.value,
-                        cinematography = sr.cinematography.value,
-                        acting = sr.acting.value,
-                        soundtrack = sr.soundtrack.value,
-                        screenplay = sr.screenplay.value,
+                        directing = sr.directing?.value,
+                        cinematography = sr.cinematography?.value,
+                        acting = sr.acting?.value,
+                        soundtrack = sr.soundtrack?.value,
+                        screenplay = sr.screenplay?.value,
                         score = sr.score.value,
+                        quickRating = sr.isQuick,
                         reviewTitle = sr.review?.title?.value,
                         reviewText = sr.review?.text?.value,
                     )

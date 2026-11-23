@@ -1,6 +1,7 @@
 package org.ratelog.test
 
 import org.ratelog.Rank
+import org.ratelog.RatingCategory
 import org.ratelog.movie.Movie
 import org.ratelog.movie.rating.Rating
 import org.ratelog.movie.rating.RatingRepository
@@ -21,21 +22,16 @@ class InMemoryRatingRepository : RatingRepository {
         limit: Int,
         name: String?,
         ratingCategory: String?
-    ): List<Pair<Rank, Rating>> =
-        store.values
+    ): List<Pair<Rank, Rating>> {
+        // Mirrors RatingDAO.findRankedRows: a category ranking skips quick ratings, nulls sort last.
+        val category = RatingCategory.parse(ratingCategory)
+        return store.values
             .filter { it.userId == userId }
-            .sortedByDescending {
-                when (ratingCategory) {
-                    "directing" -> it.directing.value
-                    "cinematography" -> it.cinematography.value
-                    "acting" -> it.acting.value
-                    "soundtrack" -> it.soundtrack.value
-                    "screenplay" -> it.screenplay.value
-                    else -> it.score?.value ?: 0.0
-                }
-            }
+            .filter { category == null || it.rankingScore(category) != null }
+            .sortedByDescending { it.rankingScore(category)?.value ?: Double.NEGATIVE_INFINITY }
             .take(limit)
             .mapIndexed { index, rating -> Pair(Rank(index + 1), rating) }
+    }
 
     override fun save(rating: Rating) {
         val ratingToSave = if (rating.id == null) {

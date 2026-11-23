@@ -225,4 +225,32 @@ class DetailTvShowHandlerTest {
 
         verify(tmdbClient, org.mockito.kotlin.never()).tvTranslations(TmdbId(123), Title("a-title"))
     }
+
+    @Test
+    fun `should flag quick seasons and keep categories for detailed ones`() {
+        val tmdbShow = TvShowFactory.aTvShow(id = 123, tmdbId = 123, originalName = "Test Show", lastSeasonNumber = 3)
+        tvShowRepository.save(tmdbShow)
+        tvDescriptionRepository.saveAll(listOf(TvDescription(null, TmdbId(123), Lang.en, Title("Test Show"), null)))
+        tvRatingRepository.save(
+            TvRatingFactory.aTvRating(
+                id = 1, tvShowId = TvShow.Id(123), userId = User.Id(1),
+                seasonRatings = listOf(
+                    TvRatingFactory.aSeasonRating(tvShowId = TvShow.Id(123), seasonNumber = 1, userId = User.Id(1), directing = 6.0, cinematography = 6.0, acting = 6.0, soundtrack = 6.0, screenplay = 6.0),
+                    TvRatingFactory.aQuickSeasonRating(tvShowId = TvShow.Id(123), seasonNumber = 2, userId = User.Id(1), score = 9.0),
+                ),
+            )
+        )
+        whenever(tmdbClient.tvShowDetails(TmdbId(123))).thenReturn(tmdbShow.right())
+
+        val detail = handler.handle(GetTvShowDetail(User.Id(1), TmdbId(123), Lang.en)).getOrNull()!!
+
+        val (detailed, quick, unrated) = detail.seasons
+        assertFalse(detailed.rating!!.quickRating)
+        assertEquals(6.0, detailed.rating!!.directing)
+        assertTrue(quick.rating!!.quickRating)
+        assertNull(quick.rating!!.directing)
+        assertEquals(9.0, quick.rating!!.score)
+        assertNull(unrated.rating)
+        assertEquals(7.5, detail.overallScore)
+    }
 }

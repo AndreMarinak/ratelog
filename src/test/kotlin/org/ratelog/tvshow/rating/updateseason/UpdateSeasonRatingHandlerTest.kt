@@ -85,11 +85,11 @@ class UpdateSeasonRatingHandlerTest {
         val updated = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))
         assertNotNull(updated)
         val season = updated!!.seasonRatings.first { it.seasonNumber == SeasonNumber(1) }
-        assertEquals(6.0, season.directing.value)
-        assertEquals(7.0, season.cinematography.value)
-        assertEquals(8.0, season.acting.value)
-        assertEquals(9.0, season.soundtrack.value)
-        assertEquals(10.0, season.screenplay.value)
+        assertEquals(6.0, season.directing!!.value)
+        assertEquals(7.0, season.cinematography!!.value)
+        assertEquals(8.0, season.acting!!.value)
+        assertEquals(9.0, season.soundtrack!!.value)
+        assertEquals(10.0, season.screenplay!!.value)
         assertEquals(8.0, season.score.value)
         assertEquals(7.0, updated.score!!.value)
     }
@@ -119,7 +119,7 @@ class UpdateSeasonRatingHandlerTest {
         val updated = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))
         assertNotNull(updated)
         val season = updated!!.seasonRatings.first { it.seasonNumber == SeasonNumber(2) }
-        assertEquals(6.0, season.directing.value)
+        assertEquals(6.0, season.directing!!.value)
         assertEquals(6.0, season.score.value)
     }
 
@@ -279,7 +279,7 @@ class UpdateSeasonRatingHandlerTest {
         assertEquals(UpdateSeasonRatingHandlerError.InvalidRatingValue, result.fold({ it }, { fail("Should not return success") }))
         val untouched = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))
         val season = untouched!!.seasonRatings.first { it.seasonNumber == SeasonNumber(1) }
-        assertEquals(5.0, season.directing.value)
+        assertEquals(5.0, season.directing!!.value)
     }
 
     @Test
@@ -327,5 +327,63 @@ class UpdateSeasonRatingHandlerTest {
         // Then
         assertTrue(result.isLeft())
         assertEquals(UpdateSeasonRatingHandlerError.SeasonRatingNotFound, result.fold({ it }, { fail("Should not return success") }))
+    }
+
+    private fun update(seasonNumber: Int, score: Double?, directing: Double? = null, others: Double? = null) = UpdateSeasonRating(
+        tvShowId = TvShow.Id(1),
+        seasonNumber = SeasonNumber(seasonNumber),
+        userId = User.Id(1),
+        directing = directing,
+        cinematography = others,
+        acting = others,
+        soundtrack = others,
+        screenplay = others,
+        reviewTitle = null, reviewText = null,
+        score = score,
+    )
+
+    @Test
+    fun `given a detailed season when updating it with only a score then it becomes quick and the show score follows`() {
+        givenRatingWithSeasons()
+
+        val result = handler.handle(update(1, score = 9.0))
+
+        assertTrue(result.isRight())
+        val updated = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))!!
+        val season = updated.seasonRatings.first { it.seasonNumber == SeasonNumber(1) }
+        assertTrue(season.isQuick)
+        assertNull(season.directing)
+        assertEquals(9.0, season.score.value)
+        assertEquals(7.5, updated.score!!.value)
+        assertFalse(updated.seasonRatings.first { it.seasonNumber == SeasonNumber(2) }.isQuick)
+    }
+
+    @Test
+    fun `given a quick season when updating it with all categories then it becomes detailed`() {
+        tvRatingRepository.save(
+            TvRatingFactory.aTvRating(
+                id = 1, tvShowId = TvShow.Id(1), userId = User.Id(1),
+                seasonRatings = listOf(TvRatingFactory.aQuickSeasonRating(id = 1, tvShowId = TvShow.Id(1), seasonNumber = 1, userId = User.Id(1), score = 9.0)),
+            )
+        )
+
+        val result = handler.handle(update(1, score = null, directing = 4.0, others = 6.0))
+
+        assertTrue(result.isRight())
+        val season = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))!!.seasonRatings.single()
+        assertFalse(season.isQuick)
+        assertEquals(4.0, season.directing!!.value)
+        assertEquals(5.6, season.score.value, 1e-9)
+    }
+
+    @Test
+    fun `given a rated season when updating it with an incomplete set of categories then it is rejected`() {
+        givenRatingWithSeasons()
+
+        val result = handler.handle(update(1, score = null, directing = 4.0))
+
+        assertEquals(UpdateSeasonRatingHandlerError.InvalidRatingCombination, result.leftOrNull())
+        val season = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))!!.seasonRatings.first { it.seasonNumber == SeasonNumber(1) }
+        assertEquals(5.0, season.directing!!.value)
     }
 }

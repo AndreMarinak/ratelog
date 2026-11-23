@@ -23,11 +23,12 @@ data class SeasonRatingEntity(
     @Column("tv_show_id") val tvShowId: Long,
     @Column("season_number") val seasonNumber: Int,
     @Column("user_id") val userId: Long,
-    val directing: Double,
-    val cinematography: Double,
-    val acting: Double,
-    val soundtrack: Double,
-    val screenplay: Double,
+    // Null for a quick rating (score only).
+    val directing: Double?,
+    val cinematography: Double?,
+    val acting: Double?,
+    val soundtrack: Double?,
+    val screenplay: Double?,
     val score: Double,
     @Column("created_at_epoch_ms") val createdAtEpochMs: Long,
     @Column("review_title") val reviewTitle: String? = null,
@@ -53,6 +54,11 @@ data class RatedTvRow(
 interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
     fun findFirstByTvShowIdAndUserId(tvShowId: Long, userId: Long): Optional<TvRatingEntity>
 
+    /**
+     * Ranked by score, or by one category when `ratingCategory` is set. A show's category score is the
+     * average over its detailed seasons (AVG skips quick ratings' nulls); shows rated only quickly are
+     * left out of a category ranking.
+     */
     @Query(
         """
         WITH season_averages AS (
@@ -79,25 +85,26 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
                            WHEN 'soundtrack' THEN sa.avg_soundtrack
                            WHEN 'screenplay' THEN sa.avg_screenplay
                            ELSE r.score
-                       END DESC
+                       END DESC NULLS LAST
                    ) AS rank
             FROM tv_ratings r
             INNER JOIN season_averages sa ON r.tv_show_id = sa.tv_show_id
             WHERE r.user_id = :userId
+              AND (CASE :ratingCategory
+                       WHEN 'directing' THEN sa.avg_directing
+                       WHEN 'cinematography' THEN sa.avg_cinematography
+                       WHEN 'acting' THEN sa.avg_acting
+                       WHEN 'soundtrack' THEN sa.avg_soundtrack
+                       WHEN 'screenplay' THEN sa.avg_screenplay
+                       ELSE 0
+                   END) IS NOT NULL
         )
         SELECT ranked.*
         FROM ranked
         INNER JOIN tv t ON ranked.tv_show_id = t.id
         WHERE (:genreId IS NULL OR t.genres LIKE CONCAT('%', :genreId, '%'))
           AND (:name IS NULL OR LOWER(t.original_name) LIKE LOWER(CONCAT('%', :name, '%')))
-        ORDER BY CASE :ratingCategory
-            WHEN 'directing' THEN ranked.avg_directing
-            WHEN 'cinematography' THEN ranked.avg_cinematography
-            WHEN 'acting' THEN ranked.avg_acting
-            WHEN 'soundtrack' THEN ranked.avg_soundtrack
-            WHEN 'screenplay' THEN ranked.avg_screenplay
-            ELSE ranked.score
-        END DESC
+        ORDER BY ranked.rank
         LIMIT :limit
         """
     )

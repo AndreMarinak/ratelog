@@ -42,6 +42,8 @@ data class GetMovieDetailResult(
     val soundtrack: Double?,
     val screenplay: Double?,
     val score: Double?,
+    /** True when the user's rating is a quick one (score only, the category fields are null). */
+    val quickRating: Boolean,
     val reviewTitle: String?,
     val reviewText: String?,
     val isFollowed: Boolean,
@@ -99,6 +101,7 @@ class DetailMovieHandler(
             soundtrack = rating?.soundtrack?.value,
             screenplay = rating?.screenplay?.value,
             score = rating?.score?.value,
+            quickRating = rating?.isQuick ?: false,
             reviewTitle = rating?.review?.title?.value,
             reviewText = rating?.review?.text?.value,
             isFollowed = isFollowed,

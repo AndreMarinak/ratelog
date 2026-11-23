@@ -10,7 +10,7 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 ## Build now (in suggested order)
 
 - [x] **1. API for Claude**: token auth (`/settings/api`), lists CRUD, add titles by TMDB id or by title + year with strict matching. See [docs/api.md](docs/api.md). No MCP connector.
-- [ ] **2. Optional quick rating**: one 0–10 score as an alternative to the 5 category sliders. Rankings must handle both kinds.
+- [x] **2. Optional quick rating**: one 0–10 score as an alternative to the 5 category sliders. Rankings must handle both kinds. API: `/api/v1/ratings` ([docs/api.md](docs/api.md#ratings)).
 - [ ] **3. Watchlist and statuses**: Want to watch, Watching, Watched, Dropped. Works for movies and TV.
 - [ ] **4. Custom tags and categories**: user-defined tags (e.g. "comfort watch", "mind-benders"), filterable alongside TMDB genres.
 - [ ] **5. Watch diary and history**: log each watch with a date, including rewatches. Timeline/history page.

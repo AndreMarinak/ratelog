@@ -58,7 +58,8 @@
 
         <div th:if="${movie != null && movie.hasRating}" class="card rating-detail-card">
             <h2 class="rating-detail-title" th:text="#{movie.detail.your.rating}">Your rating</h2>
-            <div class="rating-breakdown"
+            <p th:replace="~{fragments/quick-rating :: quickRatingLabel(${movie.quickRating})}"></p>
+            <div class="rating-breakdown" th:unless="${movie.quickRating}"
                  th:data-categories="'directing:' + ${movie.directing} + ',cinematography:' + ${movie.cinematography} + ',acting:' + ${movie.acting} + ',soundtrack:' + ${movie.soundtrack} + ',screenplay:' + ${movie.screenplay}"></div>
             <span class="visually-hidden" data-i18n-key="directing" th:text="#{movies.rating.category.directing}">Directing</span>
             <span class="visually-hidden" data-i18n-key="cinematography" th:text="#{movies.rating.category.cinematography}">Cinematography</span>
@@ -79,6 +80,8 @@
                         th:data-acting="${movie.acting}"
                         th:data-soundtrack="${movie.soundtrack}"
                         th:data-screenplay="${movie.screenplay}"
+                        th:data-score="${movie.score}"
+                        th:data-rating-mode="${movie.quickRating} ? 'quick' : 'detailed'"
                         th:data-review-title="${movie.reviewTitle}"
                         th:data-review-text="${movie.reviewText}"
                         th:aria-label="#{movie.detail.edit.rating}">
