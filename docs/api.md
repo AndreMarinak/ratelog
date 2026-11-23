@@ -30,18 +30,21 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | GET | `/api/v1/me` | | `{id, username, role}` |
 | GET | `/api/v1/search` | `q`, optional `type`, `year` | `{results: [Candidate]}` (raw TMDB search) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
-| GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url}]` |
+| GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url, numbered}]` |
 | GET | `/api/v1/lists/official` | | every official list, with your progress (see [Official lists](#official-lists)) |
-| POST | `/api/v1/lists` | `{name, isPublic?, isOfficial?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
-| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, isOfficial, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)). Your lists and official lists |
-| PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?, isOfficial?}` | list detail |
+| POST | `/api/v1/lists` | `{name, isPublic?, isOfficial?, numbered?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
+| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, isOfficial, numbered, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)). Your lists and official lists |
+| PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?, isOfficial?, numbered?}` | list detail |
 | DELETE | `/api/v1/lists/{id}` | | `204` |
 | POST | `/api/v1/lists/{id}/items` | `{items: [Item]}` | `AddItemsResult` |
+| PATCH | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | `{position}` | list detail (see [List order](#list-order)) |
+| PUT | `/api/v1/lists/{id}/order` | `{items: [{tmdbId, type}]}` | list detail (see [List order](#list-order)) |
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
 
 **Item**: `{"tmdbId": 949, "type": "movie"}` or `{"title": "Heat", "year": 1995, "type": "movie"}`. Unknown extra fields are ignored.
 Optional `"tags": ["heist", "comfort watch"]` adds those tags to the title (see [Tags](#tags)), whether it was just added or already in the list.
-Items are appended in the order sent. At most **100 items per request**; at most 50 lists per user.
+Items are appended in the order sent; an item with `"position": 3` is inserted at #3 instead (see [List order](#list-order)).
+At most **100 items per request**; at most 50 lists per user.
 
 **AddItemsResult**:
 ```json
@@ -74,10 +77,12 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 }
 ```
 
-- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. The first six fields are unchanged.
+- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. `position` is the 1-based place in the list
+  (the rank the list page shows).
   `status` is your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or `null`; `score` is your rating or `null`.
 - `seen` is `true` when you rated the title (for a show: at least one season) or its status is `watched`. Watching, Want to watch and Dropped are not seen.
-- `progress.total` counts the items in the response. Items are in list order; `position` can have gaps after removals.
+- `progress.total` counts the items in the response. Items are in list order, and `position` is 1, 2, 3... with no gaps
+  (before list order it was the stored sort key, which could have gaps after removals).
 - To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
   `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
   The list page's "Add the N unseen to my watchlist" button applies the same filter and never changes an existing status.
@@ -113,6 +118,44 @@ while read -r id; do
     -d '{"isOfficial": true}' "$RATELOG_URL/api/v1/lists/$id" > /dev/null
 done < ids.txt
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/official"
+```
+
+### List order
+
+Every list has an order: the order you added titles in, until you change it. Added in this fork.
+
+- **Numbered or plain:** `numbered: true` (the default, and every list created before this) shows each title's rank on the list
+  page; `false` makes it a plain collection without numbers. The order is kept and editable either way, and `items` always come
+  in list order with their `position`. Set it with `"numbered": false` on `POST /api/v1/lists` or `PATCH /api/v1/lists/{id}`
+  (owner only, like the name). The web page has the same checkbox in the create / edit list forms.
+- **Insert while adding:** an item with `position` (1-based) on `POST /api/v1/lists/{id}/items` or `POST /api/v1/lists` goes
+  to that place and the rest shift down. Items are applied in the order sent, so `[{..., "position": 1}, {..., "position": 2}]`
+  ends up first and second. A `position` past the end appends; `0` or less makes that item `invalid`. A title that is already
+  in the list is reported in `alreadyInList` and **not moved** (use the endpoints below).
+- **Move one title:** `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}` with `{"position": 3}` moves it to #3 (past the end =
+  last). `position` is required and must be 1 or more (`400 invalid_parameter`); a title that isn't in the list is `404`.
+- **Set the whole order:** `PUT /api/v1/lists/{id}/order` with `{"items": [{"tmdbId": 603, "type": "movie"}, ...]}`. Those
+  titles come first, in that order; titles you leave out keep their order after them, so you can send just the new top 5.
+  A title that isn't in the list is `400 not_in_list` (the message lists them), one sent twice is `400 invalid_parameter`,
+  and in both cases nothing changes. Up to 1,000 titles per request (no TMDB lookups).
+- Every change renumbers the list 1..n in one transaction, with the list locked, so two clients reordering at once don't lose
+  moves. Only the owner reorders: an official list is readable by any token, but changes are `403 forbidden`; other people's
+  lists are `404`. Both endpoints answer with the list detail (new `position`s included).
+- The list page has the same tools for the owner ("Edit order": drag, type a number, or top / up / down / bottom) and a Sort
+  menu for everyone, which only changes how that viewer sees the list (`/list/{id}?sort=title`, `reverse`, `newest`, `oldest`,
+  `rating`, `added`); the API always returns list order.
+
+```bash
+# Restore Coco (354912) to #3, insert Up (14160) at #1, then make "Cars" (920) last.
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"position": 3}' "$RATELOG_URL/api/v1/lists/12/items/movie/354912"
+curl -s -X POST -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"items": [{"tmdbId": 14160, "type": "movie", "position": 1}]}' "$RATELOG_URL/api/v1/lists/12/items"
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"position": 1000}' "$RATELOG_URL/api/v1/lists/12/items/movie/920"
+
+# A new top 3; everything else keeps its order after them.
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"items": [{"tmdbId": 238, "type": "movie"}, {"tmdbId": 278, "type": "movie"}, {"tmdbId": 1396, "type": "tv"}]}'   "$RATELOG_URL/api/v1/lists/12/order"
+
+# A plain (unnumbered) collection.
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"numbered": false}' "$RATELOG_URL/api/v1/lists/12"
 ```
 
 ## Tags
@@ -304,7 +347,7 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?
 
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `forbidden` (403: changing `isOfficial`
 without an admin token, or changing someone else's official list), `not_found` (404, also for other users' lists, except official ones, and tags),
-`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `official_list_public` (400),
+`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `official_list_public`, `not_in_list` (400),
 `tag_exists` (409), `too_many_items` (413),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
 

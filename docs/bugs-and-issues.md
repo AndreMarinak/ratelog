@@ -8,7 +8,6 @@ Problems found while building and running the fork: what happened, the cause, an
 - **The API can't read progress on other people's public lists:** `GET /api/v1/lists/{id}` only serves your own lists and official lists (other lists are 404 by design), while the web page shows your progress on any public list.
 - **Unchecking "Public" on an official list does nothing, silently** (upstream's edit modal): official lists stay public, so the save keeps it public without a message. Un-mark it first. Idea: disable the checkbox with a hint while the list is official (an upstream template edit).
 - **The web switch can't mark another user's private list**: upstream's list page refuses to open it, even for admins. Use `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}`.
-- **List items can only be appended.** The app and API have no reorder / insert-at-position, so restoring a removed title to its rank (Coco at #3 in the Disney list, 2026-11-22) meant deleting and recreating the list. Idea: `position` on API items + drag-to-reorder on list pages.
 - **Title matcher is strict with same-name knockoffs.** Aladdin (1992), Mulan (1998), Hercules (1997), Pocahontas (1995), The Hunchback of Notre Dame (1996) and Strange World (2022) came back `ambiguous` because TMDB has budget animated films with the same title and year. TMDB also dates some films differently (Hamilton 2025, Snow White 1938). Workaround: send `tmdbId`. Idea: tie-break by TMDB vote count when one candidate dwarfs the others.
 - **TMDB release-date changes break year matching.** Hamilton (2020) is dated 2025 on TMDB after its theatrical re-release, outside the ±1 year slack. Workaround: `tmdbId`.
 - **TV auto-Watched may be premature:** rating any season of a show marked Watching sets the whole show to Watched, even if later seasons are unwatched. Decide whether TV should stay Watching until the last season is rated.
@@ -18,7 +17,29 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Rating breakdown uses a decimal comma** ("9,00") on title pages in every language (upstream `breakdown.js` replaces `.` with `,`), while the rest of the UI shows "9.05". Cosmetic; left as upstream.
 - **`delete-tvshow-rating-modal.html` declares a top-level `const modal`** in a plain `<script>`. Any other top-level `const modal` on the TV page would throw a redeclaration error; wrap it in an IIFE if that page gets more inline scripts.
 
+- **Sorting a list then using "Add the N unseen to my watchlist" drops the sort** after the redirect (the bulk form only sends
+  `show` back). Harmless (the list shows in list order again); the bulk form belongs to list progress.
+- **Two tabs reordering the same list:** each move is applied to the order saved at that moment (the list is locked per move), so
+  nothing is lost or duplicated, but a tab that was open during another tab's moves shows its old order until the next move
+  answers with the saved order (then it catches up) or the page reloads.
+
 ## Fixed
+
+- **List items could only be appended** (2026-11-22, fixed 2026-11-23): there was no reorder or insert-at-position, so restoring a
+  removed title to its rank (Coco at #3 in the Disney list) meant deleting and recreating the list. Now: reorder mode on the list
+  page, `position` on API items, `PATCH .../items/{type}/{tmdbId}` and `PUT .../order` (roadmap 16).
+- **Reorder mode's number field showed no digits on phones** (found in the list-order walkthrough, 2026-11-23): form.css's
+  `input:not([type="checkbox"])` (18px side padding, 40px height) outweighed `.list-order-input`, leaving 4px for the number in a
+  40px field. Fixed with a more specific selector (`.list-order-place input.list-order-input`); keep that in mind for any small input.
+- **Drag auto-scroll crawled upwards on long lists** (found in the 40-title walkthrough, 2026-11-23): `generic.css` sets
+  `scroll-behavior: smooth` on the page, so each per-frame `scrollBy` restarted a smooth scroll instead of moving. The page
+  now scrolls instantly while a drag is in progress (the inline style is removed when the drag ends).
+- **A moved row could end up under the fixed bottom bar**: after an arrow move the row is scrolled into view with
+  `scrollIntoView({block: 'nearest'})`, which put it at the very bottom of the screen, behind the "Editing the order" bar (and the
+  phone tab bar). Rows now carry `scroll-margin` for the sticky header and the bar.
+- **API `position` had gaps after removals** and ties after old appends, so it didn't match the rank on the page. It is now the
+  1-based place in list order (position, then id), the same number the page shows; every reorder also rewrites the stored
+  positions as 1..n.
 
 - **Official list pages said "← admin's profile"** (found in the official-lists walkthrough, 2026-11-23): the back link pointed at the owner's profile, exposing an owner the cards deliberately hide. Official lists now go back to Lists.
 - **"Remove from official" wrapped onto two lines on phones**: the list title column is narrow next to the owner's Public tag and buttons. Shorter labels ("Make official" / "Remove official") that never wrap; checked at 390 and 360px.

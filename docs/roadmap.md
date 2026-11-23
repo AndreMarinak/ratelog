@@ -6,7 +6,7 @@ Base: [golmenero/ratelog](https://github.com/golmenero/ratelog). Conventions: [C
 Reserved migration numbers (so parallel work never collides): API tokens `V1000`, quick rating `V1010–1019`,
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
-lists (official lists and later list features) `V1120–1129`.
+lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options).
 
 ## Build now (in suggested order)
 
@@ -37,6 +37,14 @@ lists (official lists and later list features) `V1120–1129`.
   a row on the Discover landing right after Popular now, and `/lists/official`, each with the viewer's own "9/25 seen".
   API: `isOfficial` on lists, `GET /api/v1/lists/official`, any token can read an official list ([docs/api.md](api.md#official-lists)).
   Table `official_lists` (`V1120`). Requested 2026-11-23 for the admin's 26 researched lists.
+- [x] **16. List order**: every list has an editable order. Owners get "Edit order" on `/list/{id}` (`?reorder=1`): the list becomes thin
+  rows (grip, rank, poster, title) to drag up or down (mouse anywhere on the row, touch by the grip, auto-scroll at the edges),
+  or type a new number, or use top / up / down / bottom; every move saves in place
+  with a toast, and the forms work without JS. A "Numbered list" setting (create / edit list modals, default on) shows ranks;
+  plain lists are collections without numbers. Everyone gets a "Sort" menu (list order, reverse, title, newest / oldest release,
+  your rating, recently added) that never changes the saved order. API: `numbered` on lists, `position` when adding items,
+  `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}` and `PUT /api/v1/lists/{id}/order` ([docs/api.md](api.md#list-order)).
+  Table `custom_list_options` (`V1121`). Requested 2026-11-23 ("are lists able to have some more order?").
 
 ## Fixes and housekeeping done
 

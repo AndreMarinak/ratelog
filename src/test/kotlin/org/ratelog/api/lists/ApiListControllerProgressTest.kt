@@ -17,6 +17,11 @@ import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.delete.DeleteListHandler
 import org.ratelog.customlist.official.mark.SetListOfficialHandler
+import org.ratelog.customlist.order.move.MoveListItemHandler
+import org.ratelog.customlist.order.numbered.SetListNumberedHandler
+import org.ratelog.customlist.order.setorder.SetListOrderHandler
+import org.ratelog.test.InMemoryListOptionsRepository
+import org.ratelog.test.InMemoryListOrderRepository
 import org.ratelog.customlist.progress.ListProgressFixture
 import org.ratelog.customlist.removeitem.RemoveFromListHandler
 import org.ratelog.customlist.update.UpdateListHandler
@@ -37,6 +42,8 @@ class ApiListControllerProgressTest {
     private val f = ListProgressFixture()
     private val tmdbClient: TmdbClient = mock()
     private val officialLists = InMemoryOfficialListRepository(f.lists)
+    private val listOrder = InMemoryListOrderRepository(f.lists)
+    private val listOptions = InMemoryListOptionsRepository(f.lists)
     private val mediaImporter = MediaImporter(tmdbClient, f.movies, InMemoryMovieDescriptionRepository(), f.shows, InMemoryTvDescriptionRepository())
     private val controller = ApiListController(
         customListRepository = f.lists,
@@ -49,11 +56,17 @@ class ApiListControllerProgressTest {
             mediaImporter,
             AddToListHandler(f.lists),
             AssignTagsHandler(InMemoryTagRepository(), f.movies, f.shows),
+            f.lists,
+            MoveListItemHandler(f.lists, listOrder),
         ),
         mediaImporter = mediaImporter,
         getListProgressHandler = f.handler,
         officialLists = officialLists,
         setListOfficialHandler = SetListOfficialHandler(f.lists, officialLists, InMemoryUserRepository()),
+        listOptions = listOptions,
+        setListNumberedHandler = SetListNumberedHandler(f.lists, listOptions),
+        moveListItemHandler = MoveListItemHandler(f.lists, listOrder),
+        setListOrderHandler = SetListOrderHandler(f.lists, listOrder),
     )
     private val user = UserFactory.aUser(id = 1)
     private val userId = user.id!!
@@ -93,7 +106,7 @@ class ApiListControllerProgressTest {
 
         val json = jacksonObjectMapper().readTree(jacksonObjectMapper().writeValueAsString(controller.list(user, list.id!!.value)))
 
-        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "url", "items", "progress"), json.fieldNames().asSequence().toSet())
+        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "url", "items", "progress", "numbered"), json.fieldNames().asSequence().toSet())
         assertFalse(json["isOfficial"].asBoolean())
         assertEquals(1, json["progress"]["seen"].asInt())
         assertEquals(1, json["progress"]["total"].asInt())

@@ -73,6 +73,64 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
   `fragments/discover-rows.html` (after the first row). The switch posts a CSRF form, asks first (`data-confirm`: marking says the
   list becomes public) and redirects back with a flash message.
 
+- **List order** (user request, 2026-11-23: *"also are listes able to have some more order? Maybe allow them to just be added or
+  some way to be able to number and order them"*). Roadmap item 16. Three parts: a per-list "Numbered list" setting, an owner-only
+  reorder mode, and a read-only Sort menu for everyone.
+- **Numbered is the default, and every existing list stays numbered.** Most lists are ranked imports (Top 75, IMDb Top 250, watch
+  orders), where the number is the point. A plain list is a collection: no rank badges on the list page (hidden with the
+  `is-plain-list` class on `#listRegion`), but it still has an order, which the API still returns and the owner can still edit.
+  Stored in its own table `custom_list_options(list_id PK -> custom_lists ON DELETE CASCADE, numbered)` (`V1121`), not a column on
+  upstream's `custom_lists`; **no row = numbered**, so the migration touches no data. The checkbox is in the create and edit list
+  modals (default on). The add-to-list sheet's "New list" form doesn't get it (another agent is reworking that sheet); lists made
+  there are numbered. The forms send a `_numbered` marker so an unchecked box (which sends nothing) reads as "plain", while a form
+  without the field changes nothing.
+- **Reorder mode is a mode of the list page** (`/list/{id}?reorder=1`, the "Edit order" button, owner only, lists of 2+ titles),
+  like tick-off mode's `?mark=1`: it gets its own URL and a fixed bottom bar with "Done". It swaps the poster grid for the **whole
+  list in list order as thin rows**, per the user's follow-up the same day (*"make sure is able to be edited to drag thin titles up
+  or down with their icons as well, something easy to reorder"*): grip, the rank (an editable number field: "move to #"), a
+  36px poster (w92 / w185 for 2x), title and year, then the arrows. Rows are about 60px tall, one line, so about 10 fit between
+  the header and the bar on a 390x844 phone. 1-D rows make drag targets and "move to #3" unambiguous; Letterboxd's list editor
+  is a row list for the same reason. On wide screens each row has top / up / down / bottom; on phones (640px and below) up and
+  down stack in one column and top / bottom move into a "⋮" menu on the row, so the title keeps ~130px at 360px.
+- **Reorder mode hides the All / Not seen / Seen tabs, tick-off, the bulk watchlist button and Sort**, and ignores `show=` and
+  `sort=`. Moving a title in a filtered or re-sorted view is ambiguous (what is "#3" when only the unseen titles show?), and the
+  numbers in the fields must be the ranks you see. The tabs come back with "Done". `mark=1` and `reorder=1` together: reorder wins.
+- **Three ways to move, all saving in place** (toast "Moved "Heat" to #3."): drag (pointer events, no library; with a mouse the
+  whole row drags, with touch / pen only the grip does, so the rest of the row still scrolls the page; the lifted row follows the
+  pointer, a dashed placeholder shows where it will drop and the numbers preview the new order; the page auto-scrolls when the
+  pointer nears the sticky header or the bottom bar, faster the closer it gets, so a 75+ title list can be dragged end to end;
+  Escape cancels), the number field (Enter, or leaving the field: phone number pads have no Enter),
+  and the arrow buttons. The row moves at once; the server answers with the saved order, which wins. Moves are sent one at a time
+  in the order they were made, and "Done" waits for any still saving. Without JS each row is a plain CSRF form: the number posts
+  `position` (a "Move" button shows next to it), the arrows post `to=top|up|down|bottom` (they show as text arrows, since the
+  Lucide icons need JS) (relative moves are worked out on the server from the saved order), and the
+  page comes back in reorder mode at the row (`#order-item-{id}`) with the message. If an in-place save fails, that move is posted
+  the normal way, so it's never lost silently.
+- **One server rule for every move** (`MoveListItemHandler`): lock the list row (`SELECT ... FOR UPDATE`), read the items in list
+  order (position, then id: the order ranks were always counted in), move the item to the clamped 1-based place, and rewrite the
+  positions as 1..n in one statement (a JSON array of item ids, `jsonb_array_elements_text ... WITH ORDINALITY`, only rows whose
+  position changes). The lock makes two tabs, or a script and the page, apply their moves one after the other instead of both
+  renumbering the same old order. Owner only: admins don't reorder other people's lists, official lists included (the owner edits,
+  the same rule as an official list's name and titles).
+- **Sort is the viewer's, read-only and a plain link** (`?sort=`; unknown = list order), combined with the tabs both ways: sort
+  links keep `show=` / `mark=1`, and the tabs, tick-off links and poster forms keep `sort=` (rewritten by `ListOrderInterceptor`,
+  so the list-progress code is untouched). Options are only what the page already has locally, with no TMDB calls: **List order**
+  (default), **Reverse order** (count a top 100 up from #100), **Title** (A-Z, ignoring case, accents and a leading The/A/An),
+  **Newest / Oldest release** (year; unknown years last), **Your rating** (yours, unrated last; one marks query per media type,
+  only for this sort) and **Recently added** (newest item id first, which is insertion order and survives reordering). Left out:
+  TMDB score (stored at import time, so stale, and not shown on the list page: sorting by an invisible number reads as random) and
+  runtime / popularity (not stored for list items). **Ties keep list order.** On a numbered list the rank badges keep the list's
+  own numbers when sorted, the same rule as filtered views. Changing the sort loads a page (a new arrangement of the whole result,
+  like Discover's sort); the tabs stay in place.
+- **API:** `numbered` on list responses and on `POST` / `PATCH /api/v1/lists` (owner only, like name and visibility); `position`
+  in responses is now the 1-based place (it used to be the stored key, with gaps after removals); an item's optional `position`
+  on `POST .../items` (and on create) inserts it there, items applied in the order sent, a title already in the list is not moved;
+  `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}` `{"position": n}` moves one title (`/items/{type}/{tmdbId}` like the existing
+  `DELETE`, since the API has never exposed item ids); `PUT /api/v1/lists/{id}/order` sets the whole order from `{tmdbId, type}`
+  pairs, titles left out following in their current order, anything unknown or repeated a `400` that changes nothing. Up to 1,000
+  titles per `PUT` (no TMDB lookups). Same visibility rules as the other list endpoints: an official list is readable by any
+  token, changes are `403` for anyone but the owner, other people's lists are `404`.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -89,6 +147,9 @@ Generic hooks live in `static/inplace.js` (`data-inplace="<regions to refresh>"`
 | Search results infinite scroll | in place | in place (`search.js`) |
 | List page All / Not seen / Seen tabs | reload | in place with URL + Back (`list-filter.js`) |
 | List page remove item (after confirm) | reload | in place: progress, tabs and grid refresh (`#listRegion`) |
+| List reorder mode: drag, "move to #", top / up / down / bottom | — | in place (`list-order.js`): the row moves at once, the server's order wins, toast; no JS = form post back to the row |
+| List page Sort menu | — | **page load**: a new arrangement of the whole list with its own URL (like Discover's sort); the tabs keep it |
+| List "Edit order" / "Done" | — | **page load**: a mode with its own URL, like tick-off |
 | Add to list (modal), create list + add | **navigated to the list page** | stays on the title, modal closes, toast "Added to X" |
 | Lists tab "Load more" | reload | appends in place |
 | Profile follow / unfollow user | reload | in place |
