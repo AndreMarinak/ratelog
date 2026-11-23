@@ -18,17 +18,19 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
 - [x] **9. External scores and trailers on title pages**: TMDB score, runtime and click-to-load trailers from TMDB; IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores via MDBList (optional `MDBLIST_API_KEY`), cached in `title_extras`. Also `GET /api/v1/titles/{type}/{tmdbId}`.
-- [ ] **10. Home dashboard + Lists tab + Browse** (in progress): scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV) and a Lists tab (`/lists`: mine + public lists).
+- [x] **10. Home dashboard + Lists tab + Browse**: scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV) with one-click watchlist bookmarks; Lists tab (`/lists`: mine, people I follow, other public lists); sticky header search (`/` shortcut) and "Ratelog" wordmark; `/browse` with the Letterboxd-style "Browse by" bar (also on the home page). API: `/api/v1/home`, `/api/v1/browse`.
+- [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
+  show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
+  Optional TV counterpart: "New season of a show you've watched".
+- [ ] **12. List progress**: on list pages show your status per poster, "You've watched 9 of 25", and "add the unwatched ones to my watchlist".
+- [ ] **13. Poster hover card**: hovering (or long-pressing on phones) a poster anywhere shows a small card with the year, basic
+  scores (TMDB / IMDb, your rating) and quick actions: add to watchlist, add to a list. Requested 2026-11-23.
 
 ## Fixes and housekeeping done
 
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
-
-- [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
-  show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
-  Optional TV counterpart: "New season of a show you've watched".
-- [ ] **12. List progress**: on list pages show your status per poster, "You've watched 9 of 25", and "add the unwatched ones to my watchlist".
+- Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.
 
 ## Later (todo)
 

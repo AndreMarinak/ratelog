@@ -5,15 +5,17 @@ Problems found while building and running the fork: what happened, the cause, an
 ## Open
 
 - **List items can only be appended.** The app and API have no reorder / insert-at-position, so restoring a removed title to its rank (Coco at #3 in the Disney list, 2026-11-22) meant deleting and recreating the list. Idea: `position` on API items + drag-to-reorder on list pages.
-- **Title matcher is strict with same-name knockoffs.** Aladdin (1992) and Mulan (1998) came back `ambiguous` because TMDB has budget animated films with the same title and year. Workaround: send `tmdbId`. Idea: tie-break by TMDB vote count when one candidate dwarfs the others.
+- **Title matcher is strict with same-name knockoffs.** Aladdin (1992), Mulan (1998), Hercules (1997), Pocahontas (1995), The Hunchback of Notre Dame (1996) and Strange World (2022) came back `ambiguous` because TMDB has budget animated films with the same title and year. TMDB also dates some films differently (Hamilton 2025, Snow White 1938). Workaround: send `tmdbId`. Idea: tie-break by TMDB vote count when one candidate dwarfs the others.
 - **TMDB release-date changes break year matching.** Hamilton (2020) is dated 2025 on TMDB after its theatrical re-release, outside the ±1 year slack. Workaround: `tmdbId`.
 - **Title detail page 500s when TMDB can't load that title** (upstream): `movie-detail.html` reads `movie.posterPath` when the handler returned no movie. Rare with a valid key; should render a "not found" state.
 - **TV auto-Watched may be premature:** rating any season of a show marked Watching sets the whole show to Watched, even if later seasons are unwatched. Decide whether TV should stay Watching until the last season is rated.
 - **Old Letterboxd imports look "detailed":** before quick rating existed, imports stored the same score in all five categories. They can't be told apart from a real detailed rating with equal scores, so they were not converted.
 - **Float noise in category scores from the API:** categories sent through the API that aren't multiples of 0.25 (e.g. 8.3) display as `8.300000190734863` on the web page because category columns have lower precision. The API itself rounds to 2 decimals; the sliders only produce 0.25 steps.
-- **Mobile bottom nav had 6 items** after Watchlist was added, pushing Home off-center. Being fixed with the nav rebalance (Movies, TV, Home, Watchlist, Lists).
 
 ## Fixed
+
+- **Mobile bottom nav had 6 items** after Watchlist was added. Now 5: Home (leftmost), Movies, TV, Watchlist, Lists; Browse, Tags, Community, Profile and Configuration moved into the menu sheet.
+- **Home page posters were blurry** (upstream `w185` stretched). The new home rows load `w342` (+ `w500` for 2x screens); search results and list covers too.
 
 - **Blurry posters** (2026-11-22): tiles loaded TMDB `w185` images stretched to ~230px (worse on 2x screens). Fixed with size-appropriate images + `srcset` (see design decisions).
 - **Rating modal taller than the screen** (2026-11-22): modals had no max height, so the rate modal (5 sliders + mode toggle + review) overflowed with no way to scroll. Fixed: viewport cap + internal scroll; bottom sheet on phones.
