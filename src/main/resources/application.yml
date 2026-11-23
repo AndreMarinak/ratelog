@@ -19,6 +19,8 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Behind Railway's TLS proxy: honor X-Forwarded-* so redirects use https.
+  forward-headers-strategy: framework
   servlet:
     context-path: /
 

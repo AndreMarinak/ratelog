@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(#{tmdb.error.title})}"></head>
+<body>
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='search')}"></header>
+
+    <div class="feedback error" th:text="${badKey} ? #{tmdb.error.bad.key} : #{tmdb.error.unreachable}">
+        TMDB rejected the API key.
+    </div>
+    <p class="help-text" th:text="#{tmdb.error.help}">
+        Search and title pages need a valid TMDB v3 API Key.
+    </p>
+    <p th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}">
+        <a href="/admin/configuration" class="link" th:text="#{tmdb.error.fix}">Fix it in Admin &gt; Configuration</a>
+    </p>
+</div>
+</body>
+</html>
