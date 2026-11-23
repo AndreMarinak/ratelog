@@ -72,6 +72,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
+  visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").
+  `/fonts/**` is now public like the stylesheets.
+- **Suggestion tiles and the tile sheet's "New list" after merging** (2026-11-23): suggestion tiles now pass your score to the poster
+  ★ (the rule for every tile source), and "New list" in a tile's sheet shows the rate-limit message instead of re-posting the form.
 - **Series / "More like this" tiles showed an empty ★ on rated titles** (found merging tile rating with the title-page rows,
   2026-11-23): `TileActionsView.of(...)` needs `score` since tile rating; `RelatedRowViews` now passes it (test added). Rule for
   any new tile source: pass `score` (and `detailed` when known).

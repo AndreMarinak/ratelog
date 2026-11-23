@@ -353,6 +353,13 @@
         let posted = false;
         try {
             const response = await fetch(form.action, { method: 'POST', body: new URLSearchParams(new FormData(form)), credentials: 'same-origin' });
+            // Rate limited (429): say so; posting the form again would only be refused too.
+            if (response.status === 429) {
+                posted = true;
+                const limited = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('.feedback.error');
+                toast(limited ? limited.textContent.trim() : 'Too many requests');
+                return;
+            }
             const landed = new URL(response.url, window.location.href);
             if (!response.ok || landed.pathname === '/login') throw new Error('not saved');
             posted = true;

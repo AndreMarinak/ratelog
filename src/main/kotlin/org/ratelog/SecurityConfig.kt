@@ -74,7 +74,7 @@ class SecurityConfig(
         http
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/login", "/styles.css", "/lucide.min.js", "/img/**", "/manifest.webmanifest").permitAll()
+                    .requestMatchers("/login", "/styles.css", "/lucide.min.js", "/img/**", "/fonts/**", "/manifest.webmanifest").permitAll()
                     .requestMatchers("/*.css", "/*.js").permitAll()
                     .requestMatchers("/api/health").permitAll()
                     .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPERADMIN")

@@ -125,6 +125,15 @@ class SecurityChainIntegrationTest {
     }
 
     @Test
+    fun `the login page's fonts load for signed-out visitors`() {
+        // Signed out, a font request must not be sent to the login page (the browser would get HTML instead of the font).
+        // (This test context serves no static files, so passing security shows up as a 404 rather than a 302 to /login.)
+        val response = mvc.perform(get("/fonts/CrimsonPro-Regular.woff2")).andReturn().response
+        assertEquals(null, response.redirectedUrl, "redirected to the login page")
+        assertTrue(response.status != 302 && response.status != 401 && response.status != 403, "status ${response.status}")
+    }
+
+    @Test
     fun `the login redirect is relative, whatever host the request names`() {
         val response = mvc.perform(get("/home").with { it.serverName = "ratelog.example"; it.scheme = "https"; it.serverPort = 443; it }).andReturn().response
 
