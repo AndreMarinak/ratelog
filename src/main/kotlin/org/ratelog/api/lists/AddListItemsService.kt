@@ -13,9 +13,13 @@ import org.ratelog.api.media.TitleResolver
 import org.ratelog.api.parseMediaType
 import org.ratelog.api.toDto
 import org.ratelog.customlist.CustomList
+import org.ratelog.customlist.CustomListRepository
 import org.ratelog.customlist.additem.AddToListCommand
 import org.ratelog.customlist.additem.AddToListError
 import org.ratelog.customlist.additem.AddToListHandler
+import org.ratelog.customlist.order.move.MoveListItem
+import org.ratelog.customlist.order.move.MoveListItemHandler
+import org.ratelog.customlist.order.move.MoveTarget
 import org.ratelog.tag.TagName
 import org.ratelog.tag.TagRepository
 import org.ratelog.tag.assign.AssignTagsCommand
@@ -46,6 +50,8 @@ data class AddItemsResult(
  * Resolves each input to a TMDB title, saves it locally if needed, and appends it to the list
  * in the given order. One bad item never fails the batch; it is reported in [AddItemsResult.unresolved].
  * Items may carry `tags`, which are added to the title (whether it was just added or already in the list).
+ * Fork: an item with a `position` is inserted at that place instead (the rest shift down), in the order sent;
+ * a title that is already in the list is not moved.
  */
 @Service
 class AddListItemsService(
@@ -53,6 +59,8 @@ class AddListItemsService(
     private val mediaImporter: MediaImporter,
     private val addToListHandler: AddToListHandler,
     private val assignTagsHandler: AssignTagsHandler,
+    private val customListRepository: CustomListRepository,
+    private val moveListItemHandler: MoveListItemHandler,
 ) {
     fun addItems(listId: CustomList.Id, userId: User.Id, lang: Lang, items: List<ItemInput>): AddItemsResult {
         val added = mutableListOf<TitleDto>()
@@ -93,12 +101,21 @@ class AddListItemsService(
                                     unresolved += UnresolvedItem(input, "invalid", "List is no longer available")
                             }
                         },
-                        { added += media.toDto() }
+                        {
+                            input.position?.let { insertAt(listId, userId, media.type, media.id, it) }
+                            added += media.toDto()
+                        }
                     )
                 }
             }
         }
         return AddItemsResult(added, already, unresolved)
+    }
+
+    /** Moves the title just appended to [position] (1-based, clamped to the list). */
+    private fun insertAt(listId: CustomList.Id, userId: User.Id, type: MediaType, mediaId: Long, position: Int) {
+        val item = customListRepository.findItemByListIdAndMediaIdAndMediaType(listId, mediaId, type.name) ?: return
+        moveListItemHandler.handle(MoveListItem(listId, userId, item.id!!, MoveTarget.Place(position)))
     }
 
     /** Adds the tags to the title; returns why that failed, or null on success. */
@@ -129,6 +146,7 @@ class AddListItemsService(
         }
         // Checked up front so a bad tag name doesn't cost a TMDB lookup.
         require(input.tags.orEmpty().all { TagName.parse(it).isRight() }) { TAG_NAME_MESSAGE }
+        require(input.position == null || input.position >= 1) { "position must be 1 or more (1 = first)" }
 
         if (input.tmdbId != null) {
             // Movie and TV ids are separate namespaces on TMDB, so the id alone is ambiguous.

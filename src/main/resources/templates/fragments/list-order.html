@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: list order on /list/{id} (roadmap item 16). Model from ListOrderInterceptor: `listOrder` is a ListOrderView
+  (null when the list can't be shown). Styles in list-order.css, behaviour in list-order.js.
+*/-->
+
+<!--/* The "Numbered list" checkbox of the create / edit list forms. `_numbered` tells the server the box was on the
+       form, so an unchecked box (which sends nothing) means "plain list" (NumberedField). */-->
+<th:block th:fragment="numberedField(checked)">
+<div class="form-group list-numbered-field">
+    <input type="hidden" name="_numbered" value="1" />
+    <label class="flex gap">
+        <input type="checkbox" name="numbered" value="true" th:checked="${checked}">
+        <span th:text="#{list.numbered}">Numbered list</span>
+    </label>
+    <span class="text-soft" th:text="#{list.numbered.hint}">Shows each title's rank.</span>
+</div>
+</th:block>
+
+<!--/* Under the progress tabs: the viewer's Sort menu (plain links, ?sort=) and, for the owner, "Edit order". */-->
+<th:block th:fragment="toolbar(order)">
+<div th:if="${order != null and !order.reordering and order.total > 1}" class="list-order-toolbar">
+    <details class="list-sort" data-list-sort>
+        <summary class="list-sort-trigger" th:classappend="${order.sorted} ? 'is-sorted' : ''">
+            <i data-lucide="arrow-down-up" aria-hidden="true"></i>
+            <span class="list-sort-label" th:text="#{list.sort}">Sort</span>
+            <span class="list-sort-value" th:text="#{${order.sort.labelKey}}">List order</span>
+            <i data-lucide="chevron-down" class="list-sort-chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="list-sort-panel">
+            <ul class="list-sort-options" th:aria-label="#{list.sort.aria}">
+                <li th:each="link : ${order.sortLinks}">
+                    <a class="list-sort-option" th:href="${link.href}" th:classappend="${link.active} ? 'active' : ''"
+                       th:aria-current="${link.active} ? 'true' : null">
+                        <i data-lucide="check" class="list-sort-check" aria-hidden="true"></i>
+                        <span th:text="#{${link.labelKey}}">List order</span>
+                    </a>
+                </li>
+            </ul>
+            <p class="list-sort-note" th:text="#{list.sort.note}">Only changes how you see the list.</p>
+        </div>
+    </details>
+
+    <a th:if="${order.canReorder}" class="btn secondary list-order-start" th:href="${order.reorderHref}">
+        <i data-lucide="arrow-up-down" aria-hidden="true"></i>
+        <span th:text="#{list.order.edit}">Edit order</span>
+    </a>
+</div>
+</th:block>
+
+<!--/* Reorder mode (?reorder=1, the owner): the whole list as thin rows in list order. Each row is one form, so it
+       works without JS: the number field posts `position`, the arrows post `to=top|up|down|bottom`, and the page comes
+       back at the row. With JS (list-order.js) rows can be dragged up and down and every move saves in place. */-->
+<th:block th:fragment="editor(order, items)">
+<section th:if="${order != null and order.reordering}" class="list-order-editor" data-list-order
+         th:aria-label="#{list.order.aria}" th:data-total="${order.total}"
+         th:data-saving-text="#{list.order.bar.saving}" th:data-saved-text="#{list.order.bar.done}"
+         th:data-error-text="#{list.order.error.save}">
+    <div th:if="${listOrderNotice != null}" class="feedback success" role="status" th:text="${listOrderNotice}">Moved "Heat" to #3.</div>
+    <p class="list-order-hint" th:text="#{list.order.hint}">Drag a title, use the arrows, or type its new number. Changes save as you go.</p>
+    <p th:if="${order.plain}" class="list-order-plain-note" th:text="#{list.order.plain.note}">This list isn't numbered: the numbers only show here.</p>
+
+    <ol class="list-order-rows" data-list-order-rows>
+        <!--/* One thin row per title: grip, place (the "move to #" field), poster, title + year, arrows. The form wraps
+               the whole row; the place field's "Move" button comes first, so Enter posts the number, not an arrow. */-->
+        <li th:each="item, it : ${items}" class="list-order-row" th:id="${'order-item-' + item.id.value}"
+            th:data-item-id="${item.id.value}">
+            <form class="list-order-form" method="post" th:action="${order.moveHref(item.id.value)}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <span class="list-order-handle" th:title="#{list.order.drag}" aria-hidden="true">
+                    <i data-lucide="grip-vertical"></i>
+                </span>
+                <span class="list-order-place">
+                    <label class="visually-hidden" th:for="${'order-pos-' + item.id.value}"
+                           th:text="#{list.order.position.label(${item.title})}">Place of "Heat"</label>
+                    <input class="list-order-input" type="number" name="position" min="1" th:max="${order.total}" step="1"
+                           inputmode="numeric" th:id="${'order-pos-' + item.id.value}" th:value="${it.count}" required>
+                    <button type="submit" class="list-order-go" th:text="#{list.order.go}">Move</button>
+                </span>
+                <span class="list-order-thumb">
+                    <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w92' + ${item.posterPath}}"
+                         th:srcset="|https://image.tmdb.org/t/p/w92${item.posterPath} 1x, https://image.tmdb.org/t/p/w185${item.posterPath} 2x|"
+                         alt="" width="36" height="54" loading="lazy" draggable="false">
+                    <span th:unless="${item.posterPath != null}" class="list-order-fallback"
+                          th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</span>
+                </span>
+                <span class="list-order-text">
+                    <span class="list-order-title" th:text="${item.title}">Heat</span>
+                    <span class="list-order-year" th:text="${item.year != null} ? ${item.year} : #{movies.year.unknown}">1995</span>
+                </span>
+                <span class="list-order-buttons">
+                    <!--/* Wide screens: top / up / down / bottom in a row. Phones: up and down stacked, top and bottom under "⋮".
+                           The arrows inside the icons show only without JS (Lucide replaces the <i> with its SVG). */-->
+                    <button type="submit" name="to" value="top" class="list-order-btn list-order-wide" data-move="top" th:disabled="${it.first}"
+                            th:title="#{list.order.top}" th:aria-label="#{list.order.top.aria(${item.title})}">
+                        <i data-lucide="chevrons-up" aria-hidden="true">&#8648;</i>
+                    </button>
+                    <span class="list-order-updown">
+                        <button type="submit" name="to" value="up" class="list-order-btn" data-move="up" th:disabled="${it.first}"
+                                th:title="#{list.order.up}" th:aria-label="#{list.order.up.aria(${item.title})}">
+                            <i data-lucide="chevron-up" aria-hidden="true">&#8593;</i>
+                        </button>
+                        <button type="submit" name="to" value="down" class="list-order-btn" data-move="down" th:disabled="${it.last}"
+                                th:title="#{list.order.down}" th:aria-label="#{list.order.down.aria(${item.title})}">
+                            <i data-lucide="chevron-down" aria-hidden="true">&#8595;</i>
+                        </button>
+                    </span>
+                    <button type="submit" name="to" value="bottom" class="list-order-btn list-order-wide" data-move="bottom" th:disabled="${it.last}"
+                            th:title="#{list.order.bottom}" th:aria-label="#{list.order.bottom.aria(${item.title})}">
+                        <i data-lucide="chevrons-down" aria-hidden="true">&#8650;</i>
+                    </button>
+                    <details class="list-order-more list-order-narrow" data-list-order-more>
+                        <summary class="list-order-btn" th:title="#{list.order.more}" th:aria-label="#{list.order.more.aria(${item.title})}">
+                            <i data-lucide="ellipsis-vertical" aria-hidden="true">&#8942;</i>
+                        </summary>
+                        <span class="list-order-more-panel">
+                            <button type="submit" name="to" value="top" class="list-order-more-option" data-move="top" th:disabled="${it.first}">
+                                <i data-lucide="chevrons-up" aria-hidden="true"></i>
+                                <span th:text="#{list.order.top}">Move to top</span>
+                            </button>
+                            <button type="submit" name="to" value="bottom" class="list-order-more-option" data-move="bottom" th:disabled="${it.last}">
+                                <i data-lucide="chevrons-down" aria-hidden="true"></i>
+                                <span th:text="#{list.order.bottom}">Move to bottom</span>
+                            </button>
+                        </span>
+                    </details>
+                </span>
+            </form>
+        </li>
+    </ol>
+
+    <!--/* Fixed to the bottom of the screen (above the phone tab bar), like tick-off mode's bar. */-->
+    <div class="list-order-bar" role="region" th:aria-label="#{list.order.aria}">
+        <i data-lucide="arrow-up-down" aria-hidden="true"></i>
+        <span class="list-order-bar-text">
+            <span class="list-order-bar-title" th:text="#{list.order.bar.title}">Editing the order</span>
+            <span class="list-order-bar-status" data-list-order-status aria-live="polite" th:text="#{list.order.bar.saved}">Changes save as you go.</span>
+        </span>
+        <a class="btn primary list-order-done" th:href="${order.doneHref}" th:text="#{list.order.done}">Done</a>
+    </div>
+</section>
+</th:block>
+</body>
+</html>

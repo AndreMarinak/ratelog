@@ -52,6 +52,8 @@ data class ItemInput(
     val year: Int? = null,
     /** Optional tag names applied to the title once it is in the list (missing tags are created). */
     val tags: List<String>? = null,
+    /** Fork: optional 1-based place to insert the title at (the rest shift down); omitted = appended. Past the end = last. */
+    val position: Int? = null,
 )
 
 data class AddItemsRequest(val items: List<ItemInput> = emptyList())
@@ -63,6 +65,8 @@ data class CreateListRequest(
     val items: List<ItemInput> = emptyList(),
     /** Admin tokens only (others get 403). Makes the list official, and so public. */
     val isOfficial: Boolean? = null,
+    /** Fork: show ranks on the list page (default true); false = a plain collection. */
+    val numbered: Boolean? = null,
 )
 
 data class UpdateListRequest(
@@ -70,7 +74,18 @@ data class UpdateListRequest(
     val isPublic: Boolean? = null,
     /** Admin tokens only, on any list (others get 403). `true` also makes the list public; `false` leaves it public. */
     val isOfficial: Boolean? = null,
+    /** Fork: owner only, like name and visibility. */
+    val numbered: Boolean? = null,
 )
+
+/** Fork: `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}`: move one title to a 1-based place. */
+data class MoveItemRequest(val position: Int? = null)
+
+/** Fork: one title of a list, by TMDB id + type (no lookups, the title must already be in the list). */
+data class TitleRefInput(val tmdbId: Int? = null, val type: String? = null)
+
+/** Fork: `PUT /api/v1/lists/{id}/order`: these titles first, in this order; the rest follow in their current order. */
+data class SetOrderRequest(val items: List<TitleRefInput> = emptyList())
 
 data class ResolveRequest(
     val title: String? = null,

@@ -1,0 +1,631 @@
+/* List order on /list/{id} (fork, roadmap item 16): plain lists, the Sort menu, "Edit order" and reorder mode.
+   Linked from templates/list-detail.html; markup in templates/fragments/list-order.html; behaviour in list-order.js. */
+
+/* Plain lists (not numbered) show no ranks. The order still counts; the API still returns it. */
+.is-plain-list .list-rank {
+  display: none;
+}
+
+/* Reorder mode shows the whole list in list order: no tabs, tick-off, bulk add or Sort (the progress section). */
+.is-reordering .list-progress {
+  display: none;
+}
+
+/* --- Toolbar: Sort menu (left) and "Edit order" (right) --- */
+.list-order-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  margin: 0 0 16px;
+}
+
+.list-sort {
+  position: relative;
+  min-width: 0;
+}
+
+.list-sort-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-soft);
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: "";
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &.is-sorted {
+    border-color: hsl(var(--_brand-clay) / 0.5);
+  }
+}
+
+.list-sort-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+
+  &::before {
+    content: "\00b7";
+    margin-right: 6px;
+    color: var(--text-soft);
+  }
+}
+
+.list-sort-chevron {
+  transition: transform 0.15s ease;
+}
+
+.list-sort[open] > .list-sort-trigger {
+  color: var(--text);
+  background: var(--surface-muted);
+
+  .list-sort-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+.list-sort-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.list-sort-options {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 8px;
+  color: var(--text-soft);
+  font-weight: 600;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-muted);
+    color: var(--text);
+    outline: none;
+  }
+
+  &.active {
+    color: var(--accent);
+  }
+}
+
+.list-sort-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  visibility: hidden;
+}
+
+.list-sort-option.active .list-sort-check {
+  visibility: visible;
+}
+
+.list-sort-note {
+  margin: 4px 8px 4px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.list-order-start {
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 1rem;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+}
+
+/* --- Reorder mode --- */
+.list-order-editor {
+  margin: 4px 0 0;
+
+  .feedback {
+    margin: 0 0 12px;
+  }
+}
+
+.list-order-hint,
+.list-order-plain-note {
+  max-width: 860px;
+  margin: 0 0 12px;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+
+/* Thin rows (user request 2026-11-23: "drag thin titles up or down with their icons"): about 62px tall, one line,
+   so ~10 fit on a phone screen. The form is the row: grip | place | poster | title + year | arrows. */
+.list-order-rows {
+  display: grid;
+  gap: 4px;
+  max-width: 860px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-order-row {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  /* A moved row is scrolled into view clear of the header and the fixed bar (scrollIntoView honours these). */
+  scroll-margin: 90px 0 110px;
+
+  &.is-dragging {
+    z-index: 30;
+    border-color: hsl(var(--_brand-clay) / 0.7);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+    cursor: grabbing;
+    opacity: 0.96;
+  }
+
+  &.is-moved {
+    animation: list-order-moved 1.2s ease;
+  }
+
+  /* An open "more" menu sits above the rows after it. */
+  &:has(details[open]) {
+    z-index: 20;
+  }
+}
+
+/* Where the dragged row will land. */
+.list-order-placeholder {
+  border: 2px dashed hsl(var(--_brand-clay) / 0.55);
+  border-radius: var(--radius);
+  background: hsl(var(--_brand-clay) / 0.07);
+  list-style: none;
+}
+
+@keyframes list-order-moved {
+  0%,
+  35% {
+    border-color: hsl(var(--_brand-clay) / 0.7);
+    background: hsl(var(--_brand-clay) / 0.12);
+  }
+
+  100% {
+    border-color: var(--border);
+    background: var(--surface-strong);
+  }
+}
+
+.list-order-rows.is-sorting {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.list-order-form {
+  display: grid;
+  grid-template-columns: 28px auto 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  margin: 0;
+  padding: 3px 8px 3px 2px;
+}
+
+.list-order-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  border-radius: 6px;
+  color: var(--text-soft);
+  cursor: grab;
+  /* Touch drags start here only, so the rest of the row still scrolls the page. */
+  touch-action: none;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* With a mouse the whole row is a drag handle (form controls aside). */
+@media (hover: hover) and (pointer: fine) {
+  .list-order-editor.is-enhanced .list-order-form {
+    cursor: grab;
+  }
+
+  .list-order-editor.is-enhanced .list-order-row:hover .list-order-handle {
+    color: var(--text);
+  }
+
+  .list-order-place,
+  .list-order-buttons {
+    cursor: default;
+  }
+}
+
+.list-order-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The rank, editable: type a new number. `.list-order-place input.` beats form.css's `input:not([type="checkbox"])` (18px side padding,
+   40px height), which would leave no room for the digits. */
+.list-order-place input.list-order-input {
+  width: 46px;
+  height: 34px;
+  padding: 0 2px;
+  border-color: var(--border-strong);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+}
+
+.list-order-go {
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.list-order-thumb {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface-muted);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+}
+
+.list-order-fallback {
+  color: var(--text-soft);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.list-order-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.list-order-title {
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.list-order-year {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.list-order-buttons {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.list-order-updown {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.list-order-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--text-soft);
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: "";
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--surface-muted);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.28;
+    cursor: default;
+  }
+}
+
+summary.list-order-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.list-order-narrow {
+  display: none;
+}
+
+.list-order-more {
+  position: relative;
+
+  &[open] > summary {
+    background: var(--surface-muted);
+    color: var(--text);
+  }
+}
+
+.list-order-more-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 25;
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.list-order-more-option {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--surface-muted);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+/* The bar fixed at the bottom (above the phone tab bar), like tick-off mode's. */
+.list-order-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100vw - 32px));
+  padding: 10px 10px 10px 16px;
+  border: 1px solid hsl(var(--_brand-clay) / 0.45);
+  border-radius: 14px;
+  background: var(--surface-strong);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  transform: translateX(-50%);
+
+  & > svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: var(--accent);
+  }
+}
+
+.list-order-bar-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.list-order-bar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.list-order-bar-status {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.list-order-done {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  font-size: 1.05rem;
+}
+
+.page:has(.list-order-bar) {
+  padding-bottom: 96px;
+}
+
+body:has(.list-order-bar) .tile-toast,
+body:has(.list-order-bar) .inplace-toast {
+  bottom: 96px;
+}
+
+@media (max-width: 900px) {
+  .list-order-bar {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .page:has(.list-order-bar) {
+    padding-bottom: 170px;
+  }
+
+  /* The bar sits above the 5-tab bar here. */
+  .list-order-row {
+    scroll-margin-bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body:has(.list-order-bar) .tile-toast,
+  body:has(.list-order-bar) .inplace-toast {
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Phones: still one thin row. Up and down stack in one column; top and bottom move into the "more" menu. */
+@media (max-width: 640px) {
+  .list-order-toolbar {
+    gap: 8px;
+  }
+
+  .list-sort-trigger {
+    height: 40px;
+  }
+
+  .list-order-start {
+    padding: 9px 10px;
+  }
+
+  .list-order-form {
+    grid-template-columns: 22px auto 34px minmax(0, 1fr) auto;
+    gap: 6px;
+    min-height: 58px;
+    padding: 2px 4px 2px 0;
+  }
+
+  .list-order-place input.list-order-input {
+    width: 40px;
+  }
+
+  .list-order-thumb {
+    width: 34px;
+    height: 51px;
+  }
+
+  .list-order-title {
+    display: -webkit-box;
+    font-size: 0.98rem;
+    line-height: 1.15;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .list-order-year {
+    font-size: 0.85rem;
+  }
+
+  .list-order-wide {
+    display: none;
+  }
+
+  .list-order-narrow {
+    display: block;
+  }
+
+  .list-order-updown {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .list-order-updown .list-order-btn {
+    width: 36px;
+    height: 26px;
+  }
+
+  .list-order-more > summary {
+    width: 28px;
+    height: 44px;
+  }
+}

@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="/watchlist.css">
 <link rel="stylesheet" href="/list-progress.css">
 <link rel="stylesheet" href="/tile-actions.css">
+<link rel="stylesheet" href="/list-order.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='lists')}"></header>
@@ -14,7 +15,7 @@
     <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
     <th:block th:replace="~{fragments/list-progress :: top(${listBack})}"></th:block>
 
-    <div th:if="${list != null}" id="listRegion">
+    <div th:if="${list != null}" id="listRegion" th:classappend="${listOrder?.regionClass}">
         <div class="flex separate gap-lg centered">
             <div class="flex-1" style="min-width: 0;">
                 <h1 style="word-wrap: break-word; overflow-wrap: break-word;" th:text="${list.name}">List Name</h1>
@@ -32,11 +33,12 @@
         </div>
 
         <th:block th:replace="~{fragments/list-progress :: summary(${listProgress}, ${list.name})}"></th:block>
+        <th:block th:replace="~{fragments/list-order :: toolbar(${listOrder})}"></th:block>
 
         <div th:text="#{list.empty}" th:if="${#lists.isEmpty(list.items)}" class="empty-state"></div>
 
         <!--/* Fork: each card is wrapped so the Seen / Watchlist quick actions sit beside the link; `is-ticking` is tick-off mode (list-tick.js). */-->
-        <div class="list-grid" th:classappend="${listProgress != null and listProgress.tick} ? 'is-ticking' : ''">
+        <div class="list-grid" th:unless="${listOrder?.reordering == true}" th:classappend="${listProgress != null and listProgress.tick} ? 'is-ticking' : ''">
             <div th:each="item, iterStat : ${list.items}" th:if="${listProgress == null or listProgress.shows(item.id.value)}"
                  th:with="entry=${listProgress?.entry(item.id.value)}"
                  class="list-item" th:classappend="${entry?.actions?.seen} ? 'is-seen' : ''" th:id="${'list-item-' + item.id.value}">
@@ -66,6 +68,7 @@
             <div th:replace="~{fragments/tile-actions :: actions(${entry?.actions}, ${item.title})}"></div>
             </div>
         </div>
+        <th:block th:replace="~{fragments/list-order :: editor(${listOrder}, ${list.items})}"></th:block>
     </div>
 
     <!--/* Fork: th:replace runs before th:if, so the condition must sit on a wrapper (else a missing list 500s). */-->
@@ -77,5 +80,6 @@
     <script src="/confirm.js" defer></script>
     <script src="/tile-actions.js" defer></script>
     <script src="/list-tick.js" defer></script>
+    <script src="/list-order.js" defer></script>
 </body>
 </html>

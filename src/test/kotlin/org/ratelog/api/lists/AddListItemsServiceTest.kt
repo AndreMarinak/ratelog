@@ -29,6 +29,8 @@ import org.ratelog.test.InMemoryMovieRepository
 import org.ratelog.test.InMemoryTagRepository
 import org.ratelog.test.InMemoryTvDescriptionRepository
 import org.ratelog.test.InMemoryTvShowRepository
+import org.ratelog.test.InMemoryListOrderRepository
+import org.ratelog.customlist.order.move.MoveListItemHandler
 import org.ratelog.test.MovieFactory
 import org.ratelog.test.TvShowFactory
 import org.ratelog.tmdb.TmdbClient
@@ -50,6 +52,8 @@ class AddListItemsServiceTest {
         MediaImporter(tmdbClient, movies, InMemoryMovieDescriptionRepository(), shows, InMemoryTvDescriptionRepository()),
         AddToListHandler(lists),
         AssignTagsHandler(tags, movies, shows),
+        lists,
+        MoveListItemHandler(lists, InMemoryListOrderRepository(lists)),
     )
     private val user = User.Id(1)
     private lateinit var listId: CustomList.Id
