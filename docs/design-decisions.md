@@ -170,7 +170,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | "Rate it?" score after Seen | — | **reload**: an explicit save that changes the rating card, Rate button and Seen |
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
-| Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save |
+| Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
 | Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
 | Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
 | Ratings Movies / TV switch and filter form | page load | **page load kept**: different page / explicit Search |
