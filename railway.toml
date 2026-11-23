@@ -1,0 +1,12 @@
+# Railway deploy config (fork). Builds with the repo's Dockerfile.
+# Variables to set on the Ratelog service are listed in docs/deploy-railway.md.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+# Flyway migrations + Spring startup can take a minute on a small instance.
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
