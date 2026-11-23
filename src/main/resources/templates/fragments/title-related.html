@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: rows under a title page: "Part of the Toy Story Collection" (movies in a TMDB collection) and "More like this".
+  Rows and tiles reuse home.css (and the quick actions of fragments/tile-actions.html); the skeleton is Discover's.
+  The page renders only `placeholder`; static/title-related.js fetches `rows` from /movie/{id}/related or
+  /tv/{id}/related once the placeholder nears the viewport and swaps it in (or removes it when there is nothing).
+
+  Placeholder (movie-detail.html after the layout, tvshow-detail.html after the seasons):
+    <section th:replace="~{fragments/title-related :: placeholder('movie', ${movie?.tmdbId})}"></section>
+  Rows: `related` is an org.ratelog.recommendations.web.RelatedSectionView, or null (renders nothing).
+*/-->
+<th:block th:fragment="placeholder(type, tmdbId)" th:if="${tmdbId != null}">
+    <!--/* Outside the section: the section is swapped out, and its styles must stay. */-->
+    <link rel="stylesheet" href="/home.css">
+    <link rel="stylesheet" href="/discover.css">
+    <link rel="stylesheet" href="/title-related.css">
+    <script src="/title-related.js" defer></script>
+    <!--/* Without JS nothing would ever replace the skeleton. */-->
+    <noscript><style>.title-related.is-pending { display: none; }</style></noscript>
+    <section class="title-related is-pending"
+             th:data-src="${type == 'movie'} ? |/movie/${tmdbId}/related| : |/tv/${tmdbId}/related|"
+             aria-busy="true" th:aria-label="#{recs.aria}">
+        <div class="home-row related-row" aria-hidden="true">
+            <div class="home-row-head"><span class="related-skeleton-heading"></span></div>
+            <div class="home-row-track">
+                <div th:each="i : ${#numbers.sequence(1, 8)}" class="discover-skeleton">
+                    <div class="discover-skeleton-poster"></div>
+                    <span class="discover-skeleton-line"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+</th:block>
+
+<th:block th:fragment="rows">
+    <section th:if="${related != null}" class="title-related" th:aria-label="#{recs.aria}">
+        <section th:each="row : ${related.rows}" class="home-row related-row" th:id="${row.id}"
+                 th:classappend="${row.isSeries} ? 'related-series' : 'related-more'"
+                 th:aria-labelledby="${row.id + '-title'}">
+            <div class="home-row-head">
+                <div class="related-head">
+                    <h2 th:id="${row.id + '-title'}" th:text="${row.title}">More like this</h2>
+                    <p th:if="${row.progress != null}" class="related-progress" data-related-progress
+                       th:text="${row.progress}">You've seen 2 of 5 · Next: Toy Story 3</p>
+                </div>
+                <div class="home-row-arrows">
+                    <button type="button" data-row-prev th:aria-label="#{home.row.scroll.back}" disabled>
+                        <i data-lucide="chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" data-row-next th:aria-label="#{home.row.scroll.forward}">
+                        <i data-lucide="chevron-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="home-row-track" tabindex="0" th:aria-label="${row.title}">
+                <div th:each="tile : ${row.tiles}" class="home-tile-wrap" th:classappend="${tile.current} ? 'is-current' : ''"
+                     th:attr="data-key=${tile.key}">
+                    <th:block th:unless="${tile.current}">
+                        <a class="home-tile" th:href="${tile.href}">
+                            <th:block th:replace="~{fragments/title-related :: tileBody(${tile})}"></th:block>
+                        </a>
+                        <!--/* Watchlist bookmark + Seen eye, beside the link; tile-actions.js posts them in place. */-->
+                        <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
+                    </th:block>
+                    <!--/* This page's own title: no link, no quick actions (the panel above has them), its Seen shown. */-->
+                    <th:block th:if="${tile.current}">
+                        <div class="home-tile" aria-current="page">
+                            <th:block th:replace="~{fragments/title-related :: tileBody(${tile})}"></th:block>
+                        </div>
+                        <div class="tile-actions related-here-state">
+                            <span class="tile-act tile-badge related-seen-mark" data-related-current-seen role="img"
+                                  th:hidden="${!tile.seen}" th:title="#{recs.seen}" th:aria-label="#{recs.seen}">
+                                <i data-lucide="eye" aria-hidden="true"></i>
+                            </span>
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+        </section>
+    </section>
+</th:block>
+
+<th:block th:fragment="tileBody(tile)">
+    <div class="home-poster">
+        <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
+             th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
+             sizes="(max-width: 900px) 31vw, 152px" alt="" loading="lazy" decoding="async">
+        <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
+        <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
+        <span th:if="${tile.userScore != null}" class="home-score" th:title="#{home.your.score}"
+              th:text="${tile.userScore}">8.5</span>
+    </div>
+    <span class="home-tile-title" th:text="${tile.title}">Title</span>
+    <span th:unless="${tile.current}" class="home-tile-meta" th:text="${tile.meta}">1999</span>
+    <span th:if="${tile.current}" class="home-tile-meta related-here">
+        <i data-lucide="map-pin" aria-hidden="true"></i><span th:text="#{recs.here}">You're here</span>
+    </span>
+</th:block>
+</body>
+</html>

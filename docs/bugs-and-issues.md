@@ -4,6 +4,9 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Series headings mix languages for non-English metadata:** "Part of the {name}" is an English UI string, while the collection name
+  comes from TMDB in the metadata language, so a Spanish metadata setting reads "Part of the Toy Story - Colección". The UI strings
+  are English-only anyway; fix together with real translations (e.g. `recs.series.title` per language).
 - **Discover's "Hide titles I've seen" still uses the old TV rule:** it hides a show with any rated season (`LibraryMark.seen` = rated or Watched), while tiles, title pages and list progress now treat a show that is Watching / Want to watch / Dropped as not seen even with rated seasons. Left alone because Discover was being changed on master at the same time; fix by passing the media type into `LibraryMark.seen`.
 - **Old bookmark handlers are unused after the Seen merge:** the `.home-quick` fetch handler in `home.js` and the bookmark code in `discover.js` (`form.home-quick`) and `browse.js` (`form.browse-bookmark`), plus their CSS. Home, Discover rows and the grid now render the shared quick-action stack (`fragments/tile-actions.html`), saved in place by `tile-actions.js` with the same `type:tmdbId` key. Safe to delete; `home.js`'s scroll restore is still used by `tile-actions.js`'s fallback. Left in place because Discover was being edited on master.
 - **Aired seasons are approximate for shows with three or more unaired seasons** (`AiredSeasons` only sees the last season's date and the next future date). Needs per-season air dates stored, or a TMDB call, to be exact.
@@ -38,7 +41,10 @@ Problems found while building and running the fork: what happened, the cause, an
   shows above the backdrop while the sheet is open, and on phones at the top of the screen so it doesn't cover the lists.
 - **A just-unticked list still looked selected on phones** (same check): touch screens keep `:hover` on the last tapped
   row, and the hover style (accent border and name) read like a tick. Hover styles are now neutral on `(hover: none)`.
-
+- **Lazily loaded title-page rows came in unstyled** (found in the browser check of "More like this", 2026-11-23): the skeleton
+  section carried the `<link>`s for `home.css` / `title-related.css`, and `title-related.js` replaces that section with the fetched
+  rows, so the styles were removed with it and the posters stacked as a plain list. The links now sit beside the section, and a
+  template test checks they come before it. Rule for any swapped-in fragment: keep its styles outside the element that gets replaced.
 - **Unknown URLs answered with a JSON 500** (upstream, found 2026-11-23 while checking the trailer change): logged in, `/no-such-page`,
   `/movie/abc` or a missing `.css` returned `{"message":"Internal server error"}`. Upstream's `GlobalExceptionHandler` catches every
   `Exception`, including Spring's `NoResourceFoundException`. `system/NotFoundAdvice.kt` (ordered before it) now answers a "Page not

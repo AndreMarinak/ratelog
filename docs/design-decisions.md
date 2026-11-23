@@ -94,6 +94,51 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **"New list" at the top of the sheet** (user, 2026-11-23: "Also put the create new list when I click add to list at the top"): one compact row (name field + "Create & add", label for screen readers only) under the heading and summary, above your lists, so at 390x844 and 360x740 the lists still start in the upper half of the sheet. Creating a list still closes the sheet (it is a finishing action) and refreshes the sheet and the button in place (`data-inplace="#addToListModal, [data-list-button]"`); without JS it opens the new list as before.
 - **Built as a fork slice** (`customlist/membership`): `ListMembershipInterceptor` adds `listMembership` to the movie and TV pages from the page's own `userLists` plus one query (`ListMembershipDAO`: your lists that have the title, with its rank), so upstream's detail controllers and handlers stay untouched. The template edits are the sheet fragment, one include line for the button and one stylesheet + one script line per title page. The API's `GET /api/v1/titles/{type}/{tmdbId}` returns the same lists as `inLists`.
 
+### Series and "More like this" on title pages (2026-11-23)
+
+The user asked: "Also check if its possible when i click on movie if it can have recommedaitons related to it? For ones that have
+series maybe those as well but also other ones?" Code: `org.ratelog.recommendations`, `fragments/title-related.html`,
+`static/title-related.js` / `.css`.
+
+- **Two home-style rows under the title.** Movies in a TMDB collection get **"Part of the Toy Story Collection"**: every entry in
+  release order (undated ones last), this title outlined with "You're here", and your Seen eye, score and Upcoming badge on each, so
+  "seen 1 and 2, 3 is next" is visible at a glance. Then **"More like this"** (movies and shows). TV has no collections on TMDB, so
+  shows only get "More like this". Rows, tiles and quick actions are the home / Discover ones (`home.css`, `tile-actions`), posters
+  `w342` + `w500` 2x, swipe on phones, arrows with a mouse.
+- **TMDB `/recommendations`, not `/similar`.** Checked on Toy Story 2, The Wolf of Wall Street, Avengers: Doomsday, Dune: Part Three,
+  Another Round, Breaking Bad and Borgen. Recommendations gave the sequels plus Monsters, Inc., Lightyear...; Wall Street, Casino, The
+  Big Short...; Better Call Saul, Narcos.... `/similar` (genre / keyword overlap) gave Non Non Biyori: Vacation, Aadu 2 and Jimmy Timmy
+  Power Hour for Toy Story 2, Ressha Sentai ToQger for Avengers, and many titles with 0-10 votes. So recommendations only, with no
+  `/similar` fallback.
+- **Seen titles are left out of "More like this"**, following Discover's "Hide titles I've seen" default (a user request): the row is
+  for picking something new. The series row shows every entry, seen or not, because there seen is the point. "Seen" is the tiles'
+  rule (a show you're Watching stays, a Watched one goes); watchlist and Dropped titles stay. Tapping Seen on a tile keeps it in place
+  (eye on); it's gone on the next visit. When the series and seen titles leave fewer than 12, TMDB's page 2 tops the row up (20 max).
+- **Junk filter:** no poster, out; released titles with fewer than 10 TMDB votes, out (upcoming ones have no votes yet and stay).
+  TMDB's recommendations rarely go below about 20 votes, so this only guards odd cases. The title itself and its series are left out.
+- **Placement: last on the page.** Movies: under the three-column layout, the series first. Shows: after Seasons. Seasons are the
+  show's own content and where it is rated ("Rate seasons" jumps there), like the series row for a movie; recommendations lead away
+  from the page, so they close it (Letterboxd's "Similar films" sit at the end too).
+- **"Part of the {name}"** drops a leading "The " from TMDB's English name ("The Avengers Collection" would read "Part of the The
+  Avengers Collection"). Other metadata languages show TMDB's translated name in the English sentence (see bugs-and-issues).
+- **The series progress line** counts entries that are out: "5 films · Start with Toy Story", "You've seen 2 of 5 · Next: Toy Story
+  3" (the first unseen one in release order), "You've seen all 4 · Next: Avengers: Doomsday, Dec 16" (the next upcoming one). Upcoming
+  and undated entries can't be seen yet, so they don't count. This covers roadmap #11 on title pages.
+- **This title's own tile is not a link and has no quick actions**: the page's panel already has Seen / Watchlist, and two controls
+  for the same title would drift apart. It shows its Seen as a read-only eye. After the page's Seen button or a series tile changes,
+  `title-related.js` fetches the rows again (TMDB is cached by then) and updates only the progress line and that eye, so nothing jumps.
+  Long series (Bond, Fast & Furious) start scrolled to "You're here".
+- **Lazy, so title pages are no slower.** The page renders a poster skeleton (Discover's); `title-related.js` fetches
+  `/movie/{id}/related` (or `/tv/{id}/related`) once it is within 800px of the viewport (right away on desktop, on scroll on phones)
+  and swaps it in, or removes the skeleton when there is nothing or anything fails. The page itself makes no extra TMDB call or query.
+  TMDB calls on a cold cache: a movie's page 1 is `/movie/{id}?append_to_response=recommendations`, which also carries
+  `belongs_to_collection` (one call), then `/collection/{id}`, and page 2 only for a top-up; shows use `/tv/{id}/recommendations`.
+  Warm: no TMDB call, one marks query. In-memory cache (`TmdbRecommendationsClient`): recommendations 24 h, collections 7 days
+  (`ratelog.recommendations.cache-hours`, `collection-cache-days`; both change rarely, and a date change still shows within a week),
+  failures retried after 2 minutes. Titles use the metadata language, like the other TMDB rows. Without JS the skeleton is hidden.
+- **API:** `GET /api/v1/titles/{type}/{tmdbId}/recommendations` returns both rows with your marks. Like `/api/v1/browse`, seen titles
+  are only hidden with `hideSeen=true`, so Claude can see what you've seen (`seen: true`) when building lists.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -109,6 +154,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 |---|---|---|
 | Home poster bookmark | reload + scroll restore | in place, all copies of the title flip, toast (`home.js`; since the Seen batch, `tile-actions.js` with the same `type:tmdbId` key) |
 | Poster Seen eye and bookmark (home, Discover rows and grid, search, lists) | — | in place (`tile-actions.js`, JSON answer), every copy of the title flips, toast |
+| Title page series / "More like this" tiles (bookmark, Seen) | — | in place (`tile-actions.js`); the series progress line and "You're here" eye follow (`title-related.js`) |
 | Discover row / grid bookmark | in place | in place (`discover.js`, `browse.js`) |
 | Discover "Load more", lazy rows | in place | in place |
 | Search results infinite scroll | in place | in place (`search.js`) |

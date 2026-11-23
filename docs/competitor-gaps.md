@@ -12,13 +12,13 @@ Related: [roadmap.md](roadmap.md), [design-decisions.md](design-decisions.md).
 
 | # | Gap | Who has it | Value | Effort | Data source / note |
 |---|---|---|---|---|---|
-| 1 | **"More like this"** row on title pages | Letterboxd, IMDb, Reelgood, MovieLens | H | S | TMDB `/{type}/{id}/recommendations` (+ `/similar`); hide seen titles |
+| 1 | ~~**"More like this"** row on title pages~~ **Built 2026-11-23** (roadmap #17), with the movie's series row | Letterboxd, IMDb, Reelgood, MovieLens | H | S | TMDB `/{type}/{id}/recommendations` (`/similar` was tried and is mostly noise); seen titles hidden |
 | 2 | **Cast & crew, person pages, people in search** (filmography with "seen 7 of 23") | Letterboxd, IMDb, Kinorium | H | M | TMDB `/credits`, `/person/{id}/combined_credits`, discover `with_cast` / `with_crew` |
 | 3 | **List notes and description**, a ranked on/off toggle, list sort and filter (list order, rating, year, shuffle; fade watched) | Letterboxd | H | S–M | Small schema change; the API should accept per-entry notes so Claude can say why a title is on the list. Seen filter and progress are in progress (#12). |
 | 4 | **Saved "my services"**, then a **"Now on your services" watchlist row** and alerts | JustWatch, Plex, Letterboxd Pro, Reelgood | H | S–M | Daily TMDB `/watch/providers` diff for watchlist titles; discover `with_watch_providers` (`a\|b` = OR) |
 | 5 | **Per-episode progress**, which unlocks a real TV "Up next" (next unwatched episode), an episode calendar + iCal, and time-spent stats | Trakt, TV Time, Serializd, Simkl, Sequel | H | L | TMDB season/episode endpoints. Today "Up next" is only Want to watch titles and "Continue watching" is only status Watching. |
 | 6 | **Diary with rewatches and likes** (a like separate from rating; history kept on rewatch) | Letterboxd, Serializd, Trakt | H | M | Roadmap #5. If likes get a heart, "follow" should move to a bell icon. |
-| 7 | **"Because you liked X"** home row | IMDb, Likewise, Taste | H | S | TMDB recommendations seeded from your 8+ ratings, minus titles seen or on the watchlist |
+| 7 | **"Because you liked X"** home row | IMDb, Likewise, Taste | H | S | TMDB recommendations seeded from your 8+ ratings, minus titles seen or on the watchlist. `TmdbRecommendationsClient` (cached) and `GetRelatedTitlesHandler` from #1 already do the fetching and hiding |
 | 8 | **"Surprise me" picker**: random pick from the watchlist, filtered by service, runtime and genre | Reelgood Roulette, Kinorium | H | S | Own data plus the existing Browse filters |
 | 9 | **Title page polish**: backdrop header, details (studio, country, language), release dates by type (the digital date tells you when it can stream) | Letterboxd | M | S | TMDB `/release_dates`, `/images` |
 | 10 | **Stats + Year in review** (hours, top directors/actors, genres, streaks) | Letterboxd Pro, Trakt, Serializd, TV Time | H | M | Roadmap #8; best after the diary (#6) and credits (#2) |

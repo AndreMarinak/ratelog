@@ -123,6 +123,7 @@
                 </section>
             </div>
         </div>
+        <section th:replace="~{fragments/title-related :: placeholder('movie', ${movie?.tmdbId})}"></section>
 
         <th:block th:if="${movie != null}">
             <div th:replace="~{fragments/rate-movie-modal :: rateMovieModal(${movie})}"></div>

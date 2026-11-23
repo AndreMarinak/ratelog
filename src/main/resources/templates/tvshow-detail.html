@@ -117,6 +117,7 @@
                 </div>
             </div>
         </section>
+        <section th:replace="~{fragments/title-related :: placeholder('tv', ${show?.tmdbId})}"></section>
 
         <th:block th:if="${show != null}">
             <div th:replace="~{fragments/rate-tvshow-modal :: rateTvShowModal(${show})}"></div>
