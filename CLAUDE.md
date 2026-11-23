@@ -54,6 +54,10 @@ agent branches). Before every commit and push, check each file below and update 
 - **Small actions save in place** (no reload, a toast confirms): add `data-inplace="<regions>"` to the form (`static/inplace.js`). Navigation and whole-result changes load a page. The audit table is in design-decisions.md; add new actions to it.
 - **Feature flags:** `ratelog.features.*` in `application.yml`, exposed to templates by `system/FeatureFlagsAdvice.kt` (tags are hidden: `tagsEnabled`).
 - Buttons ignore `hidden` (base `button { display: inline-flex }`): add `&[hidden] { display: none }` to any button you toggle.
+- **Stay inside the Content-Security-Policy** (`security/SecurityHeaders.kt`): scripts, styles and fonts only from the app itself
+  (no CDNs), images only from the app, `data:`, `image.tmdb.org` and `i.ytimg.com`, iframes only from `www.youtube-nocookie.com`.
+  Prefer static `.js` files over new inline `<script>` blocks and `on*=` handlers. The browser check must show no CSP errors.
+- In-place `fetch` handlers must cope with `429` (request rate limit): show the response's message as a toast, don't re-post.
 
 ## Importing lists for the user (Claude workflow)
 

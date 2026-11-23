@@ -3,6 +3,7 @@ package org.ratelog.tvshow.togglefollow
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.tvshow.TvShow
 import org.ratelog.user.User
+import org.ratelog.watchlist.seen.BackPath
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -24,7 +25,7 @@ class ToggleTvFollowController(
             userId = user.id!!,
         ).let(handler::handle)
 
-        val referer = request.getHeader("Referer")
-        return "redirect:$referer"
+        // Fork: back to the page the button was on, only ever a same-site path.
+        return "redirect:" + BackPath.resolve(null, request.getHeader("Referer"), "/")
     }
 }

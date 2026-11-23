@@ -1,6 +1,7 @@
 package org.ratelog.user.profile
 
 import org.ratelog.annotations.CurrentUser
+import org.ratelog.system.PageLimits
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -19,9 +20,10 @@ class ProfileController(
     fun profilePage(
         @CurrentUser user: User,
         @PathVariable("id") userId: Long,
-        @RequestParam(value = "limit", defaultValue = "10") limit: Int,
+        @RequestParam(value = "limit", defaultValue = "10") requestedLimit: Int,
         model: Model
     ): String {
+        val limit = PageLimits.clamp(requestedLimit)
         return GetProfile(
             loggedUserId = user.id!!,
             userId = userId.let(User::Id),

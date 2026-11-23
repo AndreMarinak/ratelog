@@ -10,7 +10,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
 @Controller
 class LetterboxdImportController(
-    private val handler: LetterboxdImportHandler,
+    private val runner: LetterboxdImportRunner,
 ) {
 
     @PostMapping("/import/letterboxd")
@@ -19,24 +19,29 @@ class LetterboxdImportController(
         @RequestParam("file") file: MultipartFile,
         redirectAttributes: RedirectAttributes,
     ): String {
+        // Fork: straight to the profile page; "/profile" redirects again, which dropped these flash messages.
+        val profile = "redirect:/profile/${user.id!!.value}"
         if (file.isEmpty) {
             redirectAttributes.addFlashAttribute("error", "error.import.empty")
-            return "redirect:/profile"
+            return profile
+        }
+        if (file.size > LetterboxdImportLimits.MAX_FILE_BYTES) {
+            redirectAttributes.addFlashAttribute("error", "error.import.too.large")
+            return profile
         }
 
-        return ImportLetterboxdCommand(
-            userId = user.id!!,
-            csvContent = file.bytes,
-        ).let(handler::handle)
-            .mapLeft { LetterboxdImportError.ParseError }
-            .fold(
-                {
-                    redirectAttributes.addFlashAttribute("error", "error.import.parse")
-                    "redirect:/profile"
-                },
-                {
-                    "redirect:/profile"
-                }
-            )
+        // Fork: parsed now, imported in the background (LetterboxdImportRunner).
+        runner.start(user.id!!, file.bytes).fold(
+            { error -> redirectAttributes.addFlashAttribute("error", errorKey(error)) },
+            { redirectAttributes.addFlashAttribute("success", "import.letterboxd.started") },
+        )
+        return profile
+    }
+
+    private fun errorKey(error: LetterboxdImportError): String = when (error) {
+        LetterboxdImportError.ParseError -> "error.import.parse"
+        LetterboxdImportError.TooManyRows -> "error.import.too.many.rows"
+        LetterboxdImportError.AlreadyRunning -> "error.import.running"
+        LetterboxdImportError.Busy -> "error.import.busy"
     }
 }

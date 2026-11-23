@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest
 import org.ratelog.Email
 import org.ratelog.Lang
 import org.ratelog.Password
+import org.ratelog.passwordErrorKey
 import org.ratelog.Role
 import org.ratelog.Username
 import org.ratelog.annotations.CurrentUser
@@ -39,8 +40,8 @@ class CreateUserController(
             redirectAttributes.addFlashAttribute("error", "admin.error.invalid.email")
             return "redirect:/admin/configuration"
         }
-        val parsedPassword = Password.parse(password).getOrElse {
-            redirectAttributes.addFlashAttribute("error", "admin.error.invalid.password")
+        val parsedPassword = Password.parse(password).getOrElse { error ->
+            redirectAttributes.addFlashAttribute("error", passwordErrorKey(error, "admin.error.invalid.password"))
             return "redirect:/admin/configuration"
         }
         val parsedRole = Role.parse(role).getOrElse {
@@ -77,5 +78,6 @@ class CreateUserController(
         CreateUserHandlerError.EmailAlreadyExists -> "admin.error.email.exists"
         CreateUserHandlerError.CannotPromoteToSuperadmin -> "admin.error.cannot.promote.superadmin"
         CreateUserHandlerError.CannotCreateAdmin -> "admin.error.cannot.create.admin"
+        CreateUserHandlerError.ManagerCanOnlyCreateUsers -> "admin.error.forbidden"
     }
 }

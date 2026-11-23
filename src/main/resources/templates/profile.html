@@ -163,8 +163,14 @@
     if (fileInput && fileUploadText) {
         const defaultText = fileUploadText.textContent;
         fileInput.addEventListener('change', (e) => {
-            const fileName = e.target.files[0]?.name;
-            fileUploadText.textContent = fileName || defaultText;
+            const file = e.target.files[0];
+            const maxBytes = Number(fileInput.dataset.maxBytes || 0);
+            if (file && maxBytes && file.size > maxBytes) {
+                fileInput.value = '';
+                fileUploadText.textContent = fileInput.dataset.tooLarge || defaultText;
+                return;
+            }
+            fileUploadText.textContent = file?.name || defaultText;
         });
     }
 </script>

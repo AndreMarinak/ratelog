@@ -32,6 +32,10 @@ class AppUserDetails(
             SimpleGrantedAuthority(Role.USER.authority),
             SimpleGrantedAuthority(Role.ADMIN.authority),
         )
+        Role.MANAGER -> listOf(
+            SimpleGrantedAuthority(Role.USER.authority),
+            SimpleGrantedAuthority(Role.MANAGER.authority),
+        )
         Role.USER -> listOf(SimpleGrantedAuthority(Role.USER.authority))
     }
 
@@ -41,6 +45,18 @@ class AppUserDetails(
     override fun isAccountNonLocked(): Boolean = true
     override fun isCredentialsNonExpired(): Boolean = true
     override fun isEnabled(): Boolean = true
+
+    companion object {
+        fun from(user: User): AppUserDetails = AppUserDetails(
+            id = user.id!!,
+            username = user.username.value,
+            email = user.email.value,
+            password = user.passwordHash,
+            lang = user.lang,
+            metadataLang = user.metadataLang,
+            role = user.role,
+        )
+    }
 }
 
 @Service

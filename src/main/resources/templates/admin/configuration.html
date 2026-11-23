@@ -23,7 +23,11 @@
                        id="tmdbApiKey"
                        name="value"
                        autocomplete="new-password"
-                       th:value="${tmdbApiKeyValue}" />
+                       th:placeholder="${tmdbApiKeyConfigured} ? #{security.config.key.replace.placeholder} : ''" />
+                <p class="help-text" th:if="${tmdbApiKeyConfigured}"
+                   th:text="${tmdbApiKeyHint != null} ? #{security.config.key.configured.hint(${tmdbApiKeyHint})} : #{security.config.key.configured}">
+                    A key is configured (ends in …abcd). Type a new key to replace it.
+                </p>
                 <p class="help-text" th:text="#{config.general.tmdb.api.key.help}">
                     Used by Ratelog to search and fetch metadata from TMDB.
                 </p>
@@ -48,6 +52,7 @@
                 <th:block th:switch="${u.role.name()}">
                     <span th:case="'SUPERADMIN'" class="pill superadmin" th:text="#{admin.user.role.superadmin}">Superadmin</span>
                     <span th:case="'ADMIN'" class="pill admin" th:text="#{admin.user.role.admin}">Admin</span>
+                    <span th:case="'MANAGER'" class="pill manager" th:text="#{admin.user.role.manager}">Manager</span>
                     <span th:case="'USER'" class="pill user" th:text="#{admin.user.role.user}">User</span>
                 </th:block>
             </div>
@@ -65,7 +70,7 @@
                             th:data-email="${u.email.value}"
                             th:data-role="${u.role.name()}"
                             th:aria-label="#{admin.user.edit}"
-                            th:if="${currentUserRole == 'SUPERADMIN' or u.role.name() == 'USER'}">
+                            th:if="${currentUserRole == 'SUPERADMIN' or u.role.name() == 'USER' or u.role.name() == 'MANAGER'}">
                         <i data-lucide="pencil"></i>
                     </button>
                     <form class="delete-user-form inline" th:action="@{'/admin/users/' + ${u.id.value} + '/delete'}" method="post"
@@ -74,7 +79,7 @@
                               u.id.value != currentUserId and (
                                   (currentUserRole == 'SUPERADMIN' and u.role.name() != 'SUPERADMIN')
                                   or
-                                  (currentUserRole == 'ADMIN' and u.role.name() == 'USER')
+                                  (currentUserRole == 'ADMIN' and (u.role.name() == 'USER' or u.role.name() == 'MANAGER'))
                               )
                           }">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />

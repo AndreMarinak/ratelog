@@ -37,13 +37,14 @@ class EditUserHandler(
             ?: raise(EditUserHandlerError.UserNotFound)
 
         if (!isSelfEdit && command.currentUser.role == Role.ADMIN) {
-            ensure(target.role == Role.USER) { EditUserHandlerError.CannotEditAdmin }
+            ensure(target.role in ADMIN_MANAGED_ROLES) { EditUserHandlerError.CannotEditAdmin }
         }
 
         val actingUser = (if (isSelfEdit) target else command.currentUser.id?.let { userRepository.findById(it) })
             ?: raise(EditUserHandlerError.Forbidden)
 
-        if (command.currentUser.role != Role.SUPERADMIN) {
+        // Fork: your own account always needs your current password; only a superadmin editing someone else skips it.
+        if (isSelfEdit || command.currentUser.role != Role.SUPERADMIN) {
             ensure(command.currentPassword != null) { EditUserHandlerError.MissingCurrentPassword }
         }
 
@@ -66,10 +67,14 @@ class EditUserHandler(
         val newRole = command.newRole ?: target.role
 
         if (newRole != target.role) {
-            ensure(command.currentUser.role == Role.SUPERADMIN) { EditUserHandlerError.CannotChangeRole }
+            ensure(command.currentUser.role.isAdminLike) { EditUserHandlerError.CannotChangeRole }
             ensure(newRole != Role.SUPERADMIN) { EditUserHandlerError.CannotPromoteToSuperadmin }
             ensure(target.role != Role.SUPERADMIN) { EditUserHandlerError.CannotChangeSuperadminRole }
             ensure(!isSelfEdit) { EditUserHandlerError.CannotDemoteYourself }
+            // Fork: an ADMIN may give or take away MANAGER (USER <-> MANAGER); other role changes stay SUPERADMIN-only.
+            if (command.currentUser.role != Role.SUPERADMIN) {
+                ensure(target.role in ADMIN_MANAGED_ROLES && newRole in ADMIN_MANAGED_ROLES) { EditUserHandlerError.CannotChangeRole }
+            }
         }
 
         val newHash = command.newPassword?.value?.let(passwordEncoder::encode) ?: target.passwordHash
@@ -80,5 +85,10 @@ class EditUserHandler(
         }
 
         userRepository.findById(command.targetUserId)!!
+    }
+
+    companion object {
+        /** Fork: the accounts an ADMIN may edit, and the roles an ADMIN may switch them between. */
+        val ADMIN_MANAGED_ROLES = setOf(Role.USER, Role.MANAGER)
     }
 }

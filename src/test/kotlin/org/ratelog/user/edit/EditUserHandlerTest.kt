@@ -211,13 +211,57 @@ class EditUserHandlerTest {
     }
 
     @Test
-    fun `given a superadmin editing themselves without current password then data is updated and role is preserved`() {
+    fun `given a superadmin editing themselves without current password then returns MissingCurrentPassword and nothing changes`() {
         // Given
         val superadmin = userRepository.save(UserFactory.aUser(username = "root", email = "old@example.com", role = Role.SUPERADMIN))
 
         // When
         val result = handler.handle(
             command(superadmin, superadmin, email = Email("new@example.com"), newPassword = Password("NewPass1!"))
+        )
+
+        // Then
+        assertEquals(EditUserHandlerError.MissingCurrentPassword, result.fold({ it }, { Unit }))
+        val persisted = userRepository.findById(superadmin.id!!)!!
+        assertEquals(Email("old@example.com"), persisted.email)
+        assertEquals("encoded_password", persisted.passwordHash)
+    }
+
+    @Test
+    fun `given a superadmin editing themselves with a wrong current password then returns InvalidCurrentPassword`() {
+        // Given
+        val superadmin = userRepository.save(UserFactory.aUser(username = "root", role = Role.SUPERADMIN))
+
+        // When
+        val result = handler.handle(command(superadmin, superadmin, currentPassword = Password("wrong"), newPassword = Password("NewPass1!")))
+
+        // Then
+        assertEquals(EditUserHandlerError.InvalidCurrentPassword, result.fold({ it }, { Unit }))
+        assertEquals("encoded_password", userRepository.findById(superadmin.id!!)!!.passwordHash)
+    }
+
+    @Test
+    fun `given a superadmin editing another user without a current password then data is updated`() {
+        // Given
+        val superadmin = userRepository.save(UserFactory.aUser(username = "root", role = Role.SUPERADMIN))
+        val target = userRepository.save(UserFactory.aUser(username = "victim"))
+
+        // When
+        val result = handler.handle(command(superadmin, target, newPassword = Password("NewPass1!")))
+
+        // Then
+        assertTrue(result.isRight())
+        assertEquals("encoded_NewPass1!", userRepository.findById(target.id!!)!!.passwordHash)
+    }
+
+    @Test
+    fun `given a superadmin editing themselves with the current password then data is updated and role is preserved`() {
+        // Given
+        val superadmin = userRepository.save(UserFactory.aUser(username = "root", email = "old@example.com", role = Role.SUPERADMIN))
+
+        // When
+        val result = handler.handle(
+            command(superadmin, superadmin, email = Email("new@example.com"), currentPassword = Password("password"), newPassword = Password("NewPass1!"))
         )
 
         // Then
@@ -304,7 +348,7 @@ class EditUserHandlerTest {
         val superadmin = userRepository.save(UserFactory.aUser(username = "root", role = Role.SUPERADMIN))
 
         // When
-        val result = handler.handle(command(superadmin, superadmin, role = Role.ADMIN))
+        val result = handler.handle(command(superadmin, superadmin, currentPassword = Password("password"), role = Role.ADMIN))
 
         // Then
         assertTrue(result.isLeft())

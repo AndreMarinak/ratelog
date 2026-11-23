@@ -56,7 +56,8 @@ class ApiExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleGeneric(e: Exception): ResponseEntity<ApiErrorBody> {
-        logger.error("Unhandled API error", e)
+        // Fork: redacted copy, since upstream URLs in messages can carry API keys.
+        logger.error("Unhandled API error: {}", e.javaClass.simpleName, org.ratelog.security.LogSafe.sanitized(e))
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiErrorBody("internal_error", "Internal server error"))
     }
 }

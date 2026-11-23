@@ -3,7 +3,7 @@
 <body>
 <header class="site-header" th:fragment="nav(active)"
         th:with="signedIn=${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'},
-                 inMenu=${active == 'tags' or active == 'community' or active == 'profile' or active == 'admin'}"
+                 inMenu=${active == 'tags' or active == 'community' or active == 'profile' or active == 'admin' or active == 'account-add'}"
         th:classappend="${signedIn} ? 'signed-in' : ''">
     <div class="nav-brand" th:with="appName=#{app.name}">
         <a href="/" class="nav-monogram" th:aria-label="#{nav.brand.label(${appName})}">
@@ -47,6 +47,12 @@
            th:classappend="${active == 'admin'} ? 'active' : ''"
            th:aria-label="#{admin.title}" th:title="#{admin.title}">
             <i data-lucide="settings" aria-hidden="true"></i>
+        </a>
+        <a href="/accounts/new" class="nav-link btn"
+           th:if="${#authorization.expression('hasRole(''MANAGER'')')}"
+           th:classappend="${active == 'account-add'} ? 'active' : ''"
+           th:aria-label="#{account.add.title}" th:title="#{account.add.title}">
+            <i data-lucide="user-plus" aria-hidden="true"></i>
         </a>
         <form th:action="@{/logout}" method="post">
             <button type="submit" class="nav-link" th:aria-label="#{auth.logout}" th:title="#{auth.logout}">
@@ -104,6 +110,12 @@
            th:classappend="${active == 'admin'} ? 'active' : ''">
             <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
             <span th:text="#{admin.title}">Configuration</span>
+        </a>
+        <a class="nav-sheet-item" href="/accounts/new"
+           th:if="${#authorization.expression('hasRole(''MANAGER'')')}"
+           th:classappend="${active == 'account-add'} ? 'active' : ''">
+            <i data-lucide="user-plus" aria-hidden="true"></i>
+            <span th:text="#{account.add.title}">Add account</span>
         </a>
         <form th:action="@{/logout}" method="post">
             <button class="nav-sheet-item" type="submit">

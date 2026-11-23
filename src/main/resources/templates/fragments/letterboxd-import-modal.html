@@ -21,10 +21,13 @@
                 <i data-lucide="alert-triangle"></i>
                 <span th:text="#{import.letterboxd.warning}">Duplicates and titles not found in TMDB will be ignored.</span>
             </p>
+            <p class="help-text" th:text="#{import.letterboxd.limits}">Up to 10,000 rated titles and 2 MB per file.</p>
 
             <div class="form-group">
                 <div class="file-upload">
-                    <input type="file" id="file" name="file" accept=".csv" required />
+                    <!--/* data-max-bytes = LetterboxdImportLimits.MAX_FILE_BYTES (2 MB) */-->
+                    <input type="file" id="file" name="file" accept=".csv" required
+                           data-max-bytes="2097152" th:data-too-large="#{error.import.too.large}" />
                     <label for="file" class="file-upload-label">
                         <i data-lucide="upload"></i>
                         <span id="file-upload-text" th:text="#{import.letterboxd.description}">Sube tu exportación CSV de Letterboxd para importar tus valoraciones</span>

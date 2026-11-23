@@ -3,6 +3,7 @@ package org.ratelog.feed.community
 import org.ratelog.Username
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.feed.FeedItem
+import org.ratelog.system.PageLimits
 import org.ratelog.toDateString
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
@@ -38,9 +39,10 @@ class CommunityController(
     @GetMapping("/community")
     fun communityPage(
         @CurrentUser user: User,
-        @RequestParam(value = "limit", defaultValue = "10") limit: Int,
+        @RequestParam(value = "limit", defaultValue = "10") requestedLimit: Int,
         model: Model
     ): String {
+        val limit = PageLimits.clamp(requestedLimit)
         FeedQuery(user.id!!, limit, user.metadataLang).let(communityHandler::handle)
             .fold(
                 { },

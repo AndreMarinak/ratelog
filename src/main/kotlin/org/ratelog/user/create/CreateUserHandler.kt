@@ -30,8 +30,12 @@ class CreateUserHandler(
 ) {
     @Transactional
     fun handle(command: CreateUserCommand): Either<CreateUserHandlerError, Unit> = either {
-        ensure(command.currentUser.role.isAdminLike) { CreateUserHandlerError.Forbidden }
+        // Fork: managers may add accounts too, but only plain USER accounts (no way to hand out more rights).
+        ensure(command.currentUser.role.canCreateAccounts) { CreateUserHandlerError.Forbidden }
         ensure(command.role != Role.SUPERADMIN) { CreateUserHandlerError.CannotPromoteToSuperadmin }
+        if (command.currentUser.role == Role.MANAGER) {
+            ensure(command.role == Role.USER) { CreateUserHandlerError.ManagerCanOnlyCreateUsers }
+        }
         ensure(!(command.currentUser.role == Role.ADMIN && command.role == Role.ADMIN)) {
             CreateUserHandlerError.CannotCreateAdmin
         }

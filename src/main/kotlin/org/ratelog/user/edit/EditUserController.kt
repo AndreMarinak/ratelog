@@ -6,6 +6,7 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import org.ratelog.Email
 import org.ratelog.Password
+import org.ratelog.passwordErrorKey
 import org.ratelog.Role
 import org.ratelog.Username
 import org.ratelog.annotations.CurrentUser
@@ -13,7 +14,6 @@ import org.ratelog.user.AppUserDetails
 import org.ratelog.user.User
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.PathVariable
@@ -134,8 +134,8 @@ class EditUserController(
         }
 
         val parsedNewPassword = newPassword?.trim()?.takeIf { it.isNotEmpty() }?.let {
-            Password.parse(it).getOrElse {
-                raise("edit.error.invalid.new.password")
+            Password.parse(it).getOrElse { error ->
+                raise(passwordErrorKey(error, "edit.error.invalid.new.password"))
             }
         }
 
@@ -157,18 +157,7 @@ class EditUserController(
     private fun refreshCurrentUserDetails(updated: User) {
         val auth = SecurityContextHolder.getContext().authentication
         val currentDetails = auth?.principal as? AppUserDetails ?: return
-        val authorities: Collection<GrantedAuthority> = when (updated.role) {
-            Role.SUPERADMIN -> listOf(
-                SimpleGrantedAuthority(Role.USER.authority),
-                SimpleGrantedAuthority(Role.ADMIN.authority),
-                SimpleGrantedAuthority(Role.SUPERADMIN.authority),
-            )
-            Role.ADMIN -> listOf(
-                SimpleGrantedAuthority(Role.USER.authority),
-                SimpleGrantedAuthority(Role.ADMIN.authority),
-            )
-            Role.USER -> listOf(SimpleGrantedAuthority(Role.USER.authority))
-        }
+        val authorities: Collection<GrantedAuthority> = AppUserDetails.from(updated).authorities
         val newAuth = UsernamePasswordAuthenticationToken(
             AppUserDetails(
                 id = currentDetails.id,

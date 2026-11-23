@@ -1,6 +1,7 @@
 package org.ratelog.movie.top
 
 import org.ratelog.annotations.CurrentUser
+import org.ratelog.system.PageLimits
 import org.ratelog.movie.premieres.MoviePremieresHandler
 import org.ratelog.movie.premieres.MoviePremieresQuery
 import org.ratelog.tag.Tag
@@ -34,11 +35,12 @@ class TopMovieController(
         @CurrentUser user: User,
         @RequestParam("category", required = false) genreId: String?,
         @RequestParam("ratingCategory", required = false) ratingCategory: String?,
-        @RequestParam("limit", required = false, defaultValue = "10") limit: Int,
+        @RequestParam("limit", required = false, defaultValue = "10") requestedLimit: Int,
         @RequestParam("name", required = false) name: String?,
         @RequestParam("tag", required = false) tagId: Long?,
         model: Model
     ): String {
+        val limit = PageLimits.clamp(requestedLimit)
         val tops = TopMovie(
             userId = user.id!!,
             genreId = genreId,

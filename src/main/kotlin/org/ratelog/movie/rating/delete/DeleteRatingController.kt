@@ -3,6 +3,7 @@ package org.ratelog.movie.rating.delete
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.movie.Movie
 import org.ratelog.user.User
+import org.ratelog.watchlist.seen.BackPath
 import org.springframework.stereotype.Controller
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.PathVariable
@@ -28,11 +29,9 @@ class DeleteRatingController(
             userId = user.id!!,
         ).let(handler::handle)
 
-        val referer = request.getHeader("Referer")
-        val redirectTarget = when {
-            !referer.isNullOrBlank() && referer.contains("/movie/") -> "redirect:$referer"
-            else -> "redirect:/movies"
-        }
+        // Fork: back to the title page it was deleted from (same-site path only), else the ratings list.
+        val back = BackPath.local(request.getHeader("Referer"), keepFragment = false)
+        val redirectTarget = "redirect:" + (back?.takeIf { it.startsWith("/movie/") } ?: "/movies")
 
         return result
             .mapLeft(::mapError)

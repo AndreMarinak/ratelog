@@ -1,6 +1,7 @@
 package org.ratelog.tvshow.top
 
 import org.ratelog.annotations.CurrentUser
+import org.ratelog.system.PageLimits
 import org.ratelog.tag.Tag
 import org.ratelog.tag.TagRepository
 import org.ratelog.tag.toView
@@ -34,11 +35,12 @@ class TopTvShowController(
         @CurrentUser user: User,
         @RequestParam("category", required = false) genreId: String?,
         @RequestParam("ratingCategory", required = false) ratingCategory: String?,
-        @RequestParam("limit", required = false, defaultValue = "10") limit: Int,
+        @RequestParam("limit", required = false, defaultValue = "10") requestedLimit: Int,
         @RequestParam("name", required = false) name: String?,
         @RequestParam("tag", required = false) tagId: Long?,
         model: Model
     ): String {
+        val limit = PageLimits.clamp(requestedLimit)
         val tops = TopTvShow(
             userId = user.id!!,
             genreId = genreId,

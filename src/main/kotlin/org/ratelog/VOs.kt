@@ -150,9 +150,20 @@ data class Email(val value: String) {
 
 data class Password(val value: String) {
     companion object {
+        /** Fork: rules for new and changed passwords only. Signing in (and the current-password check) never parses. */
+        const val MIN_LENGTH = 8
+        /** BCrypt ignores (and Spring Security rejects) anything past 72 bytes. */
+        const val MAX_BYTES = 72
+
         fun parse(value: String): Either<ParseError, Password> = either {
             if (value.isBlank()) {
                 raise(ParseError.InvalidPassword)
+            }
+            if (value.length < MIN_LENGTH) {
+                raise(ParseError.PasswordTooShort)
+            }
+            if (value.toByteArray(Charsets.UTF_8).size > MAX_BYTES) {
+                raise(ParseError.PasswordTooLong)
             }
             Password(value)
         }
@@ -176,11 +187,15 @@ enum class Lang {
 }
 
 enum class Role {
-    USER, ADMIN, SUPERADMIN;
+    /** Fork: MANAGER is a USER who can also add (plain USER) accounts; nothing else admin-like. Requested 2026-11-23. */
+    USER, MANAGER, ADMIN, SUPERADMIN;
 
     val authority: String get() = "ROLE_$name"
 
     val isAdminLike: Boolean get() = this == ADMIN || this == SUPERADMIN
+
+    /** Fork: may add accounts (a manager only plain USER accounts, see CreateUserHandler). */
+    val canCreateAccounts: Boolean get() = this == MANAGER || isAdminLike
 
     companion object {
         fun parse(value: String): Either<ParseError, Role> = either {
@@ -250,10 +265,19 @@ data class ListName(val value: String) {
     }
 }
 
+/** Fork: message key for a rejected new password (length rules get their own message). */
+fun passwordErrorKey(error: ParseError, fallback: String): String = when (error) {
+    ParseError.PasswordTooShort -> "security.password.too.short"
+    ParseError.PasswordTooLong -> "security.password.too.long"
+    else -> fallback
+}
+
 sealed interface ParseError {
     data object InvalidUsername : ParseError
     data object InvalidEmail : ParseError
     data object InvalidPassword : ParseError
+    data object PasswordTooShort : ParseError
+    data object PasswordTooLong : ParseError
     data object InvalidListName : ParseError
     data object InvalidRole : ParseError
     data object InvalidConfigKey : ParseError

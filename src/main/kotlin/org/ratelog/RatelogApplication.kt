@@ -39,11 +39,11 @@ class WebConfig : WebMvcConfigurer {
     }
 
     override fun addCorsMappings(registry: CorsRegistry) {
+        // Fork: cross-origin requests never carry the browser's cookies (no allowCredentials); API calls send a token.
         registry.addMapping("/**")
             .allowedOriginPatterns("*")
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
             .allowedHeaders("*")
-            .allowCredentials(true)
             .maxAge(3600)
     }
 

@@ -6,7 +6,7 @@ Base: [golmenero/ratelog](https://github.com/golmenero/ratelog). Conventions: [C
 Reserved migration numbers (so parallel work never collides): API tokens `V1000`, quick rating `V1010–1019`,
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
-lists (official lists and later list features) `V1120–1129`.
+lists (official lists and later list features) `V1120–1129`, accounts and roles `V1130–1139`.
 
 ## Build now (in suggested order)
 
@@ -44,6 +44,14 @@ lists (official lists and later list features) `V1120–1129`.
   Watching · Seen · Dropped, with Seen / Watching / Remove (Undo) on every tile. Lists get "Mark what you've seen" tick-off mode.
   "Upcoming · Dec 18" badges on tiles and title pages. Rating a show's season makes it Watching, Watched once every aired season
   is rated. All in place, no reloads. No migration (data model and API unchanged).
+- [x] **17. Manager role** (requested 2026-11-23): a user who can also add plain user accounts (`/accounts/new`, "Add account" in
+  the header and the phone menu). Admins give or take the role in the admin page. No migration needed (`V1130–1139` reserved for
+  accounts and roles). `GET /api/v1/me` reports `MANAGER`.
+- [x] **Security hardening** (2026-11-23): role, deletion and password changes apply to open sessions; sign-in throttling;
+  8-character minimum for new passwords; request rate limit (`429`); Letterboxd import limits (2 MB, 10,000 rows, background);
+  Secure / SameSite cookies, trusted proxy headers only, CSP and other browser headers; masked TMDB key in the admin page;
+  same-site-only redirects; no secrets in logs; non-root container; patched Tomcat, pgjdbc, Jackson, Logback, Thymeleaf,
+  Hibernate Validator. Details in [design-decisions.md](design-decisions.md#security-hardening-2026-11-23).
 
 ## Fixes and housekeeping done
 
@@ -59,6 +67,13 @@ Gap research against Letterboxd, the TV trackers and the discovery apps (ranked)
 ## Later (todo)
 
 - [ ] Release calendar (upcoming episodes and releases for followed titles, plus an iCal feed)
+- [ ] **Spring Boot 4 migration** (Spring Framework 7, Spring Security 7, Jackson 3): Boot 3.5's free support ended 2026-06-30,
+  and newer Spring fixes ship only in Boot 4. Target 4.1.x or 4.2.x (4.0's free support ends 2026-12-31). Then drop the
+  version overrides in `pom.xml` (design-decisions.md, "Pinned dependency versions").
+- [ ] **Strict CSP:** move the inline `<script>` blocks and `on*=` handlers into the static `.js` files, then drop
+  `'unsafe-inline'` from `script-src` (`security/SecurityHeaders.kt`).
+- [ ] Dependabot or Renovate for Maven and the Docker images, so patch releases arrive as pull requests.
+- [ ] Send the TMDB key as a header (v4 "API Read Access Token" as `Authorization: Bearer`) instead of in the URL.
 - [ ] Per-episode progress for TV
 
 ## Out of scope

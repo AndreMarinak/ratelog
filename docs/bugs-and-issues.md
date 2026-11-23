@@ -7,7 +7,6 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Discover's "Hide titles I've seen" still uses the old TV rule:** it hides a show with any rated season (`LibraryMark.seen` = rated or Watched), while tiles, title pages and list progress now treat a show that is Watching / Want to watch / Dropped as not seen even with rated seasons. Left alone because Discover was being changed on master at the same time; fix by passing the media type into `LibraryMark.seen`.
 - **Old bookmark handlers are unused after the Seen merge:** the `.home-quick` fetch handler in `home.js` and the bookmark code in `discover.js` (`form.home-quick`) and `browse.js` (`form.browse-bookmark`), plus their CSS. Home, Discover rows and the grid now render the shared quick-action stack (`fragments/tile-actions.html`), saved in place by `tile-actions.js` with the same `type:tmdbId` key. Safe to delete; `home.js`'s scroll restore is still used by `tile-actions.js`'s fallback. Left in place because Discover was being edited on master.
 - **Aired seasons are approximate for shows with three or more unaired seasons** (`AiredSeasons` only sees the last season's date and the next future date). Needs per-season air dates stored, or a TMDB call, to be exact.
-- **Upstream follow controllers redirect to the raw `Referer`** (`/movie/follow`, `/tvshow/follow`). CSRF protects them, but `BackPath` would be safer; left as upstream code.
 - **Owner-only modals on the profile page use `th:if` + `th:replace` on one element** (upstream, `profile.html`: Letterboxd import and create-list modals). `th:replace` runs before `th:if`, so they render on other people's profiles too. Harmless (hidden, and the server checks ownership), but the same pattern made the list page 500 (see Fixed). Fix: wrap in `<th:block th:if>`.
 - **The API can't read progress on other people's public lists:** `GET /api/v1/lists/{id}` only serves your own lists and official lists (other lists are 404 by design), while the web page shows your progress on any public list.
 - **Unchecking "Public" on an official list does nothing, silently** (upstream's edit modal): official lists stay public, so the save keeps it public without a message. Un-mark it first. Idea: disable the checkbox with a hint while the list is official (an upstream template edit).
@@ -22,6 +21,24 @@ Problems found while building and running the fork: what happened, the cause, an
 - **`delete-tvshow-rating-modal.html` declares a top-level `const modal`** in a plain `<script>`. Any other top-level `const modal` on the TV page would throw a redeclaration error; wrap it in an IIFE if that page gets more inline scripts.
 
 ## Fixed
+
+- **Letterboxd import messages never showed** (upstream, found 2026-11-23): the import redirected to `/profile`, which redirects
+  again to `/profile/{id}`, and flash messages only survive one redirect, so "Could not parse the CSV file" was never seen. The
+  import now redirects straight to `/profile/{id}`.
+- **Kotlin default values on a `@Configuration` constructor broke startup** (found 2026-11-23 by the new security-chain test):
+  `SecurityConfig(..., @Value(...) val x: Boolean = false)` makes Kotlin add a second constructor; Spring then could not pick
+  the primary constructor of the CGLIB subclass ("No default constructor found"). The defaults live in the `@Value`
+  expressions instead.
+- **Cross-origin requests were allowed with credentials** (upstream `WebConfig`: any origin plus `allowCredentials(true)`).
+  The mapping no longer allows credentials, and the session and remember-me cookies are `SameSite=Lax` (2026-11-23).
+- **Upstream follow buttons, rating deletes and `/status` redirected to the raw `Referer`.** They now use `BackPath`, so only a
+  same-site path is used (security hardening, 2026-11-23).
+- **`limit` query parameters reached the database unchecked** (`/community`, `/profile/{id}`, `/movies`, `/tvshows`): a
+  negative value returned a 500. Clamped to 1-1000 (2026-11-23).
+- **A superadmin could change their own password without the current one**, and the profile form hid the field for them.
+  Changing your own account now always asks for it (2026-11-23).
+- **Errors in `GlobalExceptionHandler` left no trace** (upstream): it turned every exception into a 500 without logging.
+  It now logs the method, path and a redacted stack trace (2026-11-23).
 
 - **Unknown URLs answered with a JSON 500** (upstream, found 2026-11-23 while checking the trailer change): logged in, `/no-such-page`,
   `/movie/abc` or a missing `.css` returned `{"message":"Internal server error"}`. Upstream's `GlobalExceptionHandler` catches every
