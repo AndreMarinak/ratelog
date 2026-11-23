@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Fork: TMDB facts, external scores and the trailer on movie / TV detail pages.
+  `titleInfo` (org.ratelog.extras.web.TitleInfoView) is added to the model by TitleInfoModelInterceptor;
+  it is missing when nothing could be loaded, and then this renders nothing.
+-->
+<section th:fragment="titleInfo(info)" th:if="${info != null}" class="title-info" th:aria-label="#{title.info.aria}">
+    <link rel="stylesheet" href="/title-info.css">
+
+    <div class="title-info-row" th:if="${info.hasFacts}">
+        <span th:if="${info.tmdbScore != null}" class="score-badge tmdb"
+              th:title="${info.tmdbVotes != null} ? #{title.info.votes(${info.tmdbVotes})} : null">
+            <span class="score-source">TMDB</span>
+            <span class="score-value"><i data-lucide="star"></i><span th:text="${info.tmdbScore}">7.9</span></span>
+            <span th:if="${info.tmdbVotes != null}" class="score-votes" th:text="|(${info.tmdbVotes})|">(25K)</span>
+        </span>
+        <span th:if="${info.runtimeMinutes != null}" class="info-fact">
+            <i data-lucide="clock"></i>
+            <span th:text="${info.isMovie} ? #{title.info.runtime(${info.runtimeMinutes})} : #{title.info.episode.runtime(${info.runtimeMinutes})}">136 min</span>
+        </span>
+        <span th:if="${info.numberOfSeasons != null}" class="info-fact">
+            <i data-lucide="layers"></i>
+            <span th:text="#{title.info.seasons(${info.numberOfSeasons})}">3 seasons</span>
+        </span>
+    </div>
+
+    <div class="title-info-row" th:if="${info.hasScores or info.imdbUrl != null}">
+        <a th:if="${info.imdbUrl != null}" class="score-badge imdb" th:href="${info.imdbUrl}" target="_blank" rel="noopener noreferrer"
+           th:title="${info.imdbVotes != null} ? #{title.info.votes(${info.imdbVotes})} : null">
+            <span class="score-source">IMDb</span>
+            <span th:if="${info.imdbRating != null}" class="score-value"><i data-lucide="star"></i><span th:text="${info.imdbRating}">8.7</span></span>
+            <span th:if="${info.imdbRating != null and info.imdbVotes != null}" class="score-votes" th:text="|(${info.imdbVotes})|">(2.1M)</span>
+        </a>
+        <a th:if="${info.hasRt}" class="score-badge rt" th:href="${info.rtSearchUrl}" target="_blank" rel="noopener noreferrer">
+            <span class="score-source" th:text="#{title.info.rt}">Rotten Tomatoes®</span>
+            <span th:if="${info.rtCritics != null}">
+                <span class="score-value" th:text="|${info.rtCritics}%|">83%</span>
+                <span class="score-votes" th:text="#{title.info.rt.critics}">critics</span>
+            </span>
+            <span th:if="${info.rtAudience != null}">
+                <span class="score-value" th:text="|${info.rtAudience}%|">85%</span>
+                <span class="score-votes" th:text="#{title.info.rt.audience}">audience</span>
+            </span>
+        </a>
+        <span th:if="${info.metacritic != null}" class="score-badge metacritic">
+            <span class="score-source">Metacritic</span>
+            <span class="metascore" th:classappend="${info.metacriticTone}" th:text="${info.metacritic}">73</span>
+        </span>
+        <a th:if="${info.letterboxd != null}" class="score-badge letterboxd" th:href="${info.letterboxdUrl}" target="_blank" rel="noopener noreferrer">
+            <span class="score-source">Letterboxd</span>
+            <span class="score-value"><i data-lucide="star"></i><span th:text="${info.letterboxd}">4.2</span></span>
+        </a>
+    </div>
+    <p th:if="${info.hasScores}" class="score-attribution" th:text="#{title.info.scores.attribution}">Scores via MDBList</p>
+
+    <div th:if="${info.trailerKey != null}" class="trailer-frame">
+        <button type="button" class="trailer-launch"
+                th:data-embed-url="${info.trailerEmbedUrl}"
+                th:data-title="#{title.info.trailer}"
+                th:aria-label="#{title.info.trailer.play}">
+            <img th:src="${info.trailerThumbnailUrl}" alt="" loading="lazy">
+            <span class="trailer-play"><i data-lucide="play"></i></span>
+            <span class="trailer-label" th:text="#{title.info.trailer}">Trailer</span>
+        </button>
+        <noscript>
+            <a class="trailer-fallback" th:href="${info.trailerWatchUrl}" target="_blank" rel="noopener noreferrer" th:text="#{title.info.trailer.watch}">Watch on YouTube</a>
+        </noscript>
+    </div>
+    <script src="/title-info.js" defer></script>
+</section>
+</html>

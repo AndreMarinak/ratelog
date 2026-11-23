@@ -54,6 +54,37 @@ Items are appended in the order sent. At most **100 items per request**; at most
 
 **Candidate**: `{tmdbId, type, title, originalTitle, year, tmdbVoteAverage, overview}`.
 
+## Title details (scores and trailers)
+
+`GET /api/v1/titles/{type}/{tmdbId}` (`type` is `movie` or `tv`, same spellings as above). Like opening the title's page,
+it saves the title locally if needed. Returns the same extras the movie / TV pages show, plus your own rating:
+
+```json
+{
+  "tmdbId": 603, "type": "movie", "title": "The Matrix", "year": 1999,
+  "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/603",
+  "tmdbVoteAverage": 8.2, "tmdbVoteCount": 26543,
+  "runtimeMinutes": 136, "episodeRuntimeMinutes": null, "numberOfSeasons": null,
+  "trailerUrl": "https://www.youtube.com/watch?v=...",
+  "imdbId": "tt0133093", "imdbUrl": "https://www.imdb.com/title/tt0133093/",
+  "externalScores": {
+    "imdbRating": 8.7, "imdbVotes": 2134567,
+    "rottenTomatoesCritics": 83, "rottenTomatoesAudience": 85,
+    "metacritic": 73, "letterboxd": 4.2,
+    "fetchedAt": "2026-11-22T12:00:00Z", "source": "MDBList"
+  },
+  "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null}
+}
+```
+
+- `runtimeMinutes` is set for movies, `episodeRuntimeMinutes` + `numberOfSeasons` for shows.
+- `externalScores` is `null` when the server has no `MDBLIST_API_KEY`, MDBList has nothing for the title, or it is
+  rate limited; any single score inside it can be `null` too. Rotten Tomatoes and Metacritic are 0-100, IMDb 0-10, Letterboxd 0-5.
+- `userRating` is `null` when you haven't rated the title. For shows, `score` is the average of your season ratings and
+  `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`.
+- Extras are cached (TMDB data weekly; scores daily for titles out under 30 days, weekly under a year, monthly after),
+  so values can lag the source a little. Errors: `invalid_type`, `invalid_parameter`, `not_found`, `tmdb_not_configured`, `tmdb_error`.
+
 ## Errors
 
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `not_found` (404, also for other users' lists),

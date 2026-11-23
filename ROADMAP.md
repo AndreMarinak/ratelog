@@ -17,7 +17,7 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [ ] **6. CSV export and more imports**: full export, plus imports from IMDb (ratings/watchlist CSV), Trakt, and a generic CSV format (title, year, tmdb_id, rating, status, date, tags, list).
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
-- [ ] **9. External scores and trailers on title pages**: TMDB score and trailers from TMDB; IMDb / Rotten Tomatoes scores (source being researched).
+- [x] **9. External scores and trailers on title pages**: TMDB score, runtime and click-to-load trailers from TMDB; IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores via MDBList (optional `MDBLIST_API_KEY`), cached in `title_extras`. Also `GET /api/v1/titles/{type}/{tmdbId}`.
 - [ ] **10. Home dashboard**: rows for Watching, Up next (watchlist), Recently watched, Recently added lists.
 
 ## Later (todo)

@@ -54,6 +54,8 @@
             </a>
         </div>
 
+        <div th:replace="~{fragments/title-info :: titleInfo(${titleInfo})}"></div>
+
         <div class="separator"></div>
 
         <div th:if="${movie != null && movie.hasRating}" class="card rating-detail-card">

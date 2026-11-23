@@ -19,6 +19,7 @@ In the Railway project:
 | `POSTGRES_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
 | `ADMIN_PASSWORD` | a password of 12+ characters; replaces the seeded `admin`/`admin` login on first start |
 | `TMDB_API_KEY` | TMDB v3 "API Key" (only read on first start; later changes go in Admin > Configuration) |
+| `MDBLIST_API_KEY` | optional: [MDBList](https://mdblist.com/preferences/) API key for IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores on title pages (free tier: 1,000 requests/day; scores are cached). Without it the scores are hidden. |
 | `JAVA_TOOL_OPTIONS` | optional: `-XX:MaxRAMPercentage=75` |
 
 Don't set `PORT`; Railway provides it and the app listens on it.
