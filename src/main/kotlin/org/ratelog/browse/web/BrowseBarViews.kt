@@ -40,7 +40,7 @@ class BrowseBarViews(
     private val client: TmdbBrowseClient,
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    /** For includes outside `/browse`: no filters, the current user's region, no sort menu. [type] is `movie` (default) or `tv`. */
+    /** For includes outside `/discover`: no filters, the current user's region, no sort menu. [type] is `movie` (default) or `tv`. */
     fun defaults(type: String?): BrowseBarView {
         val lang = UserDetailsService.getCurrentUser()?.metadataLang ?: Lang.en
         val mediaType = if (type?.trim()?.lowercase() in setOf("tv", "tvshow", "show", "series")) MediaType.tvshow else MediaType.movie
@@ -83,7 +83,8 @@ class BrowseBarViews(
             ),
             sortMenu = if (showSort) sortMenu(filters, m) else null,
             chips = chips(filters, providers, m, locale),
-            clearHref = BrowseFilters(type = filters.type).href(),
+            // "Hide seen" is a view setting, not a filter: clearing filters keeps it.
+            clearHref = BrowseFilters(type = filters.type, hideSeen = filters.hideSeen).href(),
         )
     }
 
@@ -102,6 +103,7 @@ class BrowseBarViews(
                 title = t.title,
                 year = t.year,
                 posterUrl = t.posterPath?.let { "https://image.tmdb.org/t/p/w342$it" },
+                posterUrl2x = t.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
                 initial = t.title.trim().take(1).uppercase(),
                 tmdbScore = t.voteAverage?.let(::oneDecimal),
                 userScore = tile.mark?.score?.let(::oneDecimal),
@@ -267,8 +269,10 @@ class BrowseBarViews(
             add(
                 BarSection(
                     heading = m("browse.other.library"),
-                    links = listOf(
-                        BarLink(m("browse.hide.rated"), f.copy(hideRated = !f.hideRated).href(), active = f.hideRated),
+                    links = listOfNotNull(
+                        // While seen titles are hidden (the default), rated ones already are: only offer it to switch it off.
+                        BarLink(m("browse.hide.rated"), f.copy(hideRated = !f.hideRated).href(), active = f.hideRated)
+                            .takeIf { !f.hideSeen || f.hideRated },
                         BarLink(m("browse.hide.watchlist"), f.copy(hideWatchlist = !f.hideWatchlist).href(), active = f.hideWatchlist),
                     ),
                     layout = "toggles",

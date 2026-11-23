@@ -12,6 +12,9 @@ data class LibraryMark(
     val status: WatchStatus?,
 ) {
     val onWatchlist: Boolean get() = status == WatchStatus.WANT_TO_WATCH
+
+    /** "Seen" for Discover's "Hide titles I've seen": rated (any season, for TV) or marked Watched. */
+    val seen: Boolean get() = rated || status == WatchStatus.WATCHED
 }
 
 interface BrowseLibraryRepository {

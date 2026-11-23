@@ -154,8 +154,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  flex: 0 1 260px;
+  /* Lines wrap on the basis, not the minimum: start small so a menu showing its value ("Genre · Horror") doesn't push
+     the field onto its own line, then take the free space first, up to 260px. */
+  flex: 10 1 180px;
   min-width: 180px;
+  max-width: 260px;
   margin-left: auto;
 
   svg {
@@ -436,6 +439,7 @@
   .bb-find {
     flex: 1 1 100%;
     order: 3;
+    max-width: none;
     margin-left: 0;
   }
 

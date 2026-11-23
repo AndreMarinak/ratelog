@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.ratelog.MediaType
+import org.ratelog.browse.BrowseParamParser
+import org.ratelog.browse.BrowseParams
+import org.ratelog.browse.BrowseYear
 import org.ratelog.customlist.CustomList
 import org.ratelog.customlist.ListSummary
 import org.ratelog.home.HomeTitle
@@ -94,7 +97,7 @@ class HomeDashboardViewTest {
     }
 
     @Test
-    fun `more links point at the watchlist, lists and browse pages`() {
+    fun `more links point at the watchlist, lists and discover pages`() {
         val rows = view(
             HomeRow(HomeRowKind.CONTINUE_WATCHING, titles = listOf(title(1))),
             HomeRow(HomeRowKind.TRENDING_MOVIES, titles = listOf(title(2))),
@@ -103,10 +106,26 @@ class HomeDashboardViewTest {
 
         assertEquals("/watchlist?status=watching", rows[0].moreHref)
         assertEquals("home.row.see.all", rows[0].moreKey)
-        assertEquals("/browse?type=movie&popular=week", rows[1].moreHref)
+        assertEquals("/discover?type=movie&popular=week", rows[1].moreHref)
         assertEquals("home.row.more", rows[1].moreKey)
-        assertEquals("/browse?type=movie&decade=upcoming", rows[2].moreHref)
+        assertEquals("/discover?type=movie&year=upcoming", rows[2].moreHref)
         assertEquals("row-coming-soon", rows[2].id)
+    }
+
+    @Test
+    fun `every TMDB row's More link is a Discover grid the page fully understands`() {
+        HomeRowKind.entries.filter { !it.isPersonal }.forEach { kind ->
+            val href = kind.moreHref
+            assertTrue(href.startsWith("/discover?"), href)
+            val query = href.substringAfter('?').split('&').associate { it.substringBefore('=') to it.substringAfter('=') }
+            val parsed = BrowseParamParser.parse(
+                BrowseParams(type = query["type"], year = query["year"], popular = query["popular"], sort = query["sort"], decade = query["decade"]),
+                today,
+            )
+            assertEquals(emptyList<Any>(), parsed.invalid, href)
+            assertFalse(parsed.filters.isUnfiltered, "$href must open a grid, not the landing")
+        }
+        assertEquals(BrowseYear.Upcoming, BrowseParamParser.parse(BrowseParams(year = "upcoming"), today).filters.year)
     }
 
     @Test

@@ -1,16 +1,5 @@
-/* Fork: the /browse page (templates/browse.html): heading, poster grid and "Load more".
-   The filter bar has its own stylesheet, browse-bar.css. */
-
-.browse-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 16px;
-
-  h1 {
-    margin-bottom: 4px;
-  }
-}
+/* Fork: the Discover page's poster grid, "Load more" and toast (templates/discover.html).
+   The heading and category rows are in discover.css; the filter bar has its own stylesheet, browse-bar.css. */
 
 .browse-subtitle {
   color: var(--text-soft);

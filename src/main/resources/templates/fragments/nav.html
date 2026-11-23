@@ -15,7 +15,7 @@
     <nav class="nav-links" th:if="${signedIn}" th:aria-label="#{nav.menu.main}">
         <a class="nav-link" href="/movies" th:text="#{nav.movies}" th:classappend="${active == 'movies'} ? 'active' : ''">Movies</a>
         <a class="nav-link" href="/tvshows" th:text="#{nav.tvshows}" th:classappend="${active == 'tvshows'} ? 'active' : ''">TV Shows</a>
-        <a class="nav-link" href="/browse" th:text="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">Browse</a>
+        <a class="nav-link" href="/discover" th:text="#{nav.discover}" th:classappend="${active == 'browse'} ? 'active' : ''">Discover</a>
         <a class="nav-link" href="/watchlist" th:text="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">Watchlist</a>
         <a class="nav-link" href="/lists" th:text="#{nav.lists}" th:classappend="${active == 'lists'} ? 'active' : ''">Lists</a>
         <a class="nav-link" href="/tags" th:text="#{nav.tags}" th:classappend="${active == 'tags'} ? 'active' : ''">Tags</a>
@@ -52,7 +52,7 @@
         </form>
     </div>
 
-    <!-- Mobile: opens the sheet below (Browse, Tags, Community, profile, admin, logout). -->
+    <!-- Mobile: opens the sheet below (Discover, Tags, Community, profile, admin, logout). -->
     <button class="nav-menu-btn" id="btnNavSettings" type="button" th:if="${signedIn}"
             th:classappend="${inMenu} ? 'active' : ''"
             th:aria-label="#{nav.menu}" aria-expanded="false" aria-controls="navSettingsSheet">
@@ -83,9 +83,9 @@
         <button class="nav-sheet-close" id="btnNavSettingsClose" type="button" th:aria-label="#{modal.close}">
             <i data-lucide="x" aria-hidden="true"></i>
         </button>
-        <a class="nav-sheet-item" href="/browse" th:classappend="${active == 'browse'} ? 'active' : ''">
+        <a class="nav-sheet-item" href="/discover" th:classappend="${active == 'browse'} ? 'active' : ''">
             <i data-lucide="compass" aria-hidden="true"></i>
-            <span th:text="#{nav.browse}">Browse</span>
+            <span th:text="#{nav.discover}">Discover</span>
         </a>
         <a class="nav-sheet-item" href="/tags" th:classappend="${active == 'tags'} ? 'active' : ''">
             <i data-lucide="tags" aria-hidden="true"></i>

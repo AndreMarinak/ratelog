@@ -25,6 +25,9 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [ ] **12. List progress**: on list pages show your status per poster, "You've watched 9 of 25", and "add the unwatched ones to my watchlist".
 - [ ] **13. Poster hover card**: hovering (or long-pressing on phones) a poster anywhere shows a small card with the year, basic
   scores (TMDB / IMDb, your rating) and quick actions: add to watchlist, add to a list. Requested 2026-11-23.
+- [x] **14. Discover** (was Browse): `/discover` with category rows (Popular now + genres, movies and TV) when no filter is set,
+  the poster grid otherwise, and a "Hide titles I've seen" switch that is on by default. `/browse` redirects; API alias `/api/v1/discover`.
+  No migration needed (`V1100–1109` stay reserved for browse/discover). Requested 2026-11-23.
 
 ## Fixes and housekeeping done
 

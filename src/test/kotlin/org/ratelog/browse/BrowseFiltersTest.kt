@@ -1,7 +1,9 @@
 package org.ratelog.browse
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.ratelog.Genre
 import org.ratelog.MediaType
@@ -28,7 +30,7 @@ class BrowseFiltersTest {
         val href = filters.href(page = 2)
 
         assertEquals(
-            "/browse?type=movie&decade=2010s&year=2014&minRating=7.5&genre=science-fiction&provider=8&language=ko" +
+            "/discover?type=movie&decade=2010s&year=2014&minRating=7.5&genre=science-fiction&provider=8&language=ko" +
                 "&runtime=medium&sort=rating&hideRated=1&hideWatchlist=1&page=2",
             href,
         )
@@ -48,8 +50,42 @@ class BrowseFiltersTest {
 
     @Test
     fun `given page 1 or no filters then the URL stays short`() {
-        assertEquals("/browse?type=movie", BrowseFilters().href())
-        assertEquals("/browse?type=tv&popular=week", BrowseFilters(type = MediaType.tvshow, popular = BrowsePopular.WEEK).href(1))
+        assertEquals("/discover?type=movie", BrowseFilters().href())
+        assertEquals("/discover?type=tv&popular=week", BrowseFilters(type = MediaType.tvshow, popular = BrowsePopular.WEEK).href(1))
+    }
+
+    @Test
+    fun `given seen titles are shown then the URL says hideSeen=0 and it survives a round trip`() {
+        val showing = BrowseFilters(genre = Genre.HORROR, hideSeen = false)
+
+        val href = showing.href(page = 3)
+
+        assertEquals("/discover?type=movie&genre=horror&hideSeen=0&page=3", href)
+        val parsed = BrowseParamParser.parse(BrowseParams(genre = "horror", hideSeen = "0", page = "3"), LocalDate.parse("2026-11-22"))
+        assertEquals(showing, parsed.filters)
+        // Hiding is the default, so it never appears in a URL.
+        assertEquals("/discover?type=movie&genre=horror", showing.copy(hideSeen = true).href())
+        assertEquals(false, showing.withType(MediaType.tvshow).hideSeen)
+    }
+
+    @Test
+    fun `given only a type and the seen setting then the view is unfiltered, anything else is a filter`() {
+        assertTrue(BrowseFilters().isUnfiltered)
+        assertTrue(BrowseFilters(type = MediaType.tvshow, hideSeen = false).isUnfiltered)
+
+        listOf(
+            BrowseFilters(genre = Genre.HORROR),
+            BrowseFilters(popular = BrowsePopular.NOW),
+            BrowseFilters(sort = BrowseSort.RATING),
+            BrowseFilters(decade = BrowseDecade.Of(1990)),
+            BrowseFilters(year = BrowseYear.Upcoming),
+            BrowseFilters(minRating = 7.0),
+            BrowseFilters(provider = 8),
+            BrowseFilters(language = "ko"),
+            BrowseFilters(runtime = BrowseRuntime.SHORT),
+            BrowseFilters(hideRated = true),
+            BrowseFilters(hideWatchlist = true),
+        ).forEach { assertFalse(it.isUnfiltered, it.toString()) }
     }
 
     @Test

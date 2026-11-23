@@ -1,4 +1,4 @@
-// Fork: /browse enhancements. Without JS, "Load more" opens the next page and the bookmark buttons post normally.
+// Fork: Discover grid enhancements (templates/discover.html). Without JS, "Load more" opens the next page and the bookmark buttons post normally.
 // - Load more: fetches the next page's results fragment (?partial=1) and appends its tiles.
 // - Bookmark: posts /watchlist/toggle in the background and flips the button, keeping scroll and loaded pages.
 (() => {

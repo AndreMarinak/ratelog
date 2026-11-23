@@ -2,20 +2,20 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <!--
   Fork: the "Browse by" bar (Movies / TV, Year, Rating, Popular, Genre, Service, More, Sort) plus "Find a title".
-  Self-contained: brings its own /browse-bar.css and /browse-bar.js, and every option is a plain link to /browse.
+  Self-contained: brings its own /browse-bar.css and /browse-bar.js, and every option is a plain link to /discover.
 
   Include anywhere:      <div th:replace="~{fragments/browse-bar :: browseBar}"></div>
   Start on TV:           <div th:replace="~{fragments/browse-bar :: browseBar(browseType='tv')}"></div>
   With a filter state:   <div th:replace="~{fragments/browse-bar :: browseBar(browseBar=${view})}"></div>
 
-  `browseBar` is an org.ratelog.browse.web.BrowseBarView (the /browse page puts one in the model). Without it the
+  `browseBar` is an org.ratelog.browse.web.BrowseBarView (the /discover page puts one in the model). Without it the
   bar is built by @browseBarViews.defaults(browseType): no filters, the user's streaming region, no Sort menu.
 -->
 <body>
 <section th:fragment="browseBar" class="browse-bar"
          th:with="bar=${browseBar ?: @browseBarViews.defaults(browseType)}"
          th:attr="data-type=${bar.type}"
-         th:aria-label="#{browse.title}">
+         th:aria-label="#{browse.by}">
     <link rel="stylesheet" href="/browse-bar.css">
     <script src="/browse-bar.js" defer></script>
 

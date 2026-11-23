@@ -90,7 +90,7 @@ sealed interface BrowseYear {
 }
 
 /**
- * Everything the browse page / API filters by. The URL (see [toParams]) fully describes it, so a browse
+ * Everything the Discover page / browse API filters by. The URL (see [toParams]) fully describes it, so a
  * view can be shared or bookmarked. Combination rules are applied by [BrowseParamParser]:
  * a year wins over a decade it isn't in, `popular` wins over `sort`.
  */
@@ -111,11 +111,23 @@ data class BrowseFilters(
     val sort: BrowseSort? = null,
     val hideRated: Boolean = false,
     val hideWatchlist: Boolean = false,
+    /**
+     * Leave out titles the viewer has seen: rated, or marked Watched ([LibraryMark.seen]). On by default, like
+     * the Discover page's toggle; only `hideSeen=0` is written to URLs. The API turns it off unless asked
+     * (see [BrowseParamParser.parse]).
+     */
+    val hideSeen: Boolean = true,
 ) {
     val isMovie: Boolean get() = type == MediaType.movie
 
     /** True when the user's own library hides some TMDB results. */
-    val hidesLibrary: Boolean get() = hideRated || hideWatchlist
+    val hidesLibrary: Boolean get() = hideRated || hideWatchlist || hideSeen
+
+    /**
+     * No filter chosen: only the type and the "seen" choice, which are view settings. Discover shows its
+     * category rows for this state and the poster grid for anything else.
+     */
+    val isUnfiltered: Boolean get() = this == BrowseFilters(type = type, hideSeen = hideSeen)
 
     /** The decade the year menu should highlight: the explicit one, or the chosen year's. */
     val effectiveDecade: BrowseDecade?
@@ -161,15 +173,19 @@ data class BrowseFilters(
         sort?.let { add("sort" to it.param) }
         if (hideRated) add("hideRated" to "1")
         if (hideWatchlist) add("hideWatchlist" to "1")
+        if (!hideSeen) add("hideSeen" to "0")
     }
 
-    /** Link to `/browse` for this state. Page 1 is implied and left out. */
-    fun href(page: Int = 1): String {
-        val params = toParams() + if (page > 1) listOf("page" to page.toString()) else emptyList()
-        return "/browse?" + params.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, StandardCharsets.UTF_8)}" }
-    }
+    /** Link to `/discover` for this state. Page 1 is implied and left out. */
+    fun href(page: Int = 1): String = link(PATH, toParams() + if (page > 1) listOf("page" to page.toString()) else emptyList())
 
     companion object {
+        /** The Discover page (formerly `/browse`, which now redirects here). */
+        const val PATH = "/discover"
+
+        fun link(path: String, params: List<Pair<String, String>>): String =
+            path + "?" + params.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, StandardCharsets.UTF_8)}" }
+
         fun typeParam(type: MediaType) = when (type) {
             MediaType.movie -> "movie"
             MediaType.tvshow -> "tv"

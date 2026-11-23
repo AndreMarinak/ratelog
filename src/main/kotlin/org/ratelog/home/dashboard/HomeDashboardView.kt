@@ -75,18 +75,18 @@ private fun HomeRow.toView(locale: Locale, today: LocalDate): HomeRowView {
     )
 }
 
-/** "See all" for personal rows, "More" (the Browse page) for TMDB rows. */
+/** "See all" for personal rows, "More" (the Discover grid, which hides seen titles by default) for TMDB rows. */
 val HomeRowKind.moreHref: String
     get() = when (this) {
         HomeRowKind.CONTINUE_WATCHING -> "/watchlist?status=watching"
         HomeRowKind.UP_NEXT -> "/watchlist?status=want_to_watch"
         HomeRowKind.RECENTLY_RATED -> "/profile"
         HomeRowKind.YOUR_LISTS -> "/lists"
-        HomeRowKind.TRENDING_MOVIES -> "/browse?type=movie&popular=week"
-        HomeRowKind.TRENDING_TV -> "/browse?type=tv&popular=week"
-        HomeRowKind.IN_THEATERS -> "/browse?type=movie&sort=release_desc"
-        HomeRowKind.COMING_SOON -> "/browse?type=movie&decade=upcoming"
-        HomeRowKind.POPULAR_TV -> "/browse?type=tv&popular=now"
+        HomeRowKind.TRENDING_MOVIES -> "/discover?type=movie&popular=week"
+        HomeRowKind.TRENDING_TV -> "/discover?type=tv&popular=week"
+        HomeRowKind.IN_THEATERS -> "/discover?type=movie&sort=newest"
+        HomeRowKind.COMING_SOON -> "/discover?type=movie&year=upcoming"
+        HomeRowKind.POPULAR_TV -> "/discover?type=tv&popular=now"
     }
 
 fun HomeTitle.href(): String = when (mediaType) {

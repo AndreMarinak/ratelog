@@ -189,6 +189,22 @@ class BrowseParamParserTest {
     }
 
     @Test
+    fun `given hideSeen then the page hides seen titles unless it is off, and the API only when asked`() {
+        assertTrue(parse(BrowseParams()).filters.hideSeen, "Discover hides seen titles by default")
+        assertFalse(parse(BrowseParams(hideSeen = "0")).filters.hideSeen)
+        assertFalse(parse(BrowseParams(hideSeen = "false")).filters.hideSeen)
+        assertTrue(parse(BrowseParams(hideSeen = "1")).filters.hideSeen)
+        assertTrue(parse(BrowseParams(hideSeen = " ")).filters.hideSeen, "blank = missing")
+
+        assertFalse(BrowseParamParser.parse(BrowseParams(), today, hideSeenByDefault = false).filters.hideSeen)
+        assertTrue(BrowseParamParser.parse(BrowseParams(hideSeen = "true"), today, hideSeenByDefault = false).filters.hideSeen)
+
+        val bad = parse(BrowseParams(hideSeen = "sometimes"))
+        assertEquals(listOf("hideSeen"), bad.invalid.map { it.name })
+        assertTrue(bad.filters.hideSeen, "an unusable value falls back to the default")
+    }
+
+    @Test
     fun `given blank values then they count as missing`() {
         val parsed = parse(BrowseParams(decade = " ", genre = "", sort = "  "))
 

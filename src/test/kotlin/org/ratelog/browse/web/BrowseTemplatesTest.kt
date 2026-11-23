@@ -77,8 +77,8 @@ class BrowseTemplatesTest {
         assertTrue(html.contains("/browse-bar.js"))
         assertTrue(html.contains("Browse by"))
         listOf("Year", "Rating", "Popular", "Genre", "Service", "More").forEach { assertTrue(html.contains(">$it<"), it) }
-        assertTrue(html.contains("""href="/browse?type=movie&amp;genre=horror""""), "genre links")
-        assertTrue(html.contains("""href="/browse?type=movie&amp;provider=8""""), "service links")
+        assertTrue(html.contains("""href="/discover?type=movie&amp;genre=horror""""), "genre links")
+        assertTrue(html.contains("""href="/discover?type=movie&amp;provider=8""""), "service links")
         assertTrue(html.contains("https://image.tmdb.org/t/p/w92/n.png"))
         assertTrue(html.contains("""<form class="bb-find" action="/" method="get" role="search">"""))
         assertTrue(html.contains("""name="q""""))
@@ -92,7 +92,7 @@ class BrowseTemplatesTest {
         val html = render("fragments/browse-bar", "browseBar", mapOf("browseType" to "tv"))
 
         assertTrue(html.contains("""data-type="tv""""))
-        assertTrue(html.contains("""href="/browse?type=tv&amp;genre=sci-fi-fantasy""""))
+        assertTrue(html.contains("""href="/discover?type=tv&amp;genre=sci-fi-fantasy""""))
         assertFalse(html.contains("Upcoming"))
     }
 
@@ -130,10 +130,10 @@ class BrowseTemplatesTest {
         )
 
         val html = render(
-            "browse", "results",
+            "discover", "results",
             mapOf(
                 "tiles" to tiles,
-                "nextHref" to "/browse?type=movie&page=2",
+                "nextHref" to "/discover?type=movie&page=2",
                 "firstPageHref" to null,
                 "_csrf" to DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "tok123"),
             ),
@@ -154,15 +154,84 @@ class BrowseTemplatesTest {
         assertTrue(html.contains("""href="/movie/603""""))
         assertTrue(html.contains("""data-key="movie-604""""))
         assertTrue(html.contains("Load more"))
-        assertTrue(html.contains("""href="/browse?type=movie&amp;page=2""""))
+        assertTrue(html.contains("""href="/discover?type=movie&amp;page=2""""))
         assertFalse(html.contains("??"))
+    }
+
+    @Test
+    fun `given grid tiles then posters load a 2x image from srcset`() {
+        val tiles = views.tiles(listOf(BrowseTile(BrowseTitle(603, MediaType.movie, "The Matrix", null, "/m.jpg", null, null, emptyList(), null), null)), Locale.ENGLISH)
+
+        val html = render("discover", "results", mapOf("tiles" to tiles, "_csrf" to DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "t")))
+
+        assertTrue(html.contains("""srcset="https://image.tmdb.org/t/p/w342/m.jpg 342w, https://image.tmdb.org/t/p/w500/m.jpg 500w""""), html)
+    }
+
+    @Test
+    fun `given landing rows then loaded rows show tiles, pending ones a skeleton and their source, all with More links`() {
+        val matrix = BrowseTitle(603, MediaType.movie, "The Matrix", LocalDate.parse("1999-03-31"), "/m.jpg", 8.2, 100, emptyList(), "en")
+        val loaded = DiscoverRowView(
+            id = "discover-row-horror",
+            title = "Horror",
+            moreHref = "/discover?type=movie&genre=horror&hideSeen=0",
+            srcHref = null,
+            tiles = views.tiles(
+                listOf(BrowseTile(matrix, null), BrowseTile(matrix.copy(tmdbId = 604, title = "Reloaded"), LibraryMark(8.0, true, WatchStatus.WATCHED))),
+                Locale.ENGLISH,
+            ),
+        )
+        val pending = DiscoverRowView("discover-row-drama", "Drama", "/discover?type=movie&genre=drama", "/discover/row?type=movie&row=drama", emptyList())
+
+        val html = render(
+            "fragments/discover-rows", "rows",
+            mapOf("rows" to listOf(loaded, pending), "_csrf" to DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "tok123")),
+        )
+
+        assertTrue(html.contains("""id="discoverRows""""))
+        val horror = html.substringAfter("""id="discover-row-horror"""").substringBefore("""id="discover-row-drama"""")
+        val drama = html.substringAfter("""id="discover-row-drama"""")
+        assertTrue(horror.contains("""href="/discover?type=movie&amp;genre=horror&amp;hideSeen=0""""), horror)
+        assertTrue(horror.contains(">More<"))
+        assertTrue(horror.contains("""href="/movie/603""""))
+        assertTrue(horror.contains("w500/m.jpg 500w"))
+        assertFalse(horror.contains("data-src"))
+        assertFalse(horror.contains("aria-busy"))
+        assertEquals(1, Regex("<form class=\"home-quick").findAll(horror).count(), "no bookmark on the Watched title")
+        assertTrue(horror.contains("""aria-label="Add to watchlist: The Matrix""""))
+        assertTrue(horror.contains("""data-title="The Matrix""""))
+        assertTrue(horror.contains("""name="_csrf" value="tok123""""))
+        assertTrue(horror.contains("""action="/watchlist/toggle""""))
+        assertTrue(horror.contains("""aria-label="Watched""""), "status badge")
+        assertTrue(horror.contains(">8.0<"), "your score")
+        assertTrue(horror.contains(">8.2<"), "TMDB score")
+        Regex("<a class=\"home-tile\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(horror).forEach {
+            assertFalse(it.groupValues[1].contains("<form"), "bookmark must not be nested in the tile link")
+        }
+
+        assertTrue(Regex("<section[^>]*class=\"home-row discover-row is-pending\"").containsMatchIn(html), html)
+        assertTrue(drama.contains("""data-src="/discover/row?type=movie&amp;row=drama""""))
+        assertTrue(drama.contains("""aria-busy="true""""))
+        assertEquals(8, Regex("class=\"discover-skeleton\"").findAll(drama).count())
+        assertTrue(drama.contains("""href="/discover?type=movie&amp;genre=drama""""), "More works before (and without) JS")
+        assertFalse(html.contains("??"), "every message key resolves")
+    }
+
+    @Test
+    fun `given the lazy row endpoint then it renders the row, or nothing when there is none`() {
+        val row = DiscoverRowView("discover-row-crime", "Crime", "/discover?type=tv&genre=crime", null, emptyList())
+
+        val html = render("fragments/discover-rows", "lazyRow", mapOf("row" to row, "_csrf" to DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "t")))
+        assertTrue(html.contains("""<section class="home-row discover-row" id="discover-row-crime""""), html)
+        assertFalse(html.contains("is-pending"))
+
+        assertEquals("", render("fragments/discover-rows", "lazyRow", mapOf("row" to null)).trim())
     }
 
     @Test
     fun `given a TMDB failure then the results show a friendly message with a retry link`() {
         val html = render(
-            "browse", "results",
-            mapOf("tiles" to emptyList<Any>(), "errorKey" to "browse.error.unreachable", "retryHref" to "/browse?type=movie"),
+            "discover", "results",
+            mapOf("tiles" to emptyList<Any>(), "errorKey" to "browse.error.unreachable", "retryHref" to "/discover?type=movie"),
         )
 
         assertTrue(html.contains("Couldn&#39;t reach TMDB right now. Try again in a moment.") || html.contains("Couldn't reach TMDB right now."), html)

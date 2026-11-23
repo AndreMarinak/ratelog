@@ -50,6 +50,7 @@ data class BrowseFiltersDto(
     val sort: String?,
     val hideRated: Boolean,
     val hideWatchlist: Boolean,
+    val hideSeen: Boolean,
 )
 
 data class BrowseTitleDto(
@@ -66,16 +67,19 @@ data class BrowseTitleDto(
     val status: String?,
 )
 
-/** TMDB discover / trending with the browse page's filters. See docs/api.md#browse. */
+/**
+ * TMDB discover / trending with the Discover page's filters. `/api/v1/discover` is the same endpoint under the page's
+ * new name. Unlike the page, seen titles are only hidden with `hideSeen=true`. See docs/api.md#browse--discover.
+ */
 @RestController
-@RequestMapping("/api/v1/browse")
+@RequestMapping("/api/v1/browse", "/api/v1/discover")
 class ApiBrowseController(
     private val handler: BrowseHandler,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     @GetMapping
     fun browse(@CurrentUser user: User, params: BrowseParams): BrowseResponse {
-        val parsed = BrowseParamParser.parse(params, LocalDate.now(clock))
+        val parsed = BrowseParamParser.parse(params, LocalDate.now(clock), hideSeenByDefault = false)
         parsed.invalid.firstOrNull()?.let { bad ->
             throw badRequest(if (bad.name == "type") "invalid_type" else "invalid_parameter", "${bad.name}: ${bad.reason} (got \"${bad.value}\")")
         }
@@ -115,6 +119,7 @@ class ApiBrowseController(
         sort = sort?.param,
         hideRated = hideRated,
         hideWatchlist = hideWatchlist,
+        hideSeen = hideSeen,
     )
 
     private fun BrowseTile.toDto() = BrowseTitleDto(
