@@ -30,8 +30,8 @@
             <span th:text="#{search.tmdb.not.configured}">A TMDB API key must be configured for Ratelog to work.</span>
         </p>
 
-        <!--/* Fork: results are poster tiles the size of the home rows (home.css: .search-grid + .home-tile). search.js builds the same markup for later pages. */-->
-        <link th:if="${results != null}" rel="stylesheet" href="/home.css">
+        <!--/* Fork: results are the home rows' poster tiles (home.css) in a grid (search-results.css). search.js builds the same markup for later pages. */-->
+        <th:block th:if="${results != null}"><link rel="stylesheet" href="/home.css"><link rel="stylesheet" href="/search-results.css"></th:block>
         <div th:if="${results != null}" id="results" class="search-grid">
             <div th:text="#{search.empty}" th:if="${#lists.isEmpty(results)}" class="empty-state"></div>
 

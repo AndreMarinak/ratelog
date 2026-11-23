@@ -47,7 +47,7 @@ const SearchInfinite = {
         }
     },
 
-    // Fork: same poster tile as the server-rendered results in search.html (styled by home.css).
+    // Fork: same poster tile as the server-rendered results in search.html (home.css + search-results.css).
     createCard(item) {
         const link = document.createElement('a');
         link.href = item.type === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
