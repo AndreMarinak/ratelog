@@ -181,10 +181,12 @@ class GetDiscoverRowsHandlerTest {
         try {
             val started = System.nanoTime()
 
-            val landing = handler(eagerRows = 4, parallelRows = 4, waitMs = 300, marks = noMarks).landing(query)
+            // 1.5 s gives the instant rows room on a busy machine (300 ms was flaky under parallel builds);
+            // the horror row stays blocked on the latch for up to 5 s, so it is still the only one left pending.
+            val landing = handler(eagerRows = 4, parallelRows = 4, waitMs = 1_500, marks = noMarks).landing(query)
 
             val tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)
-            assertTrue(tookMs < 2_000, "waited ${tookMs}ms")
+            assertTrue(tookMs < 4_000, "waited ${tookMs}ms")
             assertEquals(listOf("popular", "horror", "comedy", "action"), landing.rows.take(4).map { it.spec.id })
             assertEquals(listOf(false, true, false, false), landing.rows.take(4).map { it.pending })
         } finally {

@@ -18,6 +18,8 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Flaky Discover timing test.** `GetDiscoverRowsHandlerTest` gave the instant rows only 300 ms; under parallel builds one missed it and showed as pending. The test now waits up to 1.5 s (the slow row stays blocked on a latch, so the assertion still proves the timeout path).
+
 - **Stale classes after merging branches (local builds only).** After merging `feat/listprogress`, `HomeDashboardViewTest` failed with `NoSuchMethodError: toCard(ListSummary, boolean)`: the branch added a defaulted parameter, and Maven's incremental Kotlin compile didn't recompile `HomeDashboardView.kt`, which calls it. `mvn clean package` fixes it. Run `clean` after merges that change signatures. Railway's Docker build always starts clean, so production is not affected.
 
 - **List page 500 for a missing or private list** (upstream, found 2026-11-23 while testing list progress): `list-detail.html` had `th:if="${isOwner}"` and `th:replace` (edit/delete modals) on the same element. Thymeleaf runs `th:replace` first, so the modals rendered with a null list ("Property 'id' cannot be found on null") instead of the "not authorized" message, and were also rendered (hidden) for non-owners. Fixed with a `<th:block th:if="${isOwner}">` wrapper.
