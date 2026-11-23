@@ -73,38 +73,46 @@
 </div>
 
 <!--
-    The user's tags on one title, with an inline add form and an x per chip.
-    Included once from movie-detail.html and tvshow-detail.html; data comes from the titleTagsView bean.
+    The user's tags on one title: a heading with the manage link, the chips (x to remove) and an add form.
+    Included once from movie-detail.html and tvshow-detail.html, inside the action panel; data comes from the titleTagsView bean.
 -->
-<section th:fragment="titleTags(mediaType, mediaId, tmdbId)" th:if="${mediaId != null}"
+<section th:fragment="titleTags(mediaType, mediaId, tmdbId)" th:if="${tagsEnabled == true and mediaId != null}"
          th:with="tt=${@titleTagsView.forTitle(mediaType, mediaId)}"
          class="title-tags" th:aria-label="#{tags.title}">
     <style th:replace="~{fragments/tags :: tagStyles}"></style>
     <style>
-        .title-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
-        .title-tags .title-tags-icon { width: 18px; height: 18px; color: var(--text-soft); flex-shrink: 0; }
-        .title-tags-add { display: inline-flex; align-items: center; gap: 4px; }
-        .title-tags-add input { height: 32px; width: 190px; max-width: 60vw; padding: 0 12px; font-size: 0.95rem; }
-        .title-tags-add button { padding: 4px; }
+        .title-tags-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .title-tags-head .title-section-label { margin: 0; }
+        .title-tags-head a { display: inline-flex; padding: 2px; }
+        .title-tags .title-tags-icon { width: 16px; height: 16px; color: var(--text-soft); flex-shrink: 0; }
+        .title-tags-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .title-tags-add { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
+        .title-tags-add input { flex: 1; min-width: 0; height: 34px; padding: 0 12px; font-size: 0.95rem; }
+        .title-tags-add button { padding: 6px; flex-shrink: 0; }
     </style>
 
-    <a th:href="@{/tags}" class="link secondary" th:title="#{tags.manage}" th:aria-label="#{tags.manage}">
-        <i data-lucide="tags" class="title-tags-icon" aria-hidden="true"></i>
-    </a>
+    <div class="title-tags-head">
+        <span class="title-section-label" th:text="#{tags.title}">Tags</span>
+        <a th:href="@{/tags}" class="link secondary" th:title="#{tags.manage}" th:aria-label="#{tags.manage}">
+            <i data-lucide="tags" class="title-tags-icon" aria-hidden="true"></i>
+        </a>
+    </div>
 
-    <span th:each="tag : ${tt.assigned}" class="tag-chip" th:classappend="${tag.color != null} ? 'colored'" th:style="${tag.style}">
-        <span class="tag-dot" th:if="${tag.color != null}" aria-hidden="true"></span>
-        <a th:href="@{/tags/{id}(id=${tag.id})}" th:text="${tag.name}">comfort watch</a>
-        <form th:action="@{/tags/{id}/unassign(id=${tag.id})}" method="post" th:data-confirm="#{tags.remove.confirm(${tag.name})}">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-            <input type="hidden" name="mediaType" th:value="${mediaType}" />
-            <input type="hidden" name="mediaId" th:value="${mediaId}" />
-            <input type="hidden" name="tmdbId" th:value="${tmdbId}" />
-            <button type="submit" th:title="#{tags.remove(${tag.name})}" th:aria-label="#{tags.remove(${tag.name})}">
-                <i data-lucide="x" aria-hidden="true"></i>
-            </button>
-        </form>
-    </span>
+    <div class="title-tags-chips" th:unless="${#lists.isEmpty(tt.assigned)}">
+        <span th:each="tag : ${tt.assigned}" class="tag-chip" th:classappend="${tag.color != null} ? 'colored'" th:style="${tag.style}">
+            <span class="tag-dot" th:if="${tag.color != null}" aria-hidden="true"></span>
+            <a th:href="@{/tags/{id}(id=${tag.id})}" th:text="${tag.name}">comfort watch</a>
+            <form th:action="@{/tags/{id}/unassign(id=${tag.id})}" method="post" th:data-confirm="#{tags.remove.confirm(${tag.name})}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="mediaType" th:value="${mediaType}" />
+                <input type="hidden" name="mediaId" th:value="${mediaId}" />
+                <input type="hidden" name="tmdbId" th:value="${tmdbId}" />
+                <button type="submit" th:title="#{tags.remove(${tag.name})}" th:aria-label="#{tags.remove(${tag.name})}">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+            </form>
+        </span>
+    </div>
 
     <form th:action="@{/tags/assign}" method="post" class="title-tags-add">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />

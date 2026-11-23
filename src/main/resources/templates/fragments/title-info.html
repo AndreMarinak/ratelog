@@ -2,30 +2,34 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <!--
   Fork: TMDB facts, external scores and the trailer on movie / TV detail pages.
-  `titleInfo` (org.ratelog.extras.web.TitleInfoView) is added to the model by TitleInfoModelInterceptor;
-  it is missing when nothing could be loaded, and then this renders nothing.
+  `info` is `titleInfo` (org.ratelog.extras.web.TitleInfoView), added to the model by TitleInfoModelInterceptor;
+  it is missing when nothing could be loaded, and then these fragments render nothing.
+  Styles: /title-info.css (linked by the detail pages). Trailer behaviour: /title-info.js.
 -->
-<section th:fragment="titleInfo(info)" th:if="${info != null}" class="title-info" th:aria-label="#{title.info.aria}">
-    <link rel="stylesheet" href="/title-info.css">
+<body>
 
-    <div class="title-info-row" th:if="${info.hasFacts}">
+<!--/* Runtime / number of seasons, inline in the title's meta line. */-->
+<th:block th:fragment="titleFacts(info)" th:if="${info != null}">
+    <span th:if="${info.runtimeMinutes != null}" class="title-fact">
+        <i data-lucide="clock" aria-hidden="true"></i>
+        <span th:text="${info.isMovie} ? #{title.info.runtime(${info.runtimeMinutes})} : #{title.info.episode.runtime(${info.runtimeMinutes})}">136 min</span>
+    </span>
+    <span th:if="${info.numberOfSeasons != null}" class="title-fact">
+        <i data-lucide="layers" aria-hidden="true"></i>
+        <span th:text="#{title.info.seasons(${info.numberOfSeasons})}">3 seasons</span>
+    </span>
+</th:block>
+
+<!--/* All score badges in one row. */-->
+<section th:fragment="titleScores(info)" th:if="${info != null and (info.tmdbScore != null or info.hasScores or info.imdbUrl != null)}"
+         class="title-info" th:aria-label="#{title.info.aria}">
+    <div class="title-info-row">
         <span th:if="${info.tmdbScore != null}" class="score-badge tmdb"
               th:title="${info.tmdbVotes != null} ? #{title.info.votes(${info.tmdbVotes})} : null">
             <span class="score-source">TMDB</span>
             <span class="score-value"><i data-lucide="star"></i><span th:text="${info.tmdbScore}">7.9</span></span>
             <span th:if="${info.tmdbVotes != null}" class="score-votes" th:text="|(${info.tmdbVotes})|">(25K)</span>
         </span>
-        <span th:if="${info.runtimeMinutes != null}" class="info-fact">
-            <i data-lucide="clock"></i>
-            <span th:text="${info.isMovie} ? #{title.info.runtime(${info.runtimeMinutes})} : #{title.info.episode.runtime(${info.runtimeMinutes})}">136 min</span>
-        </span>
-        <span th:if="${info.numberOfSeasons != null}" class="info-fact">
-            <i data-lucide="layers"></i>
-            <span th:text="#{title.info.seasons(${info.numberOfSeasons})}">3 seasons</span>
-        </span>
-    </div>
-
-    <div class="title-info-row" th:if="${info.hasScores or info.imdbUrl != null}">
         <a th:if="${info.imdbUrl != null}" class="score-badge imdb" th:href="${info.imdbUrl}" target="_blank" rel="noopener noreferrer"
            th:title="${info.imdbVotes != null} ? #{title.info.votes(${info.imdbVotes})} : null">
             <span class="score-source">IMDb</span>
@@ -54,20 +58,42 @@
         </a>
     </div>
     <p th:if="${info.hasScores}" class="score-attribution" th:text="#{title.info.scores.attribution}">Scores via MDBList</p>
+</section>
 
-    <div th:if="${info.trailerKey != null}" class="trailer-frame">
-        <button type="button" class="trailer-launch"
-                th:data-embed-url="${info.trailerEmbedUrl}"
-                th:data-title="#{title.info.trailer}"
-                th:aria-label="#{title.info.trailer.play}">
-            <img th:src="${info.trailerThumbnailUrl}" alt="" loading="lazy">
-            <span class="trailer-play"><i data-lucide="play"></i></span>
-            <span class="trailer-label" th:text="#{title.info.trailer}">Trailer</span>
-        </button>
-        <noscript>
-            <a class="trailer-fallback" th:href="${info.trailerWatchUrl}" target="_blank" rel="noopener noreferrer" th:text="#{title.info.trailer.watch}">Watch on YouTube</a>
-        </noscript>
+<!--/* Trailer thumbnail; the player opens in #trailerModal (fragment below). */-->
+<div th:fragment="titleTrailer(info)" th:if="${info != null and info.trailerKey != null}" class="title-trailer trailer-frame">
+    <button type="button" class="trailer-launch"
+            data-open-modal="trailerModal"
+            th:data-embed-url="${info.trailerEmbedUrl}"
+            th:aria-label="#{title.info.trailer.play}">
+        <img th:src="${info.trailerThumbnailUrl}" alt="" loading="lazy">
+        <span class="trailer-play"><i data-lucide="play"></i></span>
+        <span class="trailer-label" th:text="#{title.info.trailer.play}">Play trailer</span>
+    </button>
+    <noscript>
+        <a class="trailer-fallback" th:href="${info.trailerWatchUrl}" target="_blank" rel="noopener noreferrer" th:text="#{title.info.trailer.watch}">Watch on YouTube</a>
+    </noscript>
+</div>
+
+<!--/* Include once per page, outside any .card (backdrop-filter would trap the fixed overlay). */-->
+<div th:fragment="trailerModal(info)" th:if="${info != null and info.trailerKey != null}"
+     id="trailerModal" class="modal trailer-modal" data-modal="trailerModal">
+    <div>
+        <div class="flex separate centered trailer-modal-head">
+            <h2 th:text="#{title.info.trailer}">Trailer</h2>
+            <button type="button" data-close-modal th:aria-label="#{modal.close}">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="trailer-player" th:data-title="#{title.info.trailer}"></div>
+        <a th:if="${info.trailerWatchUrl != null}" class="trailer-youtube-link" th:href="${info.trailerWatchUrl}"
+           target="_blank" rel="noopener noreferrer">
+            <i data-lucide="external-link" aria-hidden="true"></i>
+            <span th:text="#{title.info.trailer.watch}">Watch the trailer on YouTube</span>
+        </a>
     </div>
     <script src="/title-info.js" defer></script>
-</section>
+</div>
+
+</body>
 </html>

@@ -1,0 +1,645 @@
+/* Fork: movie and TV title pages (templates/movie-detail.html, tvshow-detail.html; behaviour in title-page.js).
+   Desktop (>= 1100px): poster + where to watch | title, facts, scores, overview, trailer, your rating | action panel.
+   Tablet (700-1099px): poster + where to watch | everything else, with the action panel right under the title.
+   Phone (< 700px): small poster beside the title, a one-row action bar, then the rest. Seasons (TV) are full width below. */
+
+.title-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 260px;
+  grid-template-areas: "poster main side";
+  column-gap: 36px;
+  row-gap: 20px;
+  align-items: start;
+  width: 100%;
+  margin-top: 28px;
+}
+
+.title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.title-col-poster { grid-area: poster; }
+.title-col-main { grid-area: main; gap: 18px; }
+.title-col-side {
+  grid-area: side;
+  /* Desktop: the actions stay in reach while reading a long overview or review (88px clears the sticky header). */
+  position: sticky;
+  top: 88px;
+}
+
+.title-layout img.title-poster {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  margin: 0;
+  mask-image: none;
+  -webkit-mask-image: none;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ----- Title, facts, scores, overview ----- */
+
+.title-head h1 {
+  display: block;
+  margin: 0;
+  font-size: clamp(2.25rem, 3.2vw, 2.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+
+  .year {
+    margin-left: 8px;
+    font-size: 0.5em;
+    font-weight: 600;
+    letter-spacing: 0;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+}
+
+.title-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 14px;
+
+  .tag {
+    padding: 3px 10px;
+    font-size: 0.95rem;
+  }
+}
+
+.title-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-soft);
+  font-size: 1rem;
+  white-space: nowrap;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.title-head .title-info {
+  margin-top: 14px;
+}
+
+.title-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.title-overview {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 1.08rem;
+  line-height: 1.6;
+}
+
+button.title-overview-toggle {
+  padding: 2px 0;
+  border-radius: 4px;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+
+  &:hover {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* The base button style (display: inline-flex) would otherwise beat the hidden attribute. */
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* "Your rating" sits in the main column under the overview. */
+.title-rating.card {
+  margin: 0;
+}
+
+/* ----- Action panel ----- */
+
+.title-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+
+  & > * + * {
+    border-top: 1px solid var(--border);
+  }
+
+  .watch-status,
+  .title-tags {
+    margin: 0;
+    padding: 14px 16px 16px;
+  }
+}
+
+/* Watchlist statuses as labeled tiles (2x2 in the panel and in the phone sheet). */
+.title-panel .status-segmented,
+.watch-status-modal .status-segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.title-panel .status-segment,
+.watch-status-modal .status-segment {
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &.active {
+    border-color: hsl(var(--_brand-clay) / 0.45);
+  }
+}
+
+.watch-status-modal {
+  .watch-status {
+    margin: 16px 0 4px;
+  }
+
+  .watch-status .title-section-label {
+    display: none;
+  }
+
+  .status-segment {
+    min-height: 68px;
+    font-size: 1rem;
+  }
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.title-actions {
+  display: flex;
+  flex-direction: column;
+
+  & > * + * {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.title-action-form {
+  display: flex;
+  margin: 0;
+}
+
+.title-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 0;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  svg {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    color: var(--text-soft);
+    transition: color 0.15s ease;
+  }
+
+  &:hover {
+    color: var(--text);
+    background: var(--surface-muted);
+  }
+
+  &:hover svg {
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  /* Followed: filled heart. */
+  &.is-active svg {
+    color: var(--accent);
+    fill: var(--accent);
+  }
+
+  /* Has a watch status: accent icon (outline icons, no fill). */
+  &.is-set svg {
+    color: var(--accent);
+  }
+}
+
+/* The status tiles are inline on desktop and tablet; only phones use this button and its sheet. */
+.title-action-watchlist {
+  display: none;
+}
+
+.title-action-hint {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.title-action-score {
+  margin-left: auto;
+  color: hsl(20 83% 84%);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ----- Where to watch ----- */
+
+.title-providers {
+  padding: 14px 16px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.title-provider-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.title-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--tag-bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.2;
+  transition: border-color 0.15s ease;
+
+  img {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+  }
+
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+}
+
+/* Required JustWatch attribution for TMDB's watch-provider data. */
+.title-providers-credit {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  opacity: 0.75;
+
+  &:hover {
+    color: var(--text);
+    opacity: 1;
+  }
+}
+
+/* ----- Trailer thumbnail (the player opens in a modal, see title-info.css) ----- */
+
+.title-trailer.trailer-frame {
+  width: 100%;
+  max-width: 300px;
+
+  /* A solid pill, so the label stays readable over thumbnails that carry their own text. */
+  .trailer-label {
+    left: 8px;
+    bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(20, 18, 16, 0.85);
+    font-size: 0.9rem;
+    text-shadow: none;
+  }
+}
+
+/* ----- Seasons (TV): full width under the layout ----- */
+
+.title-seasons {
+  margin-top: 36px;
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 1.5rem;
+  }
+}
+
+/* ----- Tablet and phone: the panel joins the main flow, right under the title ----- */
+
+@media (max-width: 1099px) {
+  .title-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-areas: none;
+    /* The poster column spans every row; the last row soaks up its extra height. */
+    grid-template-rows: repeat(5, auto) 1fr;
+    column-gap: 32px;
+    row-gap: 18px;
+  }
+
+  .title-col-main,
+  .title-col-side {
+    display: contents;
+  }
+
+  .title-col-poster {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  .title-col-main > *,
+  .title-col-side > * {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .title-head { order: 1; }
+  .title-panel { order: 2; }
+  .title-body { order: 3; }
+  .title-trailer { order: 4; }
+  .title-rating { order: 5; }
+
+  /* A wide panel: the four statuses in one row, then the actions as tiles in one row. */
+  .title-panel .status-segmented {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .title-actions {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+
+    & > * + * {
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+
+  .title-action {
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 62px;
+    padding: 8px 4px;
+    font-size: 0.95rem;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .title-action-hint {
+    display: none;
+  }
+
+  .title-action.is-rated svg {
+    display: none;
+  }
+
+  .title-action-score {
+    order: -1;
+    margin: 0;
+    font-size: 1.15rem;
+  }
+}
+
+/* ----- Phone: compact header (small poster beside title, facts, scores and the trailer button),
+         a one-row action bar (Rate, Follow, Watchlist, Add to list), then overview, where to watch, your rating. ----- */
+
+@media (max-width: 699px) {
+  .title-layout {
+    grid-template-columns: minmax(0, 1fr) 108px;
+    /* Row 1: title block, row 2: trailer button; the poster spans both, row 2 takes any extra poster height. */
+    grid-template-rows: auto 1fr;
+    gap: 12px 14px;
+    margin-top: 12px;
+  }
+
+  .title-col {
+    display: contents;
+  }
+
+  .title-layout .title-col > * {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-width: 0;
+  }
+
+  .title-layout .title-col > .title-head {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .title-layout .title-col > .title-poster {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .title-layout .title-col > .title-trailer {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .title-panel { order: 1; }
+  .title-body { order: 2; }
+  .title-providers { order: 3; }
+  .title-rating { order: 4; }
+
+  .title-head h1 {
+    font-size: 1.75rem;
+    line-height: 1.05;
+  }
+
+  .title-meta {
+    gap: 6px;
+    margin-top: 8px;
+
+    .tag {
+      padding: 2px 9px;
+      font-size: 0.88rem;
+    }
+  }
+
+  .title-fact {
+    font-size: 0.92rem;
+  }
+
+  .title-head .title-info {
+    margin-top: 8px;
+    gap: 4px;
+
+    .title-info-row {
+      gap: 6px;
+    }
+
+    .score-badge {
+      padding: 3px 8px;
+      font-size: 0.88rem;
+    }
+
+    .score-votes {
+      display: none;
+    }
+  }
+
+  /* Trailer: a compact button instead of a thumbnail. */
+  .title-trailer.trailer-frame {
+    width: auto;
+    max-width: none;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    overflow: visible;
+
+    button.trailer-launch {
+      position: static;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: auto;
+      height: auto;
+      min-height: 36px;
+      padding: 4px 14px 4px 6px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: var(--tag-bg);
+    }
+
+    img {
+      display: none;
+    }
+
+    .trailer-play {
+      position: static;
+      width: 26px;
+      height: 26px;
+      transform: none;
+      box-shadow: none;
+
+      svg {
+        width: 13px;
+        height: 13px;
+        margin-left: 2px;
+      }
+    }
+
+    button.trailer-launch:hover .trailer-play {
+      transform: none;
+    }
+
+    .trailer-label {
+      position: static;
+      padding: 0;
+      background: none;
+      font-size: 0.95rem;
+    }
+  }
+
+  /* The action bar: four equal tiles; statuses move to the sheet behind "Watchlist". */
+  .title-panel > .watch-status {
+    display: none;
+  }
+
+  .title-panel > * + .title-actions {
+    border-top: 0;
+  }
+
+  .title-action-watchlist {
+    display: flex;
+  }
+
+  .title-action {
+    min-height: 60px;
+    padding: 8px 2px;
+    font-size: 0.88rem;
+  }
+
+  .title-action-score {
+    font-size: 1.05rem;
+  }
+
+  .title-overview {
+    font-size: 1rem;
+    line-height: 1.5;
+
+    &:not(.is-expanded) {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  }
+
+  .title-providers {
+    padding: 12px 14px;
+  }
+
+  .title-seasons {
+    margin-top: 24px;
+  }
+}

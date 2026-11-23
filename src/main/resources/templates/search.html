@@ -30,25 +30,24 @@
             <span th:text="#{search.tmdb.not.configured}">A TMDB API key must be configured for Ratelog to work.</span>
         </p>
 
-        <div th:if="${results != null}" id="results" class="results-grid">
+        <!--/* Fork: results are poster tiles the size of the home rows (home.css: .search-grid + .home-tile). search.js builds the same markup for later pages. */-->
+        <link th:if="${results != null}" rel="stylesheet" href="/home.css">
+        <div th:if="${results != null}" id="results" class="search-grid">
             <div th:text="#{search.empty}" th:if="${#lists.isEmpty(results)}" class="empty-state"></div>
 
             <a th:each="item : ${results}"
                th:href="${item.type == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
-               class="result-card">
-                <div class="poster-frame">
-                    <span class="type-tag" th:if="${item.type == 'movie'}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
-                    <span class="type-tag" th:unless="${item.type == 'movie'}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
-                    <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w342' + ${item.posterPath}}" th:srcset="|https://image.tmdb.org/t/p/w342${item.posterPath} 1x, https://image.tmdb.org/t/p/w500${item.posterPath} 2x|" th:alt="'Poster of ' + ${item.title}">
+               class="home-tile search-tile">
+                <div class="home-poster">
+                    <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w342' + ${item.posterPath}}"
+                         th:srcset="|https://image.tmdb.org/t/p/w342${item.posterPath} 342w, https://image.tmdb.org/t/p/w500${item.posterPath} 500w|"
+                         sizes="(max-width: 600px) 31vw, 170px" th:alt="'Poster of ' + ${item.title}" loading="lazy" decoding="async">
                     <div th:unless="${item.posterPath != null}" class="poster-fallback" th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</div>
-                    <div class="result-content">
-                        <h3>
-                            <span th:text="${item.title}">Title</span>
-                            <span class="year" th:text="${item.year != null} ? ${item.year} : #{movies.year.unknown}">Year</span>
-                        </h3>
-                        <p class="result-overview" th:text="${item.overview != null and item.overview.trim().length() > 0} ? ${item.overview} : #{search.no.synopsis}">Overview</p>
-                    </div>
+                    <span class="home-type" th:if="${item.type == 'movie'}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
+                    <span class="home-type" th:unless="${item.type == 'movie'}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
                 </div>
+                <span class="home-tile-title" th:text="${item.title}" th:title="${item.title}">Title</span>
+                <span class="home-tile-meta" th:text="${item.year != null} ? ${item.year} : #{movies.year.unknown}">Year</span>
             </a>
         </div>
 

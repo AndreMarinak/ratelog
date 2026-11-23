@@ -1,22 +1,40 @@
-// Fork: click-to-load trailers. The page only ships a thumbnail; the YouTube player loads on click.
+// Fork: click-to-load trailers. The page only ships a thumbnail; clicking it opens #trailerModal
+// (through modal.js's data-open-modal) and the YouTube player is created then. Closing the modal
+// removes the player, which also stops the video.
 (function () {
     if (window.ratelogTrailerReady) return;
     window.ratelogTrailerReady = true;
 
     var EMBED_PREFIX = 'https://www.youtube-nocookie.com/embed/';
 
-    document.addEventListener('click', function (event) {
-        var button = event.target.closest && event.target.closest('.trailer-launch');
-        if (!button) return;
-        var url = button.getAttribute('data-embed-url');
-        if (!url || url.indexOf(EMBED_PREFIX) !== 0) return;
+    function init() {
+        var modal = document.getElementById('trailerModal');
+        if (!modal) return;
+        var player = modal.querySelector('.trailer-player');
+        if (!player) return;
 
-        var iframe = document.createElement('iframe');
-        iframe.src = url;
-        iframe.title = button.getAttribute('data-title') || 'Trailer';
-        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-        iframe.allowFullscreen = true;
-        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-        button.replaceWith(iframe);
-    });
+        modal.addEventListener('modal:open', function (event) {
+            var trigger = event.detail && event.detail.trigger;
+            var url = trigger && trigger.getAttribute('data-embed-url');
+            if (!url || url.indexOf(EMBED_PREFIX) !== 0) return;
+
+            var iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.title = player.getAttribute('data-title') || 'Trailer';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+            player.replaceChildren(iframe);
+        });
+
+        modal.addEventListener('modal:close', function () {
+            player.replaceChildren();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();

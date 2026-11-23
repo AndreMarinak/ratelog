@@ -47,57 +47,52 @@ const SearchInfinite = {
         }
     },
 
+    // Fork: same poster tile as the server-rendered results in search.html (styled by home.css).
     createCard(item) {
         const link = document.createElement('a');
         link.href = item.type === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
-        link.className = 'result-card';
+        link.className = 'home-tile search-tile';
 
-        const posterFrame = document.createElement('div');
-        posterFrame.className = 'poster-frame';
+        const poster = document.createElement('div');
+        poster.className = 'home-poster';
+
+        if (item.posterPath) {
+            const img = document.createElement('img');
+            img.src = `https://image.tmdb.org/t/p/w342${item.posterPath}`;
+            img.srcset = `https://image.tmdb.org/t/p/w342${item.posterPath} 342w, https://image.tmdb.org/t/p/w500${item.posterPath} 500w`;
+            img.sizes = '(max-width: 600px) 31vw, 170px';
+            img.alt = `Poster of ${item.title}`;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            poster.appendChild(img);
+        } else {
+            const fallback = document.createElement('div');
+            fallback.className = 'poster-fallback';
+            fallback.textContent = item.title.charAt(0).toUpperCase();
+            poster.appendChild(fallback);
+        }
 
         const typeTag = document.createElement('span');
-        typeTag.className = 'type-tag';
+        typeTag.className = 'home-type';
         typeTag.title = item.type === 'movie' ? 'Movie' : 'TV';
         const typeIcon = document.createElement('i');
         typeIcon.setAttribute('data-lucide', item.type === 'movie' ? 'film' : 'tv');
         typeIcon.setAttribute('aria-hidden', 'true');
         typeTag.appendChild(typeIcon);
-        posterFrame.appendChild(typeTag);
+        poster.appendChild(typeTag);
 
-        if (item.posterPath) {
-            const img = document.createElement('img');
-            img.src = `https://image.tmdb.org/t/p/w185${item.posterPath}`;
-            img.alt = `Poster of ${item.title}`;
-            posterFrame.appendChild(img);
-        } else {
-            const fallback = document.createElement('div');
-            fallback.className = 'poster-fallback';
-            fallback.textContent = item.title.charAt(0).toUpperCase();
-            posterFrame.appendChild(fallback);
-        }
+        const title = document.createElement('span');
+        title.className = 'home-tile-title';
+        title.textContent = item.title;
+        title.title = item.title;
 
-        const content = document.createElement('div');
-        content.className = 'result-content';
+        const meta = document.createElement('span');
+        meta.className = 'home-tile-meta';
+        meta.textContent = item.year || 'Unknown year';
 
-        const heading = document.createElement('h3');
-        const titleSpan = document.createElement('span');
-        titleSpan.textContent = item.title;
-        heading.appendChild(titleSpan);
-
-        const yearSpan = document.createElement('span');
-        yearSpan.className = 'year';
-        yearSpan.textContent = item.year || 'Unknown year';
-        heading.appendChild(yearSpan);
-
-        content.appendChild(heading);
-
-        const overview = document.createElement('p');
-        overview.className = 'result-overview';
-        overview.textContent = item.overview || 'No synopsis available right now.';
-        content.appendChild(overview);
-
-        link.appendChild(posterFrame);
-        link.appendChild(content);
+        link.appendChild(poster);
+        link.appendChild(title);
+        link.appendChild(meta);
 
         return link;
     }
