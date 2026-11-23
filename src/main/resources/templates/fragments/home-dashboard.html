@@ -45,7 +45,7 @@
                 <a class="home-tile" th:href="${tile.href}">
                     <div class="home-poster">
                         <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
-                             th:srcset="${tile.posterUrl + ' 185w, ' + tile.posterUrl2x + ' 342w'}"
+                             th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
                              sizes="(max-width: 900px) 31vw, 152px" alt="" loading="lazy" decoding="async">
                         <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
                         <span th:if="${tile.showTypeTag}" class="home-type"

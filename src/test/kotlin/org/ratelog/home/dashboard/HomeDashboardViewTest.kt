@@ -29,8 +29,8 @@ class HomeDashboardViewTest {
         val tiles = view(HomeRow(HomeRowKind.TRENDING_MOVIES, titles = listOf(title(1), title(2, MediaType.tvshow)))).rows.single().tiles
 
         assertEquals(listOf("/movie/1", "/tv/2"), tiles.map { it.href })
-        assertEquals("https://image.tmdb.org/t/p/w185/p1.jpg", tiles[0].posterUrl)
-        assertEquals("https://image.tmdb.org/t/p/w342/p1.jpg", tiles[0].posterUrl2x)
+        assertEquals("https://image.tmdb.org/t/p/w342/p1.jpg", tiles[0].posterUrl)
+        assertEquals("https://image.tmdb.org/t/p/w500/p1.jpg", tiles[0].posterUrl2x)
         assertEquals("2026", tiles[0].meta)
     }
 
@@ -116,7 +116,7 @@ class HomeDashboardViewTest {
         val card = view(HomeRow(HomeRowKind.YOUR_LISTS, lists = listOf(summary))).rows.single().lists.single()
 
         assertEquals("/list/7", card.href)
-        assertEquals(listOf("https://image.tmdb.org/t/p/w185/a.jpg", "https://image.tmdb.org/t/p/w185/b.jpg", null, null), card.coverPosterUrls)
+        assertEquals(listOf("https://image.tmdb.org/t/p/w342/a.jpg", "https://image.tmdb.org/t/p/w342/b.jpg", null, null), card.coverPosterUrls)
         assertNull(card.ownerUsername)
     }
 

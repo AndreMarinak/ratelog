@@ -60,14 +60,14 @@
     </button>
 
     <nav class="bottom-nav" th:if="${signedIn}" th:aria-label="#{nav.menu.bottom}">
+        <a class="bottom-nav-item bottom-nav-home" href="/" th:aria-label="#{nav.home}" th:classappend="${active == 'search'} ? 'active' : ''">
+            <img src="/img/logo.svg" alt="">
+        </a>
         <a class="bottom-nav-item" href="/movies" th:aria-label="#{nav.movies}" th:classappend="${active == 'movies'} ? 'active' : ''">
             <i data-lucide="film" aria-hidden="true"></i>
         </a>
         <a class="bottom-nav-item" href="/tvshows" th:aria-label="#{nav.tvshows}" th:classappend="${active == 'tvshows'} ? 'active' : ''">
             <i data-lucide="tv" aria-hidden="true"></i>
-        </a>
-        <a class="bottom-nav-item bottom-nav-home" href="/" th:aria-label="#{nav.home}" th:classappend="${active == 'search'} ? 'active' : ''">
-            <img src="/img/logo.svg" alt="">
         </a>
         <a class="bottom-nav-item" href="/watchlist" th:aria-label="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">
             <i data-lucide="bookmark" aria-hidden="true"></i>

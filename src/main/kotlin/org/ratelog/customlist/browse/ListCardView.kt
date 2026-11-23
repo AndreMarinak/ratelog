@@ -19,6 +19,6 @@ fun ListSummary.toCard(showOwner: Boolean) = ListCardView(
     itemCount = itemCount,
     isPublic = isPublic,
     ownerUsername = ownerUsername.takeIf { showOwner },
-    coverPosterUrls = coverPosterPaths.take(ListSummary.COVER_SIZE).map { "https://image.tmdb.org/t/p/w185$it" } +
+    coverPosterUrls = coverPosterPaths.take(ListSummary.COVER_SIZE).map { "https://image.tmdb.org/t/p/w342$it" } +
         List((ListSummary.COVER_SIZE - coverPosterPaths.size).coerceAtLeast(0)) { null },
 )
