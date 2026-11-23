@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Fork: the "Browse by" bar (Movies / TV, Year, Rating, Popular, Genre, Service, More, Sort) plus "Find a title".
+  Self-contained: brings its own /browse-bar.css and /browse-bar.js, and every option is a plain link to /browse.
+
+  Include anywhere:      <div th:replace="~{fragments/browse-bar :: browseBar}"></div>
+  Start on TV:           <div th:replace="~{fragments/browse-bar :: browseBar(browseType='tv')}"></div>
+  With a filter state:   <div th:replace="~{fragments/browse-bar :: browseBar(browseBar=${view})}"></div>
+
+  `browseBar` is an org.ratelog.browse.web.BrowseBarView (the /browse page puts one in the model). Without it the
+  bar is built by @browseBarViews.defaults(browseType): no filters, the user's streaming region, no Sort menu.
+-->
+<body>
+<section th:fragment="browseBar" class="browse-bar"
+         th:with="bar=${browseBar ?: @browseBarViews.defaults(browseType)}"
+         th:attr="data-type=${bar.type}"
+         th:aria-label="#{browse.title}">
+    <link rel="stylesheet" href="/browse-bar.css">
+    <script src="/browse-bar.js" defer></script>
+
+    <div class="bb-main">
+        <nav class="bb-type" th:aria-label="#{browse.type.aria}">
+            <a th:each="link : ${bar.typeLinks}" th:href="${link.href}" class="bb-type-link"
+               th:classappend="${link.active} ? 'active' : ''"
+               th:aria-current="${link.active} ? 'page' : null"
+               th:text="${link.label}">Movies</a>
+        </nav>
+
+        <span class="bb-label" aria-hidden="true" th:text="#{browse.by}">Browse by</span>
+
+        <div class="bb-menus" role="group" th:aria-label="#{browse.menus.aria}">
+            <details th:each="menu : ${bar.menus}" class="bb-menu"
+                     th:classappend="${menu.active} ? 'is-set' : ''"
+                     th:attr="data-menu=${menu.id}">
+                <summary class="bb-trigger">
+                    <i th:data-lucide="${menu.icon}" aria-hidden="true"></i>
+                    <span class="bb-trigger-label" th:text="${menu.label}">Year</span>
+                    <span class="bb-trigger-value" th:if="${menu.value != null}" th:text="${menu.value}">2010s</span>
+                    <i data-lucide="chevron-down" class="bb-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="bb-panel" th:insert="~{fragments/browse-bar :: browsePanel(${menu})}"></div>
+            </details>
+        </div>
+
+        <form class="bb-find" action="/" method="get" role="search">
+            <label class="visually-hidden" for="bbFindQuery" th:text="#{browse.find}">Find a title</label>
+            <i data-lucide="search" aria-hidden="true"></i>
+            <input id="bbFindQuery" name="q" type="search" th:placeholder="#{browse.find.placeholder}" autocomplete="off">
+        </form>
+    </div>
+
+    <div class="bb-sub" th:if="${!#lists.isEmpty(bar.chips) or bar.sortMenu != null}">
+        <ul class="bb-chips" th:aria-label="#{browse.chips.aria}">
+            <li th:each="chip : ${bar.chips}">
+                <a class="bb-chip" th:href="${chip.removeHref}" th:aria-label="${chip.removeLabel}" th:title="${chip.removeLabel}">
+                    <span th:text="${chip.label}">Horror</span>
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </a>
+            </li>
+            <li th:if="${#lists.size(bar.chips) > 1}">
+                <a class="bb-clear" th:href="${bar.clearHref}" th:text="#{browse.clear}">Clear all</a>
+            </li>
+        </ul>
+
+        <details th:if="${bar.sortMenu != null}" th:with="menu=${bar.sortMenu}" class="bb-menu bb-sort" th:attr="data-menu=${menu.id}">
+            <summary class="bb-trigger">
+                <i th:data-lucide="${menu.icon}" aria-hidden="true"></i>
+                <span class="bb-trigger-label" th:text="${menu.label}">Sort</span>
+                <span class="bb-trigger-value" th:text="${menu.value}">Popularity</span>
+                <i data-lucide="chevron-down" class="bb-chevron" aria-hidden="true"></i>
+            </summary>
+            <div class="bb-panel" th:insert="~{fragments/browse-bar :: browsePanel(${menu})}"></div>
+        </details>
+    </div>
+</section>
+
+<th:block th:fragment="browsePanel(menu)">
+    <p class="bb-note" th:if="${menu.note != null}" th:text="${menu.note}">Couldn't load streaming services.</p>
+    <div th:each="section : ${menu.sections}" class="bb-section" th:classappend="'bb-' + ${section.layout}">
+        <h3 class="bb-section-heading" th:if="${section.heading != null}" th:text="${section.heading}">Heading</h3>
+        <ul class="bb-options">
+            <li th:each="link : ${section.links}">
+                <a class="bb-option" th:href="${link.href}"
+                   th:classappend="${link.active} ? 'active' : ''"
+                   th:aria-current="${link.active} ? 'true' : null">
+                    <span class="bb-check" th:if="${section.layout == 'toggles'}" aria-hidden="true"><i data-lucide="check"></i></span>
+                    <img th:if="${link.logoUrl != null}" class="bb-logo" th:src="${link.logoUrl}" alt="" loading="lazy" width="28" height="28">
+                    <span class="bb-option-text">
+                        <span class="bb-option-label" th:text="${link.label}">2010s</span>
+                        <span class="bb-option-hint" th:if="${link.hint != null}" th:text="${link.hint}">Hint</span>
+                    </span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</th:block>
+</body>
+</html>

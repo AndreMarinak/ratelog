@@ -1,0 +1,569 @@
+/* Fork: the "Browse by" bar (templates/fragments/browse-bar.html). Self-contained, linked by the fragment itself.
+   Menus are <details> dropdowns of plain links; browse-bar.js only closes them and keeps them on screen. */
+
+.browse-bar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 28px;
+  font-family: var(--font);
+}
+
+/* Main row: type toggle, menus, search */
+
+.bb-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.bb-type {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bb-type-link {
+  padding: 5px 14px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+}
+
+.bb-label {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+.bb-menus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bb-menu {
+  position: relative;
+}
+
+.bb-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--text-soft);
+  font-size: 1.02rem;
+  font-weight: 600;
+  white-space: nowrap;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: "";
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .bb-chevron {
+    width: 14px;
+    height: 14px;
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    color: var(--text);
+    background: var(--surface-muted);
+  }
+}
+
+.bb-trigger-value {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+
+  &::before {
+    content: "\00b7";
+    margin-right: 6px;
+    color: var(--text-soft);
+  }
+}
+
+.bb-menu[open] > .bb-trigger {
+  color: var(--text);
+  background: var(--surface-muted);
+
+  .bb-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+.bb-menu.is-set:not(.bb-sort) > .bb-trigger {
+  color: var(--accent);
+
+  .bb-trigger-value {
+    color: var(--accent);
+  }
+}
+
+.bb-find {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 260px;
+  min-width: 180px;
+  margin-left: auto;
+
+  svg {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    height: 16px;
+    color: var(--text-soft);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    height: 36px;
+    padding: 0 14px 0 36px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+}
+
+/* Dropdown panels */
+
+.bb-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(540px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+/* Right-hand menus open towards the left so they stay on screen (browse-bar.js fine-tunes this). */
+.bb-menus > .bb-menu:nth-child(n+4) > .bb-panel,
+.bb-sort > .bb-panel {
+  left: auto;
+  right: 0;
+}
+
+.bb-note {
+  max-width: 36ch;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  font-style: italic;
+}
+
+.bb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  & + .bb-section {
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+.bb-section-heading {
+  margin: 0 0 2px 6px;
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bb-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bb-grid .bb-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 4px;
+}
+
+.bb-years .bb-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.bb-logos .bb-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 6px;
+}
+
+.bb-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.2;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--surface-muted);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+}
+
+.bb-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.bb-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-option-hint {
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.bb-years .bb-option {
+  justify-content: center;
+  padding: 6px 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-muted);
+}
+
+.bb-check {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 3;
+    opacity: 0;
+  }
+}
+
+.bb-option.active .bb-check {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+
+  svg {
+    opacity: 1;
+  }
+}
+
+/* Second row: active filter chips and Sort */
+
+.bb-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.bb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 9px 0 12px;
+  border: 1px solid hsl(var(--_brand-clay) / 0.32);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: border-color 0.15s ease;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.65;
+  }
+
+  &:hover {
+    border-color: var(--accent);
+
+    svg {
+      color: var(--accent);
+      opacity: 1;
+    }
+  }
+}
+
+.bb-clear {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 6px;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.bb-sort {
+  flex: none;
+  margin-left: auto;
+
+  .bb-trigger {
+    height: 32px;
+    font-size: 0.98rem;
+  }
+}
+
+.bb-type-link:focus-visible,
+.bb-trigger:focus-visible,
+.bb-option:focus-visible,
+.bb-chip:focus-visible,
+.bb-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tablet: the search moves to its own line before the menus get cramped, and since the menus may wrap,
+   panels open under the whole menu row from its left edge instead of hanging off one trigger. */
+@media (max-width: 1100px) {
+  .bb-find {
+    flex: 1 1 100%;
+    order: 3;
+    margin-left: 0;
+  }
+
+  .bb-menus {
+    position: relative;
+  }
+
+  .bb-menus > .bb-menu {
+    position: static;
+  }
+
+  .bb-menus > .bb-menu > .bb-panel,
+  .bb-menus > .bb-menu:nth-child(n+4) > .bb-panel {
+    top: calc(100% + 6px);
+    left: 0;
+    right: auto;
+    max-width: 100%;
+  }
+}
+
+/* Phone: three-by-two menu grid; panels span the bar; chips scroll sideways. */
+@media (max-width: 720px) {
+  .browse-bar {
+    margin-bottom: 20px;
+  }
+
+  .bb-main {
+    gap: 8px;
+    padding: 6px;
+    border-radius: 12px;
+  }
+
+  .bb-label {
+    display: none;
+  }
+
+  .bb-type {
+    width: 100%;
+  }
+
+  .bb-type-link {
+    flex: 1;
+    text-align: center;
+  }
+
+  .bb-menus {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+
+  .bb-menus > .bb-menu {
+    position: static;
+    min-width: 0;
+  }
+
+  .bb-menus .bb-trigger {
+    justify-content: center;
+    width: 100%;
+    padding: 0 6px;
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.98rem;
+  }
+
+  .bb-menus .bb-trigger-value,
+  .bb-menus .bb-chevron {
+    display: none;
+  }
+
+  .bb-menus .bb-trigger-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bb-menus > .bb-menu > .bb-panel,
+  .bb-menus > .bb-menu:nth-child(n+4) > .bb-panel {
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: 60vh;
+  }
+
+  .bb-grid .bb-options,
+  .bb-logos .bb-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bb-years .bb-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .bb-find {
+    min-width: 0;
+  }
+
+  .bb-sub {
+    gap: 8px;
+    padding: 0;
+  }
+
+  .bb-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-right: 20px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .bb-sort .bb-trigger-label {
+    display: none;
+  }
+
+  .bb-sort .bb-trigger-value::before {
+    display: none;
+  }
+
+  .bb-sort > .bb-panel {
+    max-width: calc(100vw - 32px);
+  }
+}
