@@ -13,6 +13,7 @@ data class ListSummaryRow(
     @Column("is_public") val isPublic: Boolean,
     @Column("item_count") val itemCount: Long,
     @Column("last_activity") val lastActivity: Long,
+    @Column("is_official") val isOfficial: Boolean,
 )
 
 data class ListCoverRow(
@@ -30,8 +31,12 @@ private const val SUMMARY_COLUMNS = """
     cl.is_public AS is_public,
     (SELECT COUNT(*) FROM custom_list_items i WHERE i.list_id = cl.id) AS item_count,
     GREATEST(cl.created_at_epoch_ms,
-             COALESCE((SELECT MAX(i.added_at_epoch_ms) FROM custom_list_items i WHERE i.list_id = cl.id), 0)) AS last_activity
+             COALESCE((SELECT MAX(i.added_at_epoch_ms) FROM custom_list_items i WHERE i.list_id = cl.id), 0)) AS last_activity,
+    EXISTS (SELECT 1 FROM official_lists o WHERE o.list_id = cl.id) AS is_official
 """
+
+/* Official lists have their own section on /lists, so the "followed" and "others" sections leave them out. */
+private const val NOT_OFFICIAL = "NOT EXISTS (SELECT 1 FROM official_lists o WHERE o.list_id = cl.id)"
 
 @SpringRepository
 interface ListSummaryDAO : Repository<ListSummaryMarker, Long> {
@@ -55,6 +60,7 @@ interface ListSummaryDAO : Repository<ListSummaryMarker, Long> {
         WHERE cl.is_public = true
           AND cl.user_id IN (:ownerIds)
           AND EXISTS (SELECT 1 FROM custom_list_items i WHERE i.list_id = cl.id)
+          AND $NOT_OFFICIAL
         ORDER BY last_activity DESC, id DESC
         LIMIT :limit
         """
@@ -69,11 +75,25 @@ interface ListSummaryDAO : Repository<ListSummaryMarker, Long> {
         WHERE cl.is_public = true
           AND cl.user_id NOT IN (:excludedOwnerIds)
           AND EXISTS (SELECT 1 FROM custom_list_items i WHERE i.list_id = cl.id)
+          AND $NOT_OFFICIAL
         ORDER BY last_activity DESC, id DESC
         LIMIT :limit
         """
     )
     fun findPublicExcludingOwners(excludedOwnerIds: List<Long>, limit: Int): List<ListSummaryRow>
+
+    /** Every official list, any owner. Official lists are public; the check is repeated so a stray row can't leak a private one. */
+    @Query(
+        """
+        SELECT $SUMMARY_COLUMNS
+        FROM official_lists ol
+        JOIN custom_lists cl ON cl.id = ol.list_id
+        JOIN users u ON u.id = cl.user_id
+        WHERE cl.is_public = true
+        ORDER BY last_activity DESC, id DESC
+        """
+    )
+    fun findOfficial(): List<ListSummaryRow>
 
     /** The first posters of each list, in list order, skipping titles without one. */
     @Query(
