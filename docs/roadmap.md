@@ -64,6 +64,13 @@ lists (official lists and later list features) `V1120–1129` (`V1120` official 
   your rating, recently added) that never changes the saved order. API: `numbered` on lists, `position` when adding items,
   `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}` and `PUT /api/v1/lists/{id}/order` ([docs/api.md](api.md#list-order)).
   Table `custom_list_options` (`V1121`). Requested 2026-11-23 ("are lists able to have some more order?").
+- [x] **20. Suggested for this list** (requested 2026-11-23, "like Spotify's Recommended songs under a playlist"): your own
+  list pages get a lazy "Suggested for this list" row under the list: poster tiles from the TMDB recommendations of up to 10 of
+  the list's titles (scored by how many recommend each and how high, weighted by TMDB popularity and rating), a franchise's
+  missing entries first, the list's own movie / show mix, titles already in it left out. "+ Add" saves in place (the tile turns
+  "Added", the list grows with the new rank, toast), "More suggestions" gives a new batch, "Not interested" hides one for the
+  session. Not on other people's lists, empty lists, Edit order or tick-off. API: `GET /api/v1/lists/{id}/suggestions`
+  ([docs/api.md](api.md#list-suggestions)). No migration.
 
 ## Fixes and housekeeping done
 
