@@ -11,14 +11,19 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 
 - [x] **1. API for Claude**: token auth (`/settings/api`), lists CRUD, add titles by TMDB id or by title + year with strict matching. See [docs/api.md](docs/api.md). No MCP connector.
 - [x] **2. Optional quick rating**: one 0–10 score as an alternative to the 5 category sliders. Rankings must handle both kinds. API: `/api/v1/ratings` ([docs/api.md](docs/api.md#ratings)).
-- [ ] **3. Watchlist and statuses**: Want to watch, Watching, Watched, Dropped. Works for movies and TV.
-- [ ] **4. Custom tags and categories**: user-defined tags (e.g. "comfort watch", "mind-benders"), filterable alongside TMDB genres.
+- [x] **3. Watchlist and statuses**: Want to watch, Watching, Watched, Dropped on every title; `/watchlist` page; rating auto-sets Watched. API: `/api/v1/statuses`.
+- [x] **4. Custom tags and categories**: user-defined tags with colors on title pages, `/tags` management, tag filter on Top pages, tags during list import. API: `/api/v1/tags`.
 - [ ] **5. Watch diary and history**: log each watch with a date, including rewatches. Timeline/history page.
 - [ ] **6. CSV export and more imports**: full export, plus imports from IMDb (ratings/watchlist CSV), Trakt, and a generic CSV format (title, year, tmdb_id, rating, status, date, tags, list).
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
 - [x] **9. External scores and trailers on title pages**: TMDB score, runtime and click-to-load trailers from TMDB; IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores via MDBList (optional `MDBLIST_API_KEY`), cached in `title_extras`. Also `GET /api/v1/titles/{type}/{tmdbId}`.
-- [ ] **10. Home dashboard**: rows for Watching, Up next (watchlist), Recently watched, Recently added lists.
+- [ ] **10. Home dashboard + Lists tab** (in progress): scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV) and a Lists tab (`/lists`: mine + public lists).
+
+## Fixes and housekeeping done
+
+- Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
+- Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 
 ## Later (todo)
 
