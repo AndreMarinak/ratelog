@@ -4,6 +4,28 @@ Fork of [golmenero/ratelog](https://github.com/golmenero/ratelog): self-hosted, 
 Kotlin 2.4 + Spring Boot 3.5 (Thymeleaf server-rendered UI, Spring Data JDBC, Flyway, PostgreSQL), Arrow `Either` for errors, TMDB for metadata.
 Live: https://ratelog-production.up.railway.app (Railway deploys `master` on every push).
 
+## TOP PRIORITY: run agents so work never backs up
+
+The user wants many things built in parallel, but on 2026-11-23 six agents at once (each running Maven, a copy of the app and
+Chrome) pushed this laptop to 100% CPU, a "small popup" agent took 2+ hours, and finished branches waited for each other. Rules:
+
+1. **At most 3 coding agents at once.** Research / list-import agents (no builds) may run alongside, at most 5 agents total.
+   New requests wait in a queue (tell the user what's queued); start the next agent the moment one finishes.
+2. **One feature per agent, small and specific.** Never pile new requests onto a running agent. Only a tiny tweak to the exact
+   screen it is building, sent early, may be added; anything else becomes its own queued agent.
+3. **Time-box every agent:** the brief says "commit a working checkpoint within 45 minutes and report within about 75". Big
+   features are split into phases, each its own commit and report. If an agent is late, tell it to wrap up and ship what works.
+4. **Agents test their feature, not the world.** While building: the targeted unit tests. At the end: ONE full clean build
+   (0 failures) and a SHORT browser check of their feature (1440px + one phone width, with screenshots). The full regression
+   walkthrough is run once by the main session after merging, not by every agent.
+5. **Merge and ship continuously.** Merge each finished branch right away (keep both sides of docs / `messages.properties`
+   conflicts), then one clean build + one walkthrough run per batch, then push. Never let more than 2 finished branches wait.
+6. **Start agents from the latest master**, give each its own port and database, and don't run two agents on the same
+   files at once (run them one after the other instead).
+7. **Browser tests seed their own data** (create their own lists / ratings through the API, never rely on ids or titles left
+   in a database), so they pass on any database and on a second run.
+8. **Status on request:** for each agent, how long it has run, its stage (building / testing / docs / committed) and what's queued.
+
 ## Documentation: keep it current (required)
 
 All documentation lives under `docs/`. **A change is not done until its docs are updated, in the same commit** (or the same merge for
