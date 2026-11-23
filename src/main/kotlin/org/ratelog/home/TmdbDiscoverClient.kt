@@ -25,12 +25,32 @@ import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 
 /** The TMDB lists the home dashboard shows. `regional` feeds take the user's watch region. */
-enum class DiscoverFeed(val path: String, val mediaType: MediaType, val regional: Boolean) {
+enum class DiscoverFeed(
+    val path: String,
+    val mediaType: MediaType,
+    val regional: Boolean,
+    /** Extra TMDB query parameters (for `/discover` feeds). */
+    val params: Map<String, String> = emptyMap(),
+    /** > 1: the feed walks pages 1..n, one per ISO week, so the row changes from week to week. */
+    val rotatePages: Int = 1,
+) {
     TRENDING_MOVIES("/trending/movie/week", MediaType.movie, regional = false),
     TRENDING_TV("/trending/tv/week", MediaType.tvshow, regional = false),
     NOW_PLAYING("/movie/now_playing", MediaType.movie, regional = true),
     UPCOMING("/movie/upcoming", MediaType.movie, regional = true),
     POPULAR_TV("/tv/popular", MediaType.tvshow, regional = false),
+
+    /** Fork: acclaimed films from before 2000 (no documentaries), rotating weekly through the top ~60. */
+    CLASSICS(
+        "/discover/movie", MediaType.movie, regional = false,
+        params = mapOf(
+            "sort_by" to "vote_average.desc",
+            "vote_count.gte" to "4000",
+            "primary_release_date.lte" to "1999-12-31",
+            "without_genres" to "99",
+        ),
+        rotatePages = 3,
+    ),
 }
 
 data class DiscoverTitle(
@@ -110,8 +130,9 @@ class TmdbDiscoverClient(
                 builder.path(feed.path)
                     .queryParam("api_key", apiKey)
                     .queryParam("language", lang.name)
-                    .queryParam("page", 1)
+                    .queryParam("page", pageFor(feed, now))
                     .also { if (region != null) it.queryParam("region", region.value) }
+                    .also { feed.params.forEach { (name, value) -> it.queryParam(name, value) } }
                     .build()
             }
             .retrieve()
@@ -126,6 +147,13 @@ class TmdbDiscoverClient(
     }
 
     companion object {
+        /** Page 1, or for rotating feeds the ISO week's page in 1..[DiscoverFeed.rotatePages]. */
+        fun pageFor(feed: DiscoverFeed, now: Instant): Int {
+            if (feed.rotatePages <= 1) return 1
+            val week = now.atZone(java.time.ZoneOffset.UTC).get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            return week % feed.rotatePages + 1
+        }
+
         val SUCCESS_TTL: Duration = Duration.ofHours(1)
         val FAILURE_TTL: Duration = Duration.ofMinutes(2)
     }

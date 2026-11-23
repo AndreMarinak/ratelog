@@ -35,11 +35,21 @@ object DiscoverRows {
 
     fun genres(type: MediaType): List<Genre> = if (type == MediaType.movie) MOVIE_GENRES else TV_GENRES
 
+    /**
+     * Genre rows show well-known, well-liked titles from every era (most votes on TMDB, rated [GENRE_MIN_RATING]+),
+     * not TMDB's "popularity", which is almost all current releases (user feedback 2026-11-23: "almost strictly 2026
+     * movies"). "Popular now" stays the row for what's new.
+     */
+    const val GENRE_MIN_RATING = 7.0
+
     /** Every row for [type], carrying the viewer's "hide seen" choice into each row's filters (and so its links). */
     fun forType(type: MediaType, hideSeen: Boolean): List<DiscoverRowSpec> {
         val popular = DiscoverRowSpec(POPULAR, BrowseFilters(type = type, popular = BrowsePopular.NOW, hideSeen = hideSeen))
         return listOf(popular) + genres(type).map { genre ->
-            DiscoverRowSpec(BrowseGenres.slug(genre), BrowseFilters(type = type, genre = genre, hideSeen = hideSeen))
+            DiscoverRowSpec(
+                BrowseGenres.slug(genre),
+                BrowseFilters(type = type, genre = genre, popular = BrowsePopular.ALL_TIME, minRating = GENRE_MIN_RATING, hideSeen = hideSeen),
+            )
         }
     }
 

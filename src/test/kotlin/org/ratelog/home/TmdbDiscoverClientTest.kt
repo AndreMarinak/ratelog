@@ -109,6 +109,25 @@ class TmdbDiscoverClientTest {
     }
 
     @Test
+    fun `classics asks discover for acclaimed pre-2000 films, page rotating by week`() {
+        tmdb.respond("/discover/movie", page())
+
+        client.fetch(DiscoverFeed.CLASSICS, Lang.en, us)
+
+        val query = tmdb.requestsTo("/discover/movie").single().query
+        assertTrue("sort_by=vote_average.desc" in query, query)
+        assertTrue("vote_count.gte=4000" in query, query)
+        assertTrue("primary_release_date.lte=1999-12-31" in query, query)
+        assertTrue("without_genres=99" in query, query)
+        assertTrue("region=" !in query, query)
+        // 2026-11-22 is in ISO week 47: 47 % 3 + 1 = 3.
+        assertTrue("page=3" in query, query)
+        assertEquals(1, TmdbDiscoverClient.pageFor(DiscoverFeed.TRENDING_MOVIES, Instant.parse("2026-11-22T12:00:00Z")))
+        val pages = (0L until 21L).map { TmdbDiscoverClient.pageFor(DiscoverFeed.CLASSICS, Instant.parse("2026-01-05T00:00:00Z").plus(Duration.ofDays(7 * it))) }.toSet()
+        assertEquals(setOf(1, 2, 3), pages)
+    }
+
+    @Test
     fun `serves repeat requests from the cache for an hour`() {
         tmdb.respond("/trending/movie/week", page(movie(1, "Heat")))
 
