@@ -29,7 +29,7 @@ lists (official lists and later list features) `V1120–1129`.
   `progress` on `GET /api/v1/lists/{id}` ([docs/api.md](api.md#list-progress)).
 - [ ] **13. Poster hover card**: hovering (or long-pressing on phones) a poster anywhere shows a small card with the year, basic
   scores (TMDB / IMDb, your rating) and quick actions: add to watchlist, add to a list. Requested 2026-11-23. First step done in #16:
-  every poster has Seen and Watchlist toggles (always visible on touch).
+  every poster has Seen and Watchlist toggles (always visible on touch); #18 added your rating, ★ and Add to list on every poster.
 - [x] **14. Discover** (was Browse): `/discover` with category rows (Popular now + genres, movies and TV) when no filter is set,
   the poster grid otherwise, and a "Hide titles I've seen" switch that is on by default. `/browse` redirects; API alias `/api/v1/discover`.
   No migration needed (`V1100–1109` stay reserved for browse/discover). Requested 2026-11-23.
@@ -49,6 +49,13 @@ lists (official lists and later list features) `V1120–1129`.
   naming its rank) and the sheet stays open. The title page button reads "In 2 lists" once it's in any. "New list" moved to
   the top of the sheet. All in place. API: `inLists` on `GET /api/v1/titles/{type}/{tmdbId}` ([docs/api.md](api.md#title-details-scores-and-trailers)).
   No migration.
+- [x] **18. Rate and add to list from every poster** (requested 2026-11-23): every poster (home, Discover, search, lists, the
+  Ratings tab, the watchlist, title pages) gets Add to list and a ★ in its bottom-right corner, beside the bookmark and eye. ★ on a
+  movie opens a 1-10 quick-rating picker (popover / phone bottom sheet) that saves in place; once rated the poster always shows
+  "★ 8.5" and the picker edits it (a detailed rating opens the title page's edit modal instead, never flattened); shows go to
+  their seasons. Add to list opens the title page's sheet in place. "Rate it?" after Seen on any poster and in tick-off mode
+  (optional, can be turned off). Ratings tab: a "To rate" view of titles seen but not rated (`/ratings/unrated`). Watchlist
+  buttons line up the same way on every tile (Watching stays for shows). No migration; no API change.
 
 ## Fixes and housekeeping done
 

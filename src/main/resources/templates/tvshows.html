@@ -69,8 +69,14 @@
             </form>
 
             <div th:if="${tops != null}">
+                <link rel="stylesheet" href="/tile-actions.css">
+                <script src="/tile-actions.js" defer></script>
+                <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
                 <div th:text="#{tvshows.empty.filter}" th:if="${#lists.isEmpty(tops)}" class="empty-state"></div>
-                <a th:href="@{'/tv/' + ${s.tmdbId}}" th:each="s, iterStat : ${tops}" class="card flex separate">
+                <!--/* Fork (tile rating): each card is wrapped so the poster quick actions (rankingActions, RankingTileActionsInterceptor) sit beside the link. */-->
+                <div th:each="s, iterStat : ${tops}" class="rank-item"
+                     th:with="actions=${rankingActions != null} ? ${rankingActions[s.tmdbId]} : null">
+                <a th:href="@{'/tv/' + ${s.tmdbId}}" class="card flex separate">
                     <div class="flex gap-lg">
                         <img th:src="@{'https://image.tmdb.org/t/p/w185' + ${s.posterPath}}" th:srcset="|https://image.tmdb.org/t/p/w185${s.posterPath} 1x, https://image.tmdb.org/t/p/w342${s.posterPath} 2x|" th:alt="'Poster of ' + ${s.name}">
                         <div>
@@ -88,6 +94,8 @@
                     </div>
                     <span class="rating" th:text="${#strings.replace(#numbers.formatDecimal(s.averageScore, 1, 2), ',', '.')}">0.00</span>
                 </a>
+                <div th:replace="~{fragments/tile-actions :: actions(${actions}, ${s.name})}"></div>
+                </div>
             </div>
         </div>
 

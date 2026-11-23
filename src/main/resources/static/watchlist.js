@@ -24,6 +24,16 @@
         if (hint) hint.hidden = visible === 0;
     }
 
+    // Fork (tile rating): a rating from the poster's ★ (tile-rate.js) can move the title to another tab.
+    window.ratelogWatchlist = {
+        moved(item, previous, current) {
+            item.hidden = true;
+            count(previous, -1);
+            count(current, 1);
+            refreshEmpty();
+        },
+    };
+
     /** "Removed "Dune" from your watchlist. [Undo]": fixed at the bottom, gone after a few seconds. */
     function toast(message, undo) {
         if (!toastEl) {

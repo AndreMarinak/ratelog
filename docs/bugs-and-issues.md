@@ -4,6 +4,23 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Poster tiles built elsewhere need the score to show the chip** (2026-11-23, tile rating): `TileActionsView.of(...)` takes
+  `score` (and optionally `detailed`) since the tile rating work. A tile built without it (e.g. a new row added on another branch
+  at the same time, like "More like this" on title pages) shows an empty ★ on a rated title until it passes `score = mark?.score`;
+  rating it from that tile still works and the server never flattens a detailed rating. Check new tile sources for it.
+- **The old score badges are still in the tile markup, hidden by CSS** (`.home-score`, `.browse-user-score`, the list badge,
+  hidden with `:has(.tile-rate)`), so tick-off mode and rated upcoming titles keep showing a score. Harmless; drop them from the
+  templates once nothing needs them.
+- **The tile's rating picker only gives whole scores (1-10).** A quick rating of 7.75 (from the title page slider) is shown as
+  "7.8" on the chip and in the picker, with no score highlighted; finer scores stay on the title page ("Detailed rating…").
+- **Opening a tile's add-to-list sheet loads every list with its items** (`CustomListRepository.findByUserId`, one query per
+  list, as on title pages). Fine at the admin's ~30 lists; a lighter "my lists" query would help if lists grow a lot.
+- **Rating (or listing) a title from a tile is slow the first time it is used** (seen 2026-11-23 in the browser check: one
+  rating took more than 8 s): a title from a TMDB row that Ratelog hasn't stored yet is imported first (TMDB details and
+  translations), the same as the bookmark and the eye. The tapped score stays dimmed (busy) until it is saved; later taps are
+  fast. Idea: import in the background and answer from the stored title once it exists.
+- **The To rate view stops at 200 titles per tab** (newest Seen first); rating some makes room. No paging yet.
+
 - **Discover's "Hide titles I've seen" still uses the old TV rule:** it hides a show with any rated season (`LibraryMark.seen` = rated or Watched), while tiles, title pages and list progress now treat a show that is Watching / Want to watch / Dropped as not seen even with rated seasons. Left alone because Discover was being changed on master at the same time; fix by passing the media type into `LibraryMark.seen`.
 - **Old bookmark handlers are unused after the Seen merge:** the `.home-quick` fetch handler in `home.js` and the bookmark code in `discover.js` (`form.home-quick`) and `browse.js` (`form.browse-bookmark`), plus their CSS. Home, Discover rows and the grid now render the shared quick-action stack (`fragments/tile-actions.html`), saved in place by `tile-actions.js` with the same `type:tmdbId` key. Safe to delete; `home.js`'s scroll restore is still used by `tile-actions.js`'s fallback. Left in place because Discover was being edited on master.
 - **Aired seasons are approximate for shows with three or more unaired seasons** (`AiredSeasons` only sees the last season's date and the next future date). Needs per-season air dates stored, or a TMDB call, to be exact.
@@ -27,6 +44,16 @@ Problems found while building and running the fork: what happened, the cause, an
 - **`delete-tvshow-rating-modal.html` declares a top-level `const modal`** in a plain `<script>`. Any other top-level `const modal` on the TV page would throw a redeclaration error; wrap it in an IIFE if that page gets more inline scripts.
 
 ## Fixed
+
+- **Ranking cards' quick actions sat at the bottom of the page** (found 2026-11-23 in the browser check of the tile rating
+  work): the new `.tile-actions` overlay is positioned against its wrapper, and the Ratings tab's new `.rank-item` wrapper had no
+  `position: relative`, so every card's actions stacked in the page's bottom-right corner. Fixed in `tile-actions.css`; the same
+  check added `position: relative` to `.watchlist-item`.
+- **A tile's add-to-list sheet would have relabelled the title page's "In N lists" button** (found 2026-11-23 while wiring the
+  tile sheet): `list-membership.js` updated every `[data-list-button]` on the page after any toggle. On a title page with
+  recommendation tiles, ticking a list for a recommended title would have shown its count on the page's own button. It now
+  leaves the page's button alone when the sheet belongs to a tile (`[data-tile-sheet]`) and tells the tile with a
+  `list:membership` event.
 
 - **The add-to-list toast was hidden behind the sheet** (found in the In-your-lists browser check, 2026-11-23): once the
   sheet stayed open after a tap, the "Added to X" toast (z-index 90) sat under the modal backdrop (z-index 1000). It now

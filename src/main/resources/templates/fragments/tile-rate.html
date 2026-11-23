@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  Fork: rate and add to list from poster tiles (the ★ and list buttons of fragments/tile-actions.html).
+
+  Once per page that shows tiles (one line, next to the page's tile-actions.js):
+    <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
+  It brings static/tile-rate.{css,js} and the picker's markup and strings. tile-rate.js opens the picker (a popover
+  on desktop, a bottom sheet on phones), saves through POST /movie/rate/tile, loads the add-to-list sheet from
+  GET /tile/lists, and on title pages opens the rate modal (?rate=1, ?rate=edit, ?rate=detailed) or the add-to-list
+  sheet (?lists=1), which is where ★ and the list button go without JS.
+*/-->
+<th:block th:fragment="assets">
+<link rel="stylesheet" href="/tile-rate.css">
+<script src="/tile-rate.js" defer></script>
+<template id="tileRatePicker"
+          th:attr="data-label-aria=#{tile.rate.picker.aria},data-label-new=#{tile.rate.picker.new},data-label-hint=#{tile.rate.picker.hint},data-label-yours=#{tile.rate.picker.yours},data-label-quick=#{tile.rate.picker.quick},data-label-detailed=#{tile.rate.picker.detailed},data-label-mark=#{tile.rate.mark},data-label-on=#{tile.rate.on},data-label-on-detailed=#{tile.rate.on.detailed},data-label-lists-add=#{tile.lists.add},data-label-lists-in=#{tile.lists.in},data-label-prompt=#{tile.rate.picker.prompt}">
+    <div class="tile-rate-pop" role="dialog" data-rate-pop hidden>
+        <div class="tile-rate-head">
+            <div class="tile-rate-heading">
+                <strong class="tile-rate-title" data-pop-title>Title</strong>
+                <span class="tile-rate-sub" data-pop-sub>
+                    <span data-pop-sub-text>Rate it</span>
+                    <span class="tile-rate-current" data-pop-current hidden>
+                        <i data-lucide="star" aria-hidden="true"></i><span data-pop-current-score>8.0</span>
+                    </span>
+                    <span class="tile-rate-kind" data-pop-kind></span>
+                </span>
+            </div>
+            <button type="button" class="tile-rate-close" data-pop-close th:aria-label="#{tile.rate.picker.close}" th:title="#{tile.rate.picker.close}">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <!--/* One tap saves a quick rating (scores 1-10, like the "Rate it?" nudge). */-->
+        <form class="tile-rate-form" action="/movie/rate/tile" method="post" data-pop-form>
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="tmdbId" value="" />
+            <input type="hidden" name="type" value="movie" />
+            <input type="hidden" name="back" value="" />
+            <p class="tile-rate-hint" data-pop-hint th:text="#{tile.rate.picker.hint}">Tap a score, it saves right away.</p>
+            <p class="tile-rate-hint" data-pop-prompt-hint hidden th:text="#{tile.rate.picker.prompt.hint}">Optional. Skip, or just keep going, and it stays seen.</p>
+            <div class="tile-rate-scores">
+                <button th:each="n : ${#numbers.sequence(1, 10)}" type="submit" name="score" th:value="${n}" class="tile-rate-score-btn"
+                        th:text="${n}" th:attr="data-label=#{tile.rate.picker.score}" aria-pressed="false">7</button>
+            </div>
+        </form>
+
+        <!--/* A detailed rating: shown, never overwritten here. */-->
+        <div class="tile-rate-detailed" data-pop-detailed hidden>
+            <p class="tile-rate-hint" th:text="#{tile.rate.picker.detailed.hint}">Rated in five categories.</p>
+            <a class="tile-rate-edit" href="#" data-pop-edit>
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span th:text="#{tile.rate.picker.edit}">Edit rating</span>
+            </a>
+        </div>
+
+        <div class="tile-rate-foot" data-pop-foot>
+            <!--/* After Seen ("Rate it?"): Skip leaves it seen and unrated. */-->
+            <button type="button" class="tile-rate-link tile-rate-skip" data-pop-skip hidden th:text="#{tile.rate.picker.skip}">Skip</button>
+            <a class="tile-rate-more" href="#" data-pop-more>
+                <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+                <span th:text="#{tile.rate.picker.detailed.link} + '…'">Detailed rating…</span>
+            </a>
+            <!--/* Quick ratings only, after a second tap (Delete / Cancel). */-->
+            <form class="tile-rate-delete" action="/movie/rate/tile/delete" method="post" data-pop-delete-form hidden>
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="tmdbId" value="" />
+                <input type="hidden" name="type" value="movie" />
+                <input type="hidden" name="back" value="" />
+                <button type="button" class="tile-rate-link" data-pop-delete>
+                    <i data-lucide="trash-2" aria-hidden="true"></i>
+                    <span th:text="#{tile.rate.picker.delete}">Delete rating</span>
+                </button>
+                <span class="tile-rate-confirm" data-pop-confirm hidden>
+                    <span th:text="#{tile.rate.picker.delete.confirm}">Delete your rating?</span>
+                    <button type="submit" class="tile-rate-danger" th:text="#{tile.rate.picker.delete.yes}">Delete</button>
+                    <button type="button" class="tile-rate-link" data-pop-cancel th:text="#{tile.rate.picker.cancel}">Cancel</button>
+                </span>
+            </form>
+        </div>
+        <!--/* Remembered per browser (localStorage). Shown with the "Rate it?" prompt, and in the picker while it's off. */-->
+        <label class="tile-rate-ask" data-pop-ask-row hidden>
+            <input type="checkbox" data-pop-ask checked>
+            <span th:text="#{tile.rate.picker.ask}">Ask to rate after Seen</span>
+        </label>
+    </div>
+</template>
+</th:block>
+
+<!--/* GET /tile/lists: the title page's add-to-list sheet for one tile's title (TileListSheetController). */-->
+<div th:fragment="listSheet" data-tile-sheet th:attr="data-key=${sheetKey},data-title=${sheetTitle}">
+    <div th:replace="~{fragments/add-to-list-modal :: addToListModal(${sheetMediaId}, ${sheetMediaType})}"></div>
+</div>
+
+<div th:fragment="listSheetMissing" data-tile-sheet-missing></div>
+</body>
+</html>

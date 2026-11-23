@@ -57,6 +57,7 @@ class SearchTileActionsInterceptor(
                 releaseDate = releaseDate,
                 today = today,
                 locale = locale,
+                score = mark?.score,
             )
         }.toMap()
     }

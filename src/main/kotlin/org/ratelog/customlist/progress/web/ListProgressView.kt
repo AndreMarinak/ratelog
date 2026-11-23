@@ -131,6 +131,7 @@ private fun ListProgressEntry.toView(filter: ListFilter, release: TitleRelease?,
             releaseDate = it.releaseDate,
             today = today,
             locale = locale,
+            score = score,
         )
     },
 )

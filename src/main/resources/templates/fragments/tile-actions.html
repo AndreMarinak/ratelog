@@ -10,8 +10,16 @@
     <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
   Upcoming badge (inside the poster):
     <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
+
+  Fork (tile rating): the stack is an overlay the size of the poster. Top right: bookmark (or badge), then the eye.
+  Bottom right, where your score badge always sat: Add to list, then ★ ("★ 8.5" once rated). Upcoming titles get no ★
+  and their list button sits in the eye's empty slot, clear of the Upcoming badge. ★ and the list button are links to
+  the title page without JS; static/tile-rate.js opens the rating picker / the add-to-list sheet in place. `tileMarks`
+  (org.ratelog.tile.TileMarks, on every page) says which titles are in your lists and which ratings are detailed.
 */-->
 <div th:fragment="actions(a, title)" th:if="${a != null}" class="tile-actions" data-tile-actions
+     th:classappend="${a.upcoming} ? 'is-upcoming' : ''"
+     th:with="inList=${tileMarks != null and tileMarks.inList(a)}, detailed=${a.ratingDetailed or (tileMarks != null and tileMarks.detailed(a))}"
      th:attr="data-label-seen-off=#{tile.seen.mark},data-label-seen-on=#{tile.seen.on},data-label-seen-locked=#{tile.seen.locked},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove},data-title=${title},data-key=${a.type + ':' + a.tmdbId}">
     <!--/* Watchlist: rendered even when it can't toggle (Watching / Watched / Dropped), hidden, so un-seeing can bring it back. */-->
     <form class="tile-act tile-watchlist" th:classappend="${a.onWatchlist} ? 'is-on' : ''" th:hidden="${!a.canToggleWatchlist}"
@@ -44,7 +52,34 @@
             <i data-lucide="check" aria-hidden="true"></i>
         </button>
     </form>
+    <!--/* Upcoming: no eye, so the list button takes its slot (the Upcoming badge is bottom left). */-->
+    <th:block th:if="${a.upcoming}"><a th:replace="~{fragments/tile-actions :: listButton(${a}, ${title}, ${inList})}"></a></th:block>
+
+    <div th:unless="${a.upcoming}" class="tile-acts-bottom">
+        <a th:replace="~{fragments/tile-actions :: listButton(${a}, ${title}, ${inList})}"></a>
+        <!--/* Rate: a movie opens the quick-rating picker (tile-rate.js; data-tile-rate), a show its seasons (rated per
+               season). Rated: "★ 8.5", always visible; a detailed rating is marked so the picker won't flatten it. */-->
+        <a class="tile-act tile-rate" th:classappend="(${a.score != null} ? 'is-on' : '') + (${detailed} ? ' is-detailed' : '')"
+           th:href="${a.rateHref}"
+           th:with="label=#{${a.rateLabelKey}(${a.scoreLabel})}, labelDetailed=#{tile.rate.on.detailed(${a.scoreLabel})}"
+           th:title="${detailed} ? ${labelDetailed} : ${label}"
+           th:aria-label="(${detailed} ? ${labelDetailed} : ${label}) + ': ' + ${title}"
+           th:attr="data-tile-rate=${a.isMovie} ? 'movie' : null,aria-haspopup=${a.isMovie} ? 'dialog' : null,data-score=${a.score},data-detailed=${detailed} ? 'true' : null,data-title-href=${a.titleHref}">
+            <i data-lucide="star" aria-hidden="true"></i>
+            <span th:if="${a.scoreLabel != null}" class="tile-rate-score" th:text="${a.scoreLabel}">8.5</span>
+        </a>
+    </div>
 </div>
+
+<!--/* Add to list: the title page's add-to-list sheet, loaded in place by tile-rate.js (GET /tile/lists). Ticked
+       (list-checks) once the title is in any of your lists. Without JS: the title page, which opens its sheet. */-->
+<a th:fragment="listButton(a, title, inList)" class="tile-act tile-list" th:classappend="${inList} ? 'is-on' : ''"
+   th:href="${a.listsHref}" data-tile-lists aria-haspopup="dialog"
+   th:with="label=${inList} ? #{tile.lists.in} : #{tile.lists.add}"
+   th:title="${label}" th:aria-label="${label} + ': ' + ${title}"
+   th:attr="data-tmdb-id=${a.tmdbId},data-type=${a.type}">
+    <i th:data-lucide="${inList} ? 'list-checks' : 'list-plus'" aria-hidden="true"></i>
+</a>
 
 <!--/* "Upcoming · Dec 18" on the poster (bottom left). The word and the date wrap onto two lines on narrow tiles. */-->
 <span th:fragment="upcoming(a)" th:if="${a != null and a.upcoming}" class="tile-upcoming">

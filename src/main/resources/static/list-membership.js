@@ -36,12 +36,15 @@
         }
     }
 
-    function applyTitle(state) {
+    function applyTitle(form, state) {
         const summary = document.querySelector('#addToListModal [data-list-summary]');
         if (summary) {
             summary.textContent = state.summary;
             summary.classList.toggle('is-in', state.count > 0);
         }
+        // Fork (tile rating): a poster tile's sheet (tile-rate.js) is for another title than the page's button.
+        form.dispatchEvent(new CustomEvent('list:membership', { bubbles: true, detail: state }));
+        if (form.closest('[data-tile-sheet]')) return;
         document.querySelectorAll('[data-list-button]').forEach((button) => {
             button.classList.toggle('is-on', state.count > 0);
             button.title = state.buttonTitle;
@@ -66,7 +69,7 @@
             if (!response.ok && !state.message) throw new Error('failed');
             if (state.ok) {
                 applyRow(form, state);
-                applyTitle(state);
+                applyTitle(form, state);
             }
             toast(state.message);
         } catch (error) {

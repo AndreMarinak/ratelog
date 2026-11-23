@@ -76,6 +76,14 @@
         return key ? document.querySelectorAll(`[data-tile-actions][data-key="${CSS.escape(key)}"]`) : [stack];
     }
 
+    // Fork (tile rating): tile-rate.js brings every copy of a title in line after a rating, the same way.
+    window.ratelogTileActions = {
+        apply(key, state) {
+            document.querySelectorAll(`[data-tile-actions][data-key="${CSS.escape(key)}"]`).forEach((s) => apply(s, state));
+            refreshIcons();
+        },
+    };
+
     function saveHomeScroll(form) {
         const row = form.closest('.home-row');
         if (!row || !form.closest('.home-dashboard')) return;

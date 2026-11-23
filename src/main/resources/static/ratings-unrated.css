@@ -1,0 +1,98 @@
+/* Fork: the Ratings tab's "To rate" link (fragments/ratings-switch.html) and its view (templates/ratings-unrated.html).
+   The tiles are the home tiles (home.css) in the search results' grid (search-results.css). */
+
+.ratings-switch-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  text-align: center;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* Three options on a phone: tighter, so "TV Shows" and "To rate 12" never wrap or cut. */
+@media (max-width: 480px) {
+  .ratings-switch-link {
+    gap: 5px;
+    padding: 6px 8px;
+    font-size: 0.95rem;
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  .ratings-switch-count {
+    min-width: 18px;
+    padding: 0 5px;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .ratings-switch-link svg {
+    display: none;
+  }
+}
+
+.unrated-intro {
+  margin: 0 0 12px;
+  color: var(--text-soft);
+}
+
+.unrated-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.unrated-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-weight: 600;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.active {
+    border-color: transparent;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+}
+
+.unrated-tab-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.unrated-empty[hidden] {
+  display: none;
+}
+
+/* A title rated (or un-seen) here leaves the view. */
+.unrated-grid .home-tile-wrap {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+
+  &.is-leaving {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}

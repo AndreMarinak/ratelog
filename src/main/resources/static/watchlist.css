@@ -114,11 +114,12 @@
   }
 }
 
-/* Narrow cards (phones): Remove is a square at the end of the last row; with three actions the first one gets
-   its own row, so no label is ever cut. Wide cards: one row, Remove labelled. */
+/* Fork: every tile of a tab has the same slots (3, or 1 on Seen), equal widths, for movies and shows alike.
+   Wide cards: icon over a short label. Narrow cards (phones): icons only, named by aria-label / title, so a label
+   is never cut. */
 .watchlist-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(var(--slots, 3), minmax(0, 1fr));
   gap: 6px;
 
   form {
@@ -126,27 +127,28 @@
     min-width: 0;
     margin: 0;
   }
-
-  form:first-child:nth-last-child(3) {
-    grid-column: 1 / -1;
-  }
-
-  form:only-child {
-    grid-column: 1 / -1;
-  }
 }
 
-@container (min-width: 250px) {
-  .watchlist-actions {
-    display: flex;
+.watchlist-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 4px 6px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
 
-    form {
-      flex: 1;
-    }
-
-    form:has(.is-remove):not(:only-child) {
-      flex: 0 0 auto;
-    }
+  svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
   }
 }
 
@@ -233,31 +235,36 @@
   }
 }
 
-/* Remove: icon only on narrow cards, unless it's the only action (the label stays its accessible name). */
-.watchlist-actions form:not(:only-child) .watchlist-act.is-remove {
-  width: 38px;
-  padding: 6px;
-
-  span {
-    display: none;
-  }
+/* Fork: equal slots. Narrow cards (under 210px, i.e. phones): icons only (aria-label / title name them), except a
+   lone button (the Seen tab's Remove) keeps its label. Wide cards: the icon over a short label, never cut. */
+.watchlist-actions .watchlist-act {
+  flex-direction: column;
+  gap: 3px;
+  min-height: 46px;
+  padding: 5px 4px;
+  font-size: 0.82rem;
 }
 
-@container (min-width: 250px) {
-  .watchlist-actions form:not(:only-child) .watchlist-act.is-remove {
-    width: auto;
-    padding: 6px 10px;
+.watchlist-actions.slots-1 .watchlist-act {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 38px;
+  font-size: 0.92rem;
+}
 
-    span {
-      display: inline;
+@container (max-width: 209px) {
+  .watchlist-actions:not(.slots-1) {
+    .watchlist-act {
+      min-height: 40px;
+
+      span {
+        display: none;
+      }
     }
-  }
-}
 
-@media (max-width: 600px) {
-  .watchlist-act {
-    padding: 6px 4px;
-    font-size: 0.9rem;
+    .watchlist-note span {
+      font-size: 0.78rem;
+    }
   }
 }
 

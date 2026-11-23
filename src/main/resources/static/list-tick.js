@@ -32,7 +32,8 @@
 
     document.addEventListener('tile:changed', (event) => {
         const detail = event.detail || {};
-        if (detail.act === 'seen' && detail.state && detail.state.ok) update(detail.state.seenDelta);
+        // Seen eye, or a rating from the ★ picker (rating a movie marks it seen).
+        if ((detail.act === 'seen' || detail.act === 'rate') && detail.state && detail.state.ok) update(detail.state.seenDelta);
     });
 
     document.addEventListener('click', (event) => {
