@@ -19,13 +19,16 @@ In the Railway project:
 | `POSTGRES_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
 | `ADMIN_PASSWORD` | a password of 12+ characters; replaces the seeded `admin`/`admin` login on first start |
 | `TMDB_API_KEY` | TMDB v3 "API Key" (only read on first start; later changes go in Admin > Configuration) |
+| `PORT` | `8080` (pin it so it matches the domain's target port) |
 | `JAVA_TOOL_OPTIONS` | optional: `-XX:MaxRAMPercentage=75` |
-
-Don't set `PORT`; Railway provides it and the app listens on it.
 
 ## 3. Domain
 
-Ratelog service → `Settings` → `Networking` → `Generate Domain`. Log in as `admin` with your `ADMIN_PASSWORD`.
+Ratelog service → `Settings` → `Networking` → `Generate Domain` with **target port 8080**. Log in as `admin` with your `ADMIN_PASSWORD`.
+
+A **502** from the domain means nothing healthy is listening: usually missing `POSTGRES_*` variables (the app crash-loops
+trying `localhost:5432`), a target port that doesn't match `PORT`, or the app still starting (first boot takes about a minute).
+Check the Deploy Logs for `Started RatelogApplicationKt` or the first `Caused by:` line.
 
 ## 4. Checks
 
