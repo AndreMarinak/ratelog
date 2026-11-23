@@ -1,0 +1,75 @@
+/* Fork: Movies | TV Shows switch on the Ratings tab (templates/fragments/ratings-switch.html). */
+.ratings-switch {
+  display: inline-flex;
+  gap: 2px;
+  margin: -8px 0 24px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ratings-switch-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+}
+
+@media (max-width: 720px) {
+  .ratings-switch {
+    display: flex;
+    margin: -4px 0 18px;
+  }
+
+  .ratings-switch-link {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Phones: the ranking filters in two rows (genre | score type, then name | count | search) instead of four. */
+@media (max-width: 720px) {
+  .ratings-switch ~ .grid form.filter {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+
+    > select,
+    > input {
+      grid-column: span 2;
+      width: 100%;
+      min-width: 0;
+    }
+
+    > select#limit,
+    > button {
+      grid-column: span 1;
+      width: 100%;
+    }
+
+    > button {
+      justify-content: center;
+    }
+  }
+}

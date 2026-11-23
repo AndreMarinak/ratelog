@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--
+    Fork: the Movies | TV Shows switch that joins the two ranking pages under one "Ratings" tab.
+    Included once at the top of movies.html and tvshows.html; the filters below it stay per page.
+-->
+<nav th:fragment="ratingsSwitch(current)" class="ratings-switch" th:aria-label="#{ratings.switch.aria}">
+    <link rel="stylesheet" href="/ratings.css">
+    <a href="/movies" class="ratings-switch-link" th:classappend="${current == 'movies'} ? 'active' : ''"
+       th:attr="aria-current=${current == 'movies'} ? 'page' : null">
+        <i data-lucide="film" aria-hidden="true"></i>
+        <span th:text="#{nav.movies}">Movies</span>
+    </a>
+    <a href="/tvshows" class="ratings-switch-link" th:classappend="${current == 'tvshows'} ? 'active' : ''"
+       th:attr="aria-current=${current == 'tvshows'} ? 'page' : null">
+        <i data-lucide="tv" aria-hidden="true"></i>
+        <span th:text="#{nav.tvshows}">TV Shows</span>
+    </a>
+</nav>
+</body>
+</html>

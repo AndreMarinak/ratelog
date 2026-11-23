@@ -3,7 +3,7 @@
 <body>
 <header class="site-header" th:fragment="nav(active)"
         th:with="signedIn=${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'},
-                 inMenu=${active == 'browse' or active == 'tags' or active == 'community' or active == 'profile' or active == 'admin'}"
+                 inMenu=${active == 'tags' or active == 'community' or active == 'profile' or active == 'admin'}"
         th:classappend="${signedIn} ? 'signed-in' : ''">
     <div class="nav-brand" th:with="appName=#{app.name}">
         <a href="/" class="nav-monogram" th:aria-label="#{nav.brand.label(${appName})}">
@@ -13,8 +13,7 @@
     </div>
 
     <nav class="nav-links" th:if="${signedIn}" th:aria-label="#{nav.menu.main}">
-        <a class="nav-link" href="/movies" th:text="#{nav.movies}" th:classappend="${active == 'movies'} ? 'active' : ''">Movies</a>
-        <a class="nav-link" href="/tvshows" th:text="#{nav.tvshows}" th:classappend="${active == 'tvshows'} ? 'active' : ''">TV Shows</a>
+        <a class="nav-link" href="/ratings" th:text="#{nav.ratings}" th:classappend="${active == 'movies' or active == 'tvshows' or active == 'ratings'} ? 'active' : ''">Ratings</a>
         <a class="nav-link" href="/browse" th:text="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">Browse</a>
         <a class="nav-link" href="/watchlist" th:text="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">Watchlist</a>
         <a class="nav-link" href="/lists" th:text="#{nav.lists}" th:classappend="${active == 'lists'} ? 'active' : ''">Lists</a>
@@ -63,11 +62,11 @@
         <a class="bottom-nav-item bottom-nav-home" href="/" th:aria-label="#{nav.home}" th:classappend="${active == 'search'} ? 'active' : ''">
             <img src="/img/logo.svg" alt="">
         </a>
-        <a class="bottom-nav-item" href="/movies" th:aria-label="#{nav.movies}" th:classappend="${active == 'movies'} ? 'active' : ''">
-            <i data-lucide="film" aria-hidden="true"></i>
+        <a class="bottom-nav-item" href="/ratings" th:aria-label="#{nav.ratings}" th:classappend="${active == 'movies' or active == 'tvshows' or active == 'ratings'} ? 'active' : ''">
+            <i data-lucide="star" aria-hidden="true"></i>
         </a>
-        <a class="bottom-nav-item" href="/tvshows" th:aria-label="#{nav.tvshows}" th:classappend="${active == 'tvshows'} ? 'active' : ''">
-            <i data-lucide="tv" aria-hidden="true"></i>
+        <a class="bottom-nav-item" href="/browse" th:aria-label="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">
+            <i data-lucide="compass" aria-hidden="true"></i>
         </a>
         <a class="bottom-nav-item" href="/watchlist" th:aria-label="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">
             <i data-lucide="bookmark" aria-hidden="true"></i>
@@ -83,10 +82,6 @@
         <button class="nav-sheet-close" id="btnNavSettingsClose" type="button" th:aria-label="#{modal.close}">
             <i data-lucide="x" aria-hidden="true"></i>
         </button>
-        <a class="nav-sheet-item" href="/browse" th:classappend="${active == 'browse'} ? 'active' : ''">
-            <i data-lucide="compass" aria-hidden="true"></i>
-            <span th:text="#{nav.browse}">Browse</span>
-        </a>
         <a th:if="${tagsEnabled}" class="nav-sheet-item" href="/tags" th:classappend="${active == 'tags'} ? 'active' : ''">
             <i data-lucide="tags" aria-hidden="true"></i>
             <span th:text="#{nav.tags}">Tags</span>

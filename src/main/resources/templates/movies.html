@@ -6,7 +6,8 @@
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='movies')}"></header>
 
-    <h1 th:text="#{movies.title}">Movies.</h1>
+    <h1 th:text="#{ratings.title}">Ratings</h1>
+    <nav th:replace="~{fragments/ratings-switch :: ratingsSwitch('movies')}"></nav>
 
     <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
     <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
