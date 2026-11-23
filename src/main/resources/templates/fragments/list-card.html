@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <body>
-<!--/* Fork: a list as a card with a cover of its first posters. `card` is a ListCardView. Styles in home.css. */-->
+<!--/* Fork: a list as a card with a cover of its first posters. `card` is a ListCardView. Styles in home.css.
+       Official lists show the "Official" badge in place of the owner / visibility (official lists are always public). */-->
 <a th:fragment="listCard(card)" class="list-tile" th:href="${card.href}">
     <div class="list-cover" aria-hidden="true">
         <th:block th:each="url : ${card.coverPosterUrls}">
@@ -15,8 +16,12 @@
         <span th:unless="${card.seenCount == null or card.itemCount == 0}" class="list-tile-seen"
               th:classappend="${card.seenCount > 0} ? 'has-seen' : ''"
               th:text="#{lists.seen(${card.seenCount}, ${card.itemCount})}">9/25 seen</span>
-        <span th:if="${card.ownerUsername != null}" class="list-tile-owner" th:text="#{lists.by(${card.ownerUsername})}">by someone</span>
-        <span th:if="${card.ownerUsername == null}" class="list-tile-visibility" th:classappend="${card.isPublic} ? 'public' : ''">
+        <span th:if="${card.isOfficial}" class="list-tile-visibility list-tile-official" th:title="#{lists.official.badge.title}">
+            <i data-lucide="badge-check" aria-hidden="true"></i>
+            <span th:text="#{lists.official.badge}">Official</span>
+        </span>
+        <span th:if="${card.ownerUsername != null and !card.isOfficial}" class="list-tile-owner" th:text="#{lists.by(${card.ownerUsername})}">by someone</span>
+        <span th:if="${card.ownerUsername == null and !card.isOfficial}" class="list-tile-visibility" th:classappend="${card.isPublic} ? 'public' : ''">
             <i th:data-lucide="${card.isPublic} ? 'globe' : 'lock'" aria-hidden="true"></i>
             <span th:text="${card.isPublic} ? #{list.public} : #{lists.private}">Public</span>
         </span>

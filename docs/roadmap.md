@@ -5,7 +5,8 @@ Base: [golmenero/ratelog](https://github.com/golmenero/ratelog). Conventions: [C
 
 Reserved migration numbers (so parallel work never collides): API tokens `V1000`, quick rating `V1010–1019`,
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
-smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`.
+smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
+lists (official lists and later list features) `V1120–1129`.
 
 ## Build now (in suggested order)
 
@@ -31,12 +32,20 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - [x] **14. Discover** (was Browse): `/discover` with category rows (Popular now + genres, movies and TV) when no filter is set,
   the poster grid otherwise, and a "Hide titles I've seen" switch that is on by default. `/browse` redirects; API alias `/api/v1/discover`.
   No migration needed (`V1100–1109` stay reserved for browse/discover). Requested 2026-11-23.
+- [x] **15. Official lists** (Letterboxd-style): admins mark any list official (switch under the list title, or `isOfficial`
+  in the API); official lists are public and shown to every account in an "Official lists" row at the top of the Lists tab,
+  a row on the Discover landing right after Popular now, and `/lists/official`, each with the viewer's own "9/25 seen".
+  API: `isOfficial` on lists, `GET /api/v1/lists/official`, any token can read an official list ([docs/api.md](api.md#official-lists)).
+  Table `official_lists` (`V1120`). Requested 2026-11-23 for the admin's 26 researched lists.
 
 ## Fixes and housekeeping done
 
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.
+- 2026-11-23 batch: one Ratings tab (Movies | TV Shows switch), Browse renamed Discover, title page redesign (desktop three columns,
+  phone action bar), small actions save in place (no reload), Classics home row, tags hidden behind a feature flag, compact
+  Discover bar on phones, no white overscroll. Details in [design-decisions.md](design-decisions.md).
 
 Gap research against Letterboxd, the TV trackers and the discovery apps (ranked): [competitor-gaps.md](competitor-gaps.md).
 

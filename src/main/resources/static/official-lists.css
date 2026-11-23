@@ -1,0 +1,92 @@
+/* Official lists (fork): the row on the Lists tab and the Discover landing, the badge + admin toggle under a list's
+   title, and /lists/official. Markup in templates/fragments/official-lists.html and templates/lists-official.html.
+   The row and the cards reuse home.css (rows, "Your lists" collage cards, .list-tile-official). */
+
+/* On /lists the row is also a .lists-section, whose h2 margin would push the heading off the "See all" line. */
+.official-row .home-row-head h2 {
+  margin: 0;
+}
+
+/* Under the list title: badge for everyone, toggle for admins. */
+.list-official-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 2px 0 8px;
+}
+
+.list-official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 3px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.5;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.list-official-toggle {
+  display: inline-flex;
+  margin: 0;
+}
+
+.list-official-button {
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px 6px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  /* The list title column is narrow on phones (the owner's buttons sit beside it); never break the label. */
+  white-space: nowrap;
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* /lists/official */
+.official-page-head {
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 4px 0;
+  }
+
+  p {
+    max-width: 62ch;
+    color: var(--text-soft);
+  }
+}
+
+@media (max-width: 600px) {
+  .list-official-button {
+    min-height: 44px;
+    padding-inline: 10px 12px;
+  }
+}

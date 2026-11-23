@@ -20,6 +20,7 @@ class ApiException(val status: HttpStatus, val code: String, override val messag
 
 fun notFound(message: String) = ApiException(HttpStatus.NOT_FOUND, "not_found", message)
 fun badRequest(code: String, message: String) = ApiException(HttpStatus.BAD_REQUEST, code, message)
+fun forbidden(message: String) = ApiException(HttpStatus.FORBIDDEN, "forbidden", message)
 
 /** JSON errors for the /api/v1 controllers only; takes precedence over the app's GlobalExceptionHandler. */
 @RestControllerAdvice(basePackages = ["org.ratelog.api"])
