@@ -73,5 +73,6 @@
 </div>
 <script th:if="${hasMore}" th:src="@{/search.js}"></script>
 <script th:if="${results != null}" src="/tile-actions.js" defer></script>
+<th:block th:if="${results != null}"><th:block th:replace="~{fragments/tile-rate :: assets}"></th:block></th:block>
 </body>
 </html>

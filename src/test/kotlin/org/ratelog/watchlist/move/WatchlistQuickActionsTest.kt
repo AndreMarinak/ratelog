@@ -217,9 +217,17 @@ class WatchlistQuickActionsTest {
         val items = (model["items"] as List<WatchlistItemResponse>).associateBy { it.title }
         assertTrue(items.values.all { item -> item.actions.any { it.to == "remove" } }, "Remove on every tile")
         assertEquals(listOf("seen", "remove"), items.getValue("Dune: Part Two").actions.map { it.to })
+        assertEquals(2, items.getValue("Dune: Part Two").firstSpan, "a movie's Seen takes the Watching slot, Remove lines up")
         assertEquals(listOf("seen", "watching", "remove"), items.getValue("The Bear").actions.map { it.to })
+        assertEquals(1, items.getValue("The Bear").firstSpan)
+        assertTrue(items.values.all { it.slots == 3 })
         val upcoming = items.getValue("Avengers: Doomsday")
         assertEquals(listOf("remove"), upcoming.actions.map { it.to }, "no Seen before it's out")
+        assertEquals("watchlist.note.upcoming", upcoming.noteKey)
+        assertEquals(2, upcoming.noteSpan)
+        assertEquals(1, upcoming.firstSpan)
+        assertEquals("tile.rate.mark", items.getValue("Dune: Part Two").tileActions!!.rateLabelKey, "the poster gets the star too")
+        assertEquals(false, upcoming.tileActions!!.canRate)
         assertEquals("Dec 18", upcoming.upcomingDate)
         assertNull(items.getValue("Dune: Part Two").upcomingDate)
         assertEquals("tvshow", items.getValue("The Bear").mediaType)
@@ -240,14 +248,25 @@ class WatchlistQuickActionsTest {
         fun moves(status: WatchStatus, isTv: Boolean = false, upcoming: Boolean = false, rated: Boolean = false) =
             WatchlistController.actionsFor(status, isTv, upcoming, rated).map { it.to }
 
+        // Seen first, Watching / Drop for shows only, Remove last (2026-11-23: Watching is "bc its a series").
         assertEquals(listOf("seen", "remove"), moves(WatchStatus.WANT_TO_WATCH))
         assertEquals(listOf("seen", "watching", "remove"), moves(WatchStatus.WANT_TO_WATCH, isTv = true))
-        assertEquals(listOf("remove"), moves(WatchStatus.WANT_TO_WATCH, isTv = true, upcoming = true))
+        listOf(false, true).forEach { tv ->
+            assertEquals(listOf("remove"), moves(WatchStatus.WANT_TO_WATCH, isTv = tv, upcoming = true))
+            assertEquals(listOf("remove"), moves(WatchStatus.WATCHED, isTv = tv))
+            assertEquals(emptyList<String>(), moves(WatchStatus.WATCHED, isTv = tv, rated = true), "a rated title stays seen through its rating")
+            assertEquals(listOf("remove"), moves(WatchStatus.DROPPED, isTv = tv, upcoming = true))
+        }
         assertEquals(listOf("seen", "dropped", "remove"), moves(WatchStatus.WATCHING, isTv = true))
         assertEquals(listOf("seen", "remove"), moves(WatchStatus.WATCHING))
-        assertEquals(listOf("remove"), moves(WatchStatus.WATCHED))
-        assertEquals(emptyList<String>(), moves(WatchStatus.WATCHED, rated = true), "a rated title stays seen through its rating")
-        assertEquals(listOf("watching", "seen", "remove"), moves(WatchStatus.DROPPED, isTv = true))
+        assertEquals(listOf("seen", "watching", "remove"), moves(WatchStatus.DROPPED, isTv = true), "same order as To watch")
+        assertEquals(listOf("seen", "remove"), moves(WatchStatus.DROPPED))
+        assertEquals(3, WatchlistController.slotsFor(WatchStatus.WANT_TO_WATCH))
+        assertEquals(1, WatchlistController.slotsFor(WatchStatus.WATCHED))
+        assertEquals("watchlist.note.upcoming", WatchlistController.noteFor(WatchStatus.WANT_TO_WATCH, upcoming = true, rated = false, hasDate = true))
+        assertEquals("watchlist.note.upcoming.soon", WatchlistController.noteFor(WatchStatus.DROPPED, upcoming = true, rated = false, hasDate = false))
+        assertEquals("watchlist.note.rated", WatchlistController.noteFor(WatchStatus.WATCHED, upcoming = false, rated = true, hasDate = true))
+        assertEquals(null, WatchlistController.noteFor(WatchStatus.WATCHED, upcoming = false, rated = false, hasDate = true))
         assertEquals("watchlist.action.remove.aria.watched", WatchlistController.actionsFor(WatchStatus.WATCHED, false, false, false).single().ariaKey)
     }
 

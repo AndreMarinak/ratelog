@@ -113,7 +113,7 @@ class BrowseBarViews(
                 onWatchlist = status == WatchStatus.WANT_TO_WATCH,
                 statusIcon = badge?.icon,
                 statusLabel = badge?.let { m(it.messageKey) },
-                actions = TileActionsView.of(t.tmdbId, t.type, status, tile.mark?.rated == true, t.releaseDate, today, locale),
+                actions = TileActionsView.of(t.tmdbId, t.type, status, tile.mark?.rated == true, t.releaseDate, today, locale, score = tile.mark?.score),
             )
         }
     }

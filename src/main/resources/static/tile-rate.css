@@ -1,0 +1,396 @@
+/* Fork: the ★ rating picker opened from poster tiles (fragments/tile-rate.html, static/tile-rate.js).
+   Desktop: a small popover beside the ★. Phones (600px and below, like the app's modals): a bottom sheet over a
+   dimmed page. The ★ and list buttons themselves are styled in tile-actions.css. */
+
+.tile-rate-pop {
+  position: absolute;
+  z-index: 1100;
+  width: 292px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-family: var(--font);
+
+  &[hidden] {
+    display: none;
+  }
+
+  &.is-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: auto;
+    max-width: none;
+    padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    border-width: 1px 0 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    animation: tile-rate-up 0.18s ease-out;
+  }
+}
+
+@keyframes tile-rate-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Behind the phone sheet. */
+.tile-rate-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+  background: rgba(0, 0, 0, 0.55);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.tile-rate-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tile-rate-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tile-rate-title {
+  overflow: hidden;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tile-rate-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.tile-rate-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--rate-text, hsl(20 83% 84%));
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+
+  &[hidden] {
+    display: none;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    fill: var(--rate-star, hsl(32 92% 62%));
+    stroke: var(--rate-star, hsl(32 92% 62%));
+  }
+}
+
+.tile-rate-kind:not(:empty)::before {
+  content: "\00b7";
+  margin-right: 6px;
+}
+
+button.tile-rate-close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px 0 0;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--text-soft);
+
+  &:hover {
+    background: var(--surface-muted);
+    color: var(--text);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.tile-rate-form {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.tile-rate-hint {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.tile-rate-scores {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+button.tile-rate-score-btn {
+  justify-content: center;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--rate-star, hsl(32 92% 62%));
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* Your current quick score. */
+  &[aria-pressed="true"] {
+    border-color: transparent;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  &[aria-busy="true"] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.tile-rate-detailed {
+  display: grid;
+  gap: 10px;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+a.tile-rate-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--accent-strong);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.tile-rate-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+
+  &:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+}
+
+a.tile-rate-more,
+button.tile-rate-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.tile-rate-delete {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  margin-left: auto;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.tile-rate-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 0.95rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+button.tile-rate-danger {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font);
+  font-weight: 700;
+
+  &:hover {
+    background: var(--danger-strong);
+  }
+}
+
+@media (max-width: 600px) {
+  button.tile-rate-score-btn {
+    min-height: 46px;
+    font-size: 1.15rem;
+  }
+
+  .tile-rate-title {
+    font-size: 1.2rem;
+  }
+}
+
+/* "Ask to rate after Seen" (localStorage). */
+.tile-rate-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  cursor: pointer;
+
+  &[hidden] {
+    display: none;
+  }
+
+  input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+}
+
+button.tile-rate-skip {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* The "Rate it?" prompt after Seen on a phone: a floating card above the tab bar (and the tick-off bar), with no
+   backdrop, so the next poster can be tapped right away. */
+@media (max-width: 600px) {
+  .tile-rate-pop.is-sheet.is-prompt {
+    left: 8px;
+    right: 8px;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 14px 12px;
+    border-width: 1px;
+    border-radius: var(--radius);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  body:has(.list-tick-bar) .tile-rate-pop.is-sheet.is-prompt {
+    bottom: calc(152px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The poster was in the lower half: the prompt sits under the header instead. */
+  .tile-rate-pop.is-sheet.is-prompt.is-top,
+  body:has(.list-tick-bar) .tile-rate-pop.is-sheet.is-prompt.is-top {
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
+
+  /* Compact: the question, two rows of scores, one footer line (Skip, the switch, Detailed rating). */
+  .tile-rate-pop.is-prompt {
+    .tile-rate-head {
+      margin-bottom: 8px;
+    }
+
+    [data-pop-prompt-hint] {
+      display: none;
+    }
+
+    .tile-rate-scores {
+      gap: 5px;
+    }
+
+    button.tile-rate-score-btn {
+      min-height: 38px;
+      font-size: 1.05rem;
+    }
+
+    .tile-rate-foot {
+      margin-top: 8px;
+      padding-top: 6px;
+      gap: 4px 12px;
+    }
+
+    .tile-rate-ask {
+      margin-top: 4px;
+    }
+  }
+}

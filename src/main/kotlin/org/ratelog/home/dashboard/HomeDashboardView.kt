@@ -115,7 +115,7 @@ private fun HomeTitle.toTile(kind: HomeRowKind, locale: Locale, today: LocalDate
     // POST /watchlist/toggle leaves Watching / Watched / Dropped alone, so those tiles get no button.
     canToggleWatchlist = status == null || status == WatchStatus.WANT_TO_WATCH,
     inWatchlist = status == WatchStatus.WANT_TO_WATCH,
-    actions = TileActionsView.of(tmdbId, mediaType, status, rated = score != null, releaseDate = releaseDate, today = today, locale = locale),
+    actions = TileActionsView.of(tmdbId, mediaType, status, rated = score != null, releaseDate = releaseDate, today = today, locale = locale, score = score),
 )
 
 /** "Dec 5" (in the UI language), with the year when it isn't this year. */

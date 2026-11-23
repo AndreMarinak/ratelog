@@ -6,6 +6,7 @@ import org.ratelog.user.User
 import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.move.WatchlistMove
 import org.ratelog.watchlist.seen.ReleaseRules
+import org.ratelog.watchlist.seen.TileActionsView
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -56,8 +57,23 @@ data class WatchlistItemResponse(
     /** Short release date while it's upcoming ("Dec 18"), else null. */
     val upcomingDate: String? = null,
     val actions: List<WatchlistItemAction> = emptyList(),
+    /** Fork (tile rating): the poster's Add to list and ★ (fragments/tile-actions.html); the buttons above cover the rest. */
+    val tileActions: TileActionsView? = null,
+    /** Slots in the action row: 3 on every tab but Seen (1), the same for movies and shows. */
+    val slots: Int = 3,
+    /** Shown in the slots no button can fill ("Out Dec 18" where Seen would be, "Rated" where Remove would be). */
+    val noteKey: String? = null,
 ) {
     val upcoming: Boolean get() = upcomingDate != null
+
+    /** How many slots the note takes. */
+    val noteSpan: Int get() = (slots - actions.size).coerceAtLeast(1)
+
+    /**
+     * How many slots the first button takes: a movie has no Watching / Drop, so its Seen widens into that slot and
+     * Remove stays in the last slot, lined up with the shows next to it.
+     */
+    val firstSpan: Int get() = if (noteKey != null) 1 else (slots - actions.size + 1).coerceAtLeast(1)
 }
 
 @Controller
@@ -133,6 +149,12 @@ class WatchlistController(
             mediaId = item.mediaId,
             upcomingDate = if (upcoming) item.releaseDate?.let { ReleaseRules.shortDate(it, today, locale) } else null,
             actions = actionsFor(item.status, item.mediaType == MediaType.tvshow, upcoming, rated = item.score != null),
+            slots = slotsFor(item.status),
+            noteKey = noteFor(item.status, upcoming, rated = item.score != null, hasDate = item.releaseDate != null),
+            tileActions = TileActionsView.of(
+                item.tmdbId, item.mediaType, item.status, rated = item.score != null, releaseDate = item.releaseDate,
+                today = today, locale = locale, score = item.score,
+            ),
         )
     }
 
@@ -156,8 +178,10 @@ class WatchlistController(
         fun tabLabelKey(status: WatchStatus) = "watchlist.tab.${status.apiName}"
 
         /**
-         * The buttons under a tile, per tab. Seen is never offered for an upcoming title; Watching / Dropped only for
-         * shows. A rated title on the Seen tab gets no Remove: it would still count as seen through its rating.
+         * The buttons under a tile, per tab, always in the same order: Seen, then Watching / Drop (shows only: a series
+         * is something you're in the middle of), then Remove. To watch and Dropped: Seen · Watching · Remove; Watching:
+         * Seen · Drop · Remove; Seen: Remove. An upcoming title gets no Seen or Watching (it isn't out; [noteFor] fills the
+         * slot). A rated title on the Seen tab gets no Remove: it would still count as seen through its rating.
          */
         fun actionsFor(status: WatchStatus, isTv: Boolean, upcoming: Boolean, rated: Boolean): List<WatchlistItemAction> {
             val seen = WatchlistItemAction(WatchlistMove.SEEN.param, "watchlist.action.seen", "watchlist.action.seen.aria", "eye", "is-seen")
@@ -168,8 +192,18 @@ class WatchlistController(
                 WatchStatus.WANT_TO_WATCH -> listOfNotNull(seen.takeIf { !upcoming }, watching.takeIf { isTv && !upcoming }, remove)
                 WatchStatus.WATCHING -> listOfNotNull(seen.takeIf { !upcoming }, dropped.takeIf { isTv }, remove)
                 WatchStatus.WATCHED -> listOfNotNull(remove.takeIf { !rated })
-                WatchStatus.DROPPED -> listOfNotNull(watching.takeIf { isTv }, seen.takeIf { !upcoming }, remove)
+                WatchStatus.DROPPED -> listOfNotNull(seen.takeIf { !upcoming }, watching.takeIf { isTv && !upcoming }, remove)
             }
+        }
+
+        /** Every tile of a tab has the same number of slots, so the buttons line up across the grid. */
+        fun slotsFor(status: WatchStatus): Int = if (status == WatchStatus.WATCHED) 1 else 3
+
+        /** What fills the slots no button can: why Seen isn't offered (not out yet), or why Remove isn't (rated). */
+        fun noteFor(status: WatchStatus, upcoming: Boolean, rated: Boolean, hasDate: Boolean): String? = when {
+            status == WatchStatus.WATCHED -> if (rated) "watchlist.note.rated" else null
+            upcoming -> if (hasDate) "watchlist.note.upcoming" else "watchlist.note.upcoming.soon"
+            else -> null
         }
     }
 }

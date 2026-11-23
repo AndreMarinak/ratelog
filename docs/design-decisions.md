@@ -82,9 +82,9 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Watchlist on an unrated Seen asks first.** One status can't be both Watched and Want to watch, so adding a seen-but-unrated title to the watchlist (a rewatch) would stop it counting as seen: the button confirms. A rated title stays seen through its rating, so it doesn't ask.
 - **Upcoming:** a title is upcoming when its release date (a show's first air date) is after today; released today is out. Tiles only know the date, so no date = not upcoming there; title pages also treat a dateless movie that TMDB lists as Rumored / Planned / In Production / Post Production (a show: Planned / In Production) as upcoming, shown as just "Upcoming". "Today" comes from an injected `Clock` (system zone). The badge date is short ("Dec 18") while it's under ten months away, so the year is never ambiguous, else "Sep 2027"; title pages show the full date. Upcoming titles get no Seen toggle anywhere (`POST /seen/toggle` refuses them too); the Watchlist toggle stays. Dates come from the TMDB payloads (home, Discover, search) or the stored title (lists, watchlist, personal rows, title pages; unreleased movies are refreshed by the daily sync).
 - **The follow bell only where it does something** (user, 2026-11-23: it "wouldn't do anything for most" titles). Following only adds release dates to the Premieres box on the Ratings page (no notifications), so the bell shows for movies whose release date is after today or unknown, and for shows that are Returning Series / In Production / Planned. A title already followed always keeps it (on) so a follow can't be stranded. Labelled "Notify me · Adds release dates to Premieres"; small and secondary, not a heart (a heart may later mean "like").
-- **"Rate it?" after Seen, never forced** (user decision 2026-11-23). After tapping Seen on a movie page with no rating, a small inline prompt offers 1-10 (one tap saves a quick rating through the Rate modal's own `POST /movie/rate`) or Skip. Not on tiles, the watchlist page or tick-off (bulk marking stays fast), not for shows (rated per season), and not without JS (Seen just saves). Saving reloads the page, like the Rate modal, because the rating card, the Rate button and Seen all change.
-- **Poster quick actions:** a stack in the poster's top-right corner: the watchlist bookmark (or a Watching / Dropped badge where the bookmark can't toggle), then the Seen eye. The Watched badge became the eye. The bookmark is rendered hidden rather than left out when it can't toggle, so un-seeing can bring it back in place. With a mouse, controls that are off appear on hover / focus; on touch screens and at 900px and below they're always visible; anything on is always visible. Status icons changed so the eye means Seen everywhere: Watched = `eye`, Watching = `circle-play`.
-- **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter).
+- **"Rate it?" after Seen, never forced** (user decision 2026-11-23). After tapping Seen on a movie page with no rating, a small inline prompt offers 1-10 (one tap saves a quick rating through the Rate modal's own `POST /movie/rate`) or Skip. Not on tiles, the watchlist page or tick-off (bulk marking stays fast), not for shows (rated per season), and not without JS (Seen just saves). Saving reloads the page, like the Rate modal, because the rating card, the Rate button and Seen all change. *(Tiles and tick-off got their own optional prompt on 2026-11-23, see "Rate it? after Seen on tiles" below.)*
+- **Poster quick actions:** a stack in the poster's top-right corner: the watchlist bookmark (or a Watching / Dropped badge where the bookmark can't toggle), then the Seen eye. The Watched badge became the eye. The bookmark is rendered hidden rather than left out when it can't toggle, so un-seeing can bring it back in place. With a mouse, controls that are off appear on hover / focus; on touch screens and at 900px and below they're always visible; anything on is always visible. Status icons changed so the eye means Seen everywhere: Watched = `eye`, Watching = `circle-play`. *(Since 2026-11-23 there is a second group bottom right: Add to list and ★, see "Rate and add to list from any poster" below.)*
+- **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). *(Layout and the Dropped order changed 2026-11-23, see "Watchlist buttons line up on every tile" below.)* Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter).
 - **List tick-off mode** ("Mark what you've seen", `?mark=1`): tapping a poster toggles Seen instead of opening the title; seen posters get a green check and outline, unseen an empty ring; a bar fixed above the phone tab bar shows the live count and Done (the same view without `mark`). The mode lives in the URL and every tab link keeps it, so master's in-place tab switch (`list-filter.js`) re-renders the grid in the same mode; all handlers are delegated from `document`. Without JS the posters stay links and each poster's eye is the per-poster form. Rated movies stay checked (a tap explains), upcoming titles have no toggle.
 - **Explicit `back` on form posts.** The new endpoints (`/seen/toggle`, `/watchlist/item`) take a `back` field and fall back to the Referer, then `/watchlist`; only a local path (+ query, + #fragment for `back`) is ever used, so a crafted value can't redirect off-site (`BackPath`).
 - **Search infinite scroll loads the server-rendered page** (`/?q=...&page=N`) and appends its tiles, instead of building tiles in JS from `/api/search`, so later pages carry the same quick actions and badges with no duplicated markup. The marks come from `SearchTileActionsInterceptor` (one query per media type), so the upstream search controller stays untouched.
@@ -222,6 +222,120 @@ series maybe those as well but also other ones?" Code: `org.ratelog.recommendati
     `403`): its id is nobody else's business. Admins can still un-mark any official list, hidden ones included.
   - The live site's 14 official lists are all public, so nothing changes for them.
 
+
+### Rate and add to list from any poster (2026-11-23)
+
+Requested by the user on 2026-11-23: "Also I can click the save button to watchlist but I lowkey want a rating button that's
+over it too so I don't have to click it and click back" / "If alr rated should take u to edit and display ur rating always" /
+"also maybe with that rating button to anywhere add one to be able to add to list?" / "ALso under ratings should have these
+buttons as well, aka anywhere I see a movie tile".
+
+- **Four actions on every poster, in two corners.** Top right stays the status stack (bookmark or Watching / Dropped badge,
+  then the Seen eye); **bottom right is a new row: Add to list, then ★**. Three or four 30px buttons stacked in one corner would
+  cover 108px of a 144px-tall poster at 360px (home rows are 96px wide there, the Discover and search grids about 97px), and
+  bottom right is where your score badge always sat on home, Discover and list posters, so the score stays where you look for
+  it. The bottom row needs at most 81px of the 84px a 96px tile has inside its padding (a perfect score reads "10", not "10.0",
+  to fit). The `.tile-actions` stack became an overlay the size of the poster (`aspect-ratio: 2/3`; 221px on list and watchlist
+  cards, whose poster row is a fixed 220px) so one fragment places both corners. Off controls keep the old rule: hover / focus
+  with a mouse, always visible on touch and at 900px and below.
+- **Rated = "★ 8.5", always visible** (one decimal, like the score badges it replaces; the old `.home-score`,
+  `.browse-user-score` and list score badges are hidden with `:has()` wherever the ★ is shown, and stay where it isn't, e.g. a
+  rated upcoming title or list tick-off mode). Unrated = an outline ★ button. Colours: the light clay score text with a warm
+  star, so it reads as "yours" next to the green eye and the clay bookmark.
+- **Movies: ★ opens a quick-rating picker**, a popover by the ★ on desktop (flips above when there's no room below, closes when
+  its row scrolls sideways) and a bottom sheet on phones (600px and below, like the app's modals). One tap on **1-10** saves a
+  quick rating: the same scale as the title page's "Rate it?" nudge, and as fine as Letterboxd's half stars (ten steps). Finer
+  scores stay on the title page's slider ("Detailed rating…" opens the rate modal with `?rate=detailed`). Saving is in place:
+  a toast ("Rated "Heat" 8/10 and marked it seen."), every copy of the title on the page (same `data-key`) gets the chip, the
+  eye turns on and locks (rating marks a movie Watched, the existing rule), list pages update "You've seen 9 of 25".
+- **Already rated opens your rating for editing.** A quick rating is shown in the picker ("Your rating ★ 8.5 · Quick rating",
+  the matching score highlighted) and can be changed with one tap, or deleted: "Delete rating" asks inline ("Delete your rating?
+  Delete / Cancel"), no native dialog. Deleting leaves the title seen (Watched stays, like every other delete) but unlocked.
+- **A detailed (five-category) rating is never flattened from a tile.** The picker shows your score with "Detailed rating" and
+  an **Edit rating** link to `/movie/{id}?rate=edit`, which opens the title page's rate modal in edit mode with the categories
+  filled in; no score buttons and no Delete (a detailed rating can carry a review: delete it where you can see it). The server
+  refuses too (`409`), so a stale page can't do it. Tiles learn which ratings are detailed from `TileMarks` (below).
+- **Its own endpoint, upstream's handlers:** `POST /movie/rate/tile` (`tmdbId`, `score`) and `/movie/rate/tile/delete`. The
+  modal's `/movie/rate` can't be reused as is: it needs the local movie id (tiles only know the TMDB id, and the movie may not be
+  saved yet, so the title is saved first like `/watchlist/toggle` does), only creates, and redirects; `/movie/rate/update`
+  replaces the review with what is posted. `TileRateHandler` calls upstream's `AddRatingHandler` / `UpdateRatingHandler`
+  (passing the stored review back, so changing the score keeps it) and `DeleteRatingHandler`, so validation, the DB rules and the
+  auto-Watched repository decorator apply unchanged. Upcoming movies are refused, like Seen. `fetch` gets JSON, a plain post
+  (the picker's fallback) redirects back with a flash message.
+- **Shows: ★ goes to the show's seasons** (`/tv/{id}#seasons`, the same as the title page's "Rate seasons") and the chip shows
+  the show's score, the average of your rated seasons. Shows are rated per season, so the tile can't rate "the show"; a season
+  picker on the tile was left out because TMDB rows don't carry the season list and the title page already shows it with each
+  season's rating.
+- **Upcoming titles get no ★** (you can't rate what isn't out, like the missing eye); their list button moves up into the eye's
+  empty slot so the bottom corner stays clear for the "Upcoming · Dec 18" badge.
+- **Without JS** ★ is a plain link: a movie's page with `?rate=1` (opens Rate / Edit rating there when JS runs, e.g. after a
+  middle-click), a show's seasons. The list button goes to `?lists=1` (opens the add-to-list sheet). The title page removes
+  the parameter after opening (`history.replaceState`), so a reload or a shared link doesn't open it again.
+- **Add to list from any poster** opens the title page's own add-to-list sheet (ticks, "#3", remove with confirm, New list on
+  top) on the current page: `GET /tile/lists?tmdbId=&type=` renders it (saving the title locally if needed) and `tile-rate.js`
+  shows it; its toggles are `list-membership.js`'s own, which now also tells the tile (a `list:membership` event) and leaves the
+  title page's button alone when the sheet belongs to a tile. "New list" from a tile's sheet creates and adds in place and stays
+  on the page. On a title page (recommendation rows) the page's own sheet is set aside while a tile's sheet is open. The list
+  button shows `list-checks` once the title is in any of your lists, with a quiet style (accent icon on the dark chip, not a
+  filled circle): on your own list pages every poster is in a list, and a row of orange circles was noise.
+- **`TileMarks`: two per-page lookups instead of changing every tile query.** "Is it in one of my lists" and "is my rating
+  detailed" come from a lazy model attribute (`tileMarks`, added to every page by `TileMarksAdvice`): each is one query for the
+  whole account, run the first time a tile asks and kept for the request, so a page with 200 tiles costs at most two queries and
+  a page without tiles none. The alternative was a new column in the marks queries of home, Discover, lists and search plus
+  every view model in between; this keeps those slices (and other branches working on them) untouched.
+- **Everywhere a poster appears:** home rows, Discover rows and grid, search, list pages, the Ratings tab, the new To rate view,
+  the watchlist page and title pages (for recommendation rows). On the Ratings tab the actions sit in a row at the bottom right
+  of each ranking card (the big number stays the ranked score, which can be one category's; the chip is your overall score). On
+  the watchlist page the poster only gets Add to list and ★: the buttons under each card are the status moves. Tag pages (tags
+  are hidden) and profiles (no posters) are left as they are.
+
+### "Rate it?" after Seen on tiles (2026-11-23)
+
+Requested by the user on 2026-11-23: "there's a mass mark what you've seen but it should go to rating them immediately after
+(can be optional) for each. But should be on each individual tile".
+
+- **After Seen from a tile's eye** (any poster, and list tick-off mode), an unrated released movie gets the same picker as a
+  prompt on that tile: "Marked seen. Rate it?" with the ten scores, Skip and "Detailed rating…". Tick-off taps the poster, so the
+  prompt points at the tile's check when the ★ is hidden there.
+- **It never blocks:** no backdrop and no focus grab, so the next poster can be ticked straight away; tapping anywhere else
+  closes the prompt (the title stays seen and unrated) and ticking the next poster opens it there. One tile at a time, no chain
+  of modals. On phones it is a floating card above the tab bar, and above the tick-off bar in tick-off mode.
+- **Optional, remembered per browser:** an "Ask to rate after Seen" switch in the prompt (on by default, `localStorage`, read
+  in a try/catch so blocked storage just means "on"). While it's off the switch also shows in the ★ picker, so it can be turned
+  back on.
+- **Movies only:** shows are rated per season, and a "Rate seasons" link after every ticked show would only slow tick-off down.
+  Not after the watchlist page's Seen button either: that tile leaves the tab at once.
+
+### To rate: seen but not rated (2026-11-23)
+
+Requested by the user on 2026-11-23: "Also under ratings there should be something to show movies watched but haven't rated".
+
+- **`/ratings/unrated`, a third option in the Ratings switch: "★ To rate 12".** Titles with status Watched and no rating (a
+  show: no rated season), newest Seen first, All · Movies · TV tabs with counts. The count in the switch is the hint on the
+  ranking pages (one `COUNT` query per Ratings page view, `UnratedSeenCountAdvice`; hidden at 0). A new page and route rather
+  than another filter in the ranking forms, which are a different thing (your ranked ratings) and were being edited elsewhere.
+- **Rate in place:** every tile has the poster actions, so ★ rates a movie right there; the tile fades out and the tab and
+  switch counts drop by one (`ratings-unrated.js`), and the toast says what was saved. Un-seeing a tile with its eye removes it
+  too. A show's ★ opens its seasons. Up to 200 titles per tab.
+
+### Watchlist buttons line up on every tile (2026-11-23)
+
+Requested by the user on 2026-11-23 (screenshot: movie tiles "Seen · Remove", TV tiles "Seen · Watc… · Remove"): "also some
+have buttons and others don't for moving it?", then, about the extra button: "oh and the watching thing is bc its a series
+which makes sense".
+
+- **Watching / Drop stay for shows only** (a series is something you're in the middle of; the user confirmed it makes sense).
+  What changed is the layout, so movie and show tiles look intentional side by side.
+- **Fixed slots, same order, equal widths:** every tile of a tab has the same number of slots (3, or 1 on the Seen tab), always
+  Seen first, Watching / Drop in the middle (shows), Remove last. A movie's Seen widens into the middle slot, so Remove sits in
+  the same place on every tile and all buttons share one height. Dropped now reads Seen · Watching · Remove, the same order as
+  To watch (it was Watching · Seen · Remove).
+- **A note fills a slot no button can**, instead of a gap: "Out Dec 18" where Seen / Watching would be on an upcoming title,
+  "Rated" where Remove would be on a rated Seen title (its tooltip explains: delete the rating to un-see it).
+- **Labels never cut:** on cards 210px and wider each button is the icon over a short label; on narrower cards (phones, two
+  cards per row) icons only, named by `aria-label` / `title`. The lone Remove on the Seen tab keeps its label. Moves, Undo and
+  the in-place behaviour are unchanged. Add to list and ★ sit on the poster of every watchlist tile (see above).
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -257,9 +371,15 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
 | Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
+| Poster ★: rate, change or delete a quick rating (every poster) | — (title page only) | in place (`tile-rate.js`, `POST /movie/rate/tile`, JSON): every copy's chip and eye update, list progress counts, toast |
+| Poster ★ on a detailed rating, "Detailed rating…" | — | **page load**: the title page opens its rate modal (`?rate=edit` / `?rate=detailed`); five categories need the full form |
+| Poster Add to list (every poster) | — (title page only) | in place: the title page's sheet loads on the page (`GET /tile/lists`), ticks save in place, the poster's button ticks; New list stays on the page |
+| "Rate it?" after Seen on a poster / in tick-off | — | in place, optional prompt on that tile; Skip or the next tap closes it |
+| To rate view: rate a title | — | in place: the tile leaves, counts drop |
+| Watchlist poster ★ | — | in place: the tile leaves To watch (rating marks it seen), tab counts move |
 | Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
 | Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
-| Ratings Movies / TV switch | page load | **page load kept**: a different page |
+| Ratings Movies / TV / To rate switch | page load | **page load kept**: a different page |
 | Ratings filters (genre, score type, name, count) | page load on Search | **in place with URL + Back** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
 

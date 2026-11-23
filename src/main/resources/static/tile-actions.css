@@ -2,24 +2,41 @@
    tile-actions.js). Used by the home rows (.home-tile-wrap), Discover rows and grid (.browse-tile), search results
    and list pages (.list-item). The stack sits top right of the poster: watchlist bookmark (or a Watching / Dropped
    badge), then the Seen eye. With a mouse, controls that are off appear on hover or focus; on touch screens and
-   narrow windows they are always shown. Anything that is on (in the watchlist, seen) is always shown. */
+   narrow windows they are always shown. Anything that is on (in the watchlist, seen) is always shown.
+   Fork (tile rating): .tile-actions is an overlay the size of the poster, so the bottom-right group (Add to list,
+   then ★ / "★ 8.5") sits where your score badge used to be; that badge is hidden wherever the ★ is shown. */
 
 :root {
   --seen: hsl(138 40% 60%);
   --seen-strong: hsl(138 42% 44%);
   --upcoming: hsl(40 85% 76%);
+  /* Your score: the light clay of the score badges, with a warmer star. */
+  --rate-text: hsl(20 83% 84%);
+  --rate-star: hsl(32 92% 62%);
 }
 
 .tile-actions {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 3;
+  aspect-ratio: 2 / 3;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
+  padding: 6px;
   pointer-events: none;
+}
+
+/* Add to list + Rate, bottom right of the poster. */
+.tile-acts-bottom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
 }
 
 .tile-act {
@@ -34,7 +51,8 @@
 }
 
 .tile-act button,
-.tile-badge {
+.tile-badge,
+a.tile-act {
   display: grid;
   place-items: center;
   width: 30px;
@@ -52,7 +70,8 @@
   }
 }
 
-.tile-act button {
+.tile-act button,
+a.tile-act {
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 
@@ -112,7 +131,9 @@
 
 /* Off controls wait for hover / focus with a mouse. */
 .tile-watchlist:not(.is-on),
-.tile-seen:not(.is-on) {
+.tile-seen:not(.is-on),
+.tile-list:not(.is-on),
+.tile-rate:not(.is-on) {
   opacity: 0;
 }
 
@@ -125,15 +146,61 @@
 
 @media (hover: none), (max-width: 900px) {
   .tile-watchlist:not(.is-on),
-  .tile-seen:not(.is-on) {
+  .tile-seen:not(.is-on),
+  .tile-list:not(.is-on),
+  .tile-rate:not(.is-on) {
     opacity: 1;
   }
 }
 
+/* ----- Add to list and Rate (fork, tile rating) ----- */
+
+a.tile-act {
+  text-decoration: none;
+}
+
+a.tile-rate:hover {
+  color: var(--rate-star);
+}
+
+/* Rated: a "★ 8.5" chip, always visible (it replaces the old score badge in the same corner). */
+a.tile-rate.is-on {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: auto;
+  min-width: 30px;
+  padding: 0 8px 0 6px;
+  color: var(--rate-text);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    fill: var(--rate-star);
+    stroke: var(--rate-star);
+  }
+
+  &:hover {
+    color: #fff;
+    transform: scale(1.05);
+  }
+}
+
+/* The ★ shows your score, so the old badge in that corner goes (it stays where there is no ★, e.g. upcoming). */
+.home-tile-wrap:has(.tile-rate) .home-score,
+.browse-tile:has(.tile-rate) .browse-user-score,
+.list-grid:not(.is-ticking) .list-item:has(.tile-rate) .home-score {
+  display: none;
+}
+
 /* Discover grid: a little more room, the same corner as its old bookmark. */
 .browse-tile .tile-actions {
-  top: 8px;
-  right: 8px;
+  padding: 8px;
 }
 
 .browse-tile:hover .tile-actions {
@@ -150,9 +217,11 @@
     height: 100%;
   }
 
+  /* The card's poster is a fixed 220px row (components.css) under a 1px border. */
   .tile-actions {
-    top: 8px;
-    right: 8px;
+    aspect-ratio: auto;
+    height: 221px;
+    padding: 8px;
   }
 }
 
@@ -207,9 +276,16 @@
 
 @media (max-width: 600px) {
   .tile-act button,
-  .tile-badge {
+  .tile-badge,
+  a.tile-act {
     width: 30px;
     height: 30px;
+  }
+
+  a.tile-rate.is-on {
+    width: auto;
+    padding: 0 6px 0 5px;
+    font-size: 0.85rem;
   }
 
   .tile-upcoming {
@@ -228,9 +304,12 @@
     cursor: pointer;
   }
 
-  /* The Seen eye becomes the check: bigger, always visible, alone in the corner. */
+  /* The Seen eye becomes the check: bigger, always visible, alone in the corner. Rating and lists wait for Done
+     (the score badge is shown instead of the ★ chip). */
   .tile-watchlist,
-  .tile-badge {
+  .tile-badge,
+  .tile-list,
+  .tile-acts-bottom {
     display: none !important;
   }
 
@@ -316,5 +395,87 @@ body:has(.list-tick-bar) .tile-toast {
 @media (max-width: 900px) {
   body:has(.list-tick-bar) .tile-toast {
     bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ----- Watchlist page and Ratings tab (fork, tile rating) ----- */
+
+/* Watchlist tiles: the buttons under the card are the status moves, so the poster only gets Add to list and ★. */
+.watchlist-item {
+  position: relative;
+
+  .tile-actions {
+    aspect-ratio: auto;
+    height: 221px;
+    padding: 8px;
+  }
+
+  .tile-watchlist,
+  .tile-seen,
+  .tile-badge {
+    display: none !important;
+  }
+
+  &:hover .tile-act {
+    opacity: 1;
+  }
+
+  /* The ★ chip shows your score on the poster. */
+  &:has(.tile-rate) .list-content .rating {
+    display: none;
+  }
+}
+
+/* Ratings tab ranking cards: the quick actions in a row at the bottom right of the card, under the ranked score. */
+.rank-item {
+  position: relative;
+  margin-bottom: 8px;
+
+  & > .card {
+    margin-bottom: 0;
+  }
+
+  .tile-actions {
+    top: auto;
+    left: auto;
+    right: 14px;
+    bottom: 12px;
+    aspect-ratio: auto;
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+  }
+
+  .tile-acts-bottom {
+    margin-top: 0;
+  }
+
+  &:hover .tile-act {
+    opacity: 1;
+  }
+}
+
+/* "In your lists": always shown, so keep it quiet (accent icon on the dark chip, not a filled accent circle). */
+.tile-list.is-on {
+  background: rgba(20, 18, 16, 0.82);
+  color: var(--accent);
+
+  &:hover {
+    background: rgba(20, 18, 16, 0.92);
+    color: var(--accent-strong);
+  }
+}
+
+/* Phones: the ranking card's text column reaches the right edge, so the actions get their own strip at the bottom. */
+@media (max-width: 720px) {
+  .rank-item {
+    & > .card {
+      padding-bottom: 50px;
+    }
+
+    .tile-actions {
+      right: 12px;
+      bottom: 10px;
+    }
   }
 }
