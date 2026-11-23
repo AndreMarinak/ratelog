@@ -1,0 +1,558 @@
+/* Home dashboard rows and list cards (fork).
+   Linked from templates/fragments/home-dashboard.html and templates/lists.html (list cards: fragments/list-card.html). */
+
+.home-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-top: 4px;
+}
+
+.home-welcome {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(120deg, var(--accent-soft), var(--surface) 65%);
+  box-shadow: var(--shadow-soft);
+
+  h2 {
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+  }
+
+  p {
+    color: var(--text-soft);
+    max-width: 62ch;
+  }
+}
+
+.home-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-soft);
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+}
+
+/* Rows */
+
+.home-row {
+  min-width: 0;
+}
+
+.home-row-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.6rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.home-row-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  color: var(--text-soft);
+  font-weight: 600;
+  white-space: nowrap;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    color: var(--accent);
+  }
+
+  &:hover svg {
+    transform: translateX(2px);
+  }
+}
+
+/* Shown by home.js only when the row overflows, and only with a mouse. */
+.home-row-arrows {
+  display: none;
+  gap: 6px;
+  flex-shrink: 0;
+
+  button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--surface-muted);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+  }
+}
+
+.home-row.is-scrollable .home-row-arrows {
+  display: flex;
+}
+
+@media (hover: none) {
+  .home-row.is-scrollable .home-row-arrows {
+    display: none;
+  }
+}
+
+.home-row-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 152px;
+  gap: 14px;
+  /* Room for the hover lift and focus ring, which overflow clipping would otherwise cut. */
+  padding: 6px 4px 8px;
+  margin: -6px -4px 0;
+  scroll-padding-inline: 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  & > * {
+    scroll-snap-align: start;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  &.is-lists {
+    grid-auto-columns: 264px;
+  }
+}
+
+/* Poster tiles: same near-full-brightness posters as the old trending grid. */
+
+/* The wrapper holds the tile link and, beside it (never inside it), the watchlist button. */
+.home-tile-wrap {
+  position: relative;
+  min-width: 0;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: inherit;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible .home-poster {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.home-poster {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #312924, #1e1916);
+  box-shadow: var(--shadow-soft);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    object-fit: cover;
+    filter: brightness(0.92) saturate(0.95);
+    transition: filter 0.2s ease;
+  }
+
+  .poster-fallback {
+    font-size: 2.6rem;
+  }
+}
+
+.home-tile-wrap:hover .home-poster img {
+  filter: brightness(1.05) saturate(1.05);
+}
+
+/* One-click watchlist: top-right of the poster. Shown on hover/focus with a mouse, always on touch,
+   and always once the title is on the watchlist (it doubles as the "Want to watch" badge). */
+.home-quick {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 999px;
+    background: rgba(20, 18, 16, 0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    color: var(--text);
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      color: var(--accent);
+      transform: scale(1.08);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  &.is-on button {
+    background: var(--accent);
+    color: white;
+  }
+
+  &.is-on button:hover {
+    background: var(--accent-strong);
+    color: white;
+  }
+}
+
+.home-tile-wrap:hover .home-quick,
+.home-quick:focus-within,
+.home-quick.is-on {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .home-quick {
+    opacity: 1;
+  }
+}
+
+.home-type,
+.home-status {
+  position: absolute;
+  top: 6px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.78);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.home-type {
+  left: 6px;
+  width: 24px;
+  height: 24px;
+  color: var(--text);
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.home-status {
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.home-score {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 1;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.84);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  color: hsl(20 83% 84%);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.home-tile-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.home-tile-meta {
+  min-height: 1.2em;
+  margin-top: -4px;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+/* List cards (home "Your lists" row and /lists) */
+
+.list-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  color: inherit;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Four overlapping posters, Letterboxd-style; empty slots keep the shape for short lists. */
+.list-cover {
+  display: flex;
+  margin-bottom: 6px;
+
+  & > img,
+  & > .list-cover-empty {
+    position: relative;
+    flex: 0 0 31%;
+    width: auto;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    margin-left: -8%;
+    border-radius: 6px;
+    object-fit: cover;
+    box-shadow: 4px 0 14px rgba(0, 0, 0, 0.55);
+  }
+
+  & > :first-child {
+    margin-left: 0;
+  }
+
+  & > :nth-child(1) { z-index: 4; }
+  & > :nth-child(2) { z-index: 3; }
+  & > :nth-child(3) { z-index: 2; }
+  & > :nth-child(4) { z-index: 1; }
+}
+
+.list-cover-empty {
+  display: block;
+  background: linear-gradient(135deg, #312924, #1e1916);
+}
+
+.list-tile-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.list-tile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.list-tile-owner {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.list-tile-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--tag-bg);
+  line-height: 1.6;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &.public {
+    color: var(--text);
+  }
+}
+
+/* /lists */
+
+.lists-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h1 {
+    margin: 8px 0;
+  }
+}
+
+.lists-new {
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.lists-section {
+  margin-top: 28px;
+
+  h2 {
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+  }
+
+  .empty-state a {
+    margin-left: 6px;
+    font-style: normal;
+  }
+}
+
+.lists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.lists-more {
+  display: inline-flex;
+  margin-top: 16px;
+}
+
+/* Phones: rows bleed to the screen edges and show about three posters plus a peek of the next. */
+@media (max-width: 900px) {
+  .home-dashboard {
+    gap: 28px;
+  }
+
+  .home-quick {
+    opacity: 1;
+  }
+
+  /* Phones and tablets swipe; the arrows would only crowd the headings. */
+  .home-row.is-scrollable .home-row-arrows {
+    display: none;
+  }
+
+  .home-row-head h2,
+  .lists-section h2 {
+    font-size: 1.35rem;
+  }
+
+  .home-row-track {
+    grid-auto-columns: clamp(96px, calc((100vw - 68px) / 3.3), 152px);
+    gap: 10px;
+    /* body has 24px side padding; reach the edges without widening the page. */
+    margin-inline: -24px;
+    padding-inline: 24px;
+    scroll-padding-inline: 24px;
+
+    &.is-lists {
+      grid-auto-columns: min(72vw, 264px);
+    }
+  }
+
+  .home-tile-title {
+    font-size: 0.95rem;
+  }
+
+  .home-score {
+    font-size: 0.85rem;
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 520px) {
+  .lists-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .lists-grid .list-tile {
+    padding: 8px;
+  }
+
+  .lists-grid .list-tile-name {
+    font-size: 1rem;
+  }
+}

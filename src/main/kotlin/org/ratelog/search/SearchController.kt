@@ -5,9 +5,9 @@ import org.ratelog.MediaType
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.config.istmdbconfigured.IsTmdbConfiguredHandler
 import org.ratelog.config.istmdbconfigured.IsTmdbConfiguredQuery
-import org.ratelog.search.trending.SearchTrending
-import org.ratelog.search.trending.SearchTrendingHandler
-import org.ratelog.search.trending.SearchTrendingQuery
+import org.ratelog.home.dashboard.GetHomeDashboard
+import org.ratelog.home.dashboard.GetHomeDashboardHandler
+import org.ratelog.home.dashboard.toView
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -33,7 +33,7 @@ data class SearchResultResponse(
 @Controller
 class SearchController(
     private val handler: SearchHandler,
-    private val trendingHandler: SearchTrendingHandler,
+    private val homeDashboardHandler: GetHomeDashboardHandler,
     private val isTmdbConfiguredHandler: IsTmdbConfiguredHandler,
 ) {
 
@@ -74,12 +74,10 @@ class SearchController(
                 }
             )
         } else {
-            SearchTrendingQuery(lang = user.metadataLang)
-                .let(trendingHandler::handle)
-                .getOrElse { SearchTrending(emptyList()) }
-                .let { trending ->
-                    model.addAttribute("trendingItems", trending.items)
-                }
+            // Fork: the home dashboard (templates/fragments/home-dashboard.html) replaces the trending grid.
+            GetHomeDashboard(userId = user.id!!, lang = user.metadataLang)
+                .let(homeDashboardHandler::handle)
+                .let { model.addAttribute("home", it.toView(user.lang.locale)) }
         }
         return "search"
     }

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/* Fork: a list as a card with a cover of its first posters. `card` is a ListCardView. Styles in home.css. */-->
+<a th:fragment="listCard(card)" class="list-tile" th:href="${card.href}">
+    <div class="list-cover" aria-hidden="true">
+        <th:block th:each="url : ${card.coverPosterUrls}">
+            <img th:if="${url != null}" th:src="${url}" alt="" loading="lazy" decoding="async">
+            <span th:unless="${url != null}" class="list-cover-empty"></span>
+        </th:block>
+    </div>
+    <span class="list-tile-name" th:text="${card.name}">List name</span>
+    <span class="list-tile-meta">
+        <span th:text="#{lists.count(${card.itemCount})}">12 titles</span>
+        <span th:if="${card.ownerUsername != null}" class="list-tile-owner" th:text="#{lists.by(${card.ownerUsername})}">by someone</span>
+        <span th:if="${card.ownerUsername == null}" class="list-tile-visibility" th:classappend="${card.isPublic} ? 'public' : ''">
+            <i th:data-lucide="${card.isPublic} ? 'globe' : 'lock'" aria-hidden="true"></i>
+            <span th:text="${card.isPublic} ? #{list.public} : #{lists.private}">Public</span>
+        </span>
+    </span>
+</a>
+</body>
+</html>

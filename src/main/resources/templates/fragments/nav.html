@@ -1,37 +1,65 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <body>
-<header class="site-header" th:fragment="nav(active)">
-    <div class="nav-brand">
-        <a href="/" class="nav-monogram" th:aria-label="#{nav.home}"><img src="/img/logo.svg" th:alt="#{app.name}"></a>
+<header class="site-header" th:fragment="nav(active)"
+        th:with="signedIn=${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'},
+                 inMenu=${active == 'browse' or active == 'tags' or active == 'community' or active == 'profile' or active == 'admin'}"
+        th:classappend="${signedIn} ? 'signed-in' : ''">
+    <div class="nav-brand" th:with="appName=#{app.name}">
+        <a href="/" class="nav-monogram" th:aria-label="#{nav.brand.label(${appName})}">
+            <img src="/img/logo.svg" alt="">
+            <span class="nav-wordmark" th:text="${appName}" aria-hidden="true">Ratelog</span>
+        </a>
     </div>
 
-    <nav class="nav-links" th:if="${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'}"
-         th:aria-label="#{nav.menu.main}">
+    <nav class="nav-links" th:if="${signedIn}" th:aria-label="#{nav.menu.main}">
         <a class="nav-link" href="/movies" th:text="#{nav.movies}" th:classappend="${active == 'movies'} ? 'active' : ''">Movies</a>
         <a class="nav-link" href="/tvshows" th:text="#{nav.tvshows}" th:classappend="${active == 'tvshows'} ? 'active' : ''">TV Shows</a>
+        <a class="nav-link" href="/browse" th:text="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">Browse</a>
         <a class="nav-link" href="/watchlist" th:text="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">Watchlist</a>
+        <a class="nav-link" href="/lists" th:text="#{nav.lists}" th:classappend="${active == 'lists'} ? 'active' : ''">Lists</a>
+        <a class="nav-link" href="/tags" th:text="#{nav.tags}" th:classappend="${active == 'tags'} ? 'active' : ''">Tags</a>
         <a class="nav-link" href="/community" th:text="#{nav.community}" th:classappend="${active == 'community'} ? 'active' : ''">Community</a>
     </nav>
 
-    <div class="nav-auth" th:if="${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'}">
-        <a href="/profile" class="nav-link btn" th:aria-label="#{nav.profile}">
+    <!-- Fork: header search on every page (GET / ?q=, the existing results page). "/" focuses it (nav.js). -->
+    <form class="nav-search" th:if="${signedIn}" action="/" method="get" role="search">
+        <label for="navSearchInput" class="visually-hidden" th:text="#{search.btn}">Search</label>
+        <i data-lucide="search" aria-hidden="true"></i>
+        <input id="navSearchInput" name="q" type="search" autocomplete="off" enterkeyhint="search"
+               th:value="${active == 'search' and param.q != null} ? ${param.q[0]} : ''"
+               th:placeholder="#{nav.search.placeholder}" placeholder="Search movies & TV…">
+        <input th:if="${active == 'search' and param.mediaType != null and !#strings.isEmpty(param.mediaType[0])}"
+               type="hidden" name="mediaType" th:value="${param.mediaType[0]}">
+        <kbd class="nav-search-key" aria-hidden="true">/</kbd>
+    </form>
+
+    <div class="nav-auth" th:if="${signedIn}">
+        <a href="/profile" class="nav-link btn" th:classappend="${active == 'profile'} ? 'active' : ''"
+           th:aria-label="#{nav.profile}" th:title="#{nav.profile}">
             <i data-lucide="user" aria-hidden="true"></i>
         </a>
         <a href="/admin/configuration" class="nav-link btn"
            th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}"
-           th:aria-label="#{admin.title}">
+           th:classappend="${active == 'admin'} ? 'active' : ''"
+           th:aria-label="#{admin.title}" th:title="#{admin.title}">
             <i data-lucide="settings" aria-hidden="true"></i>
         </a>
         <form th:action="@{/logout}" method="post">
-            <button type="submit" class="nav-link" th:aria-label="#{auth.logout}">
+            <button type="submit" class="nav-link" th:aria-label="#{auth.logout}" th:title="#{auth.logout}">
                 <i data-lucide="log-out" aria-hidden="true"></i>
             </button>
         </form>
     </div>
 
-    <nav class="bottom-nav" th:if="${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'}"
-         th:aria-label="#{nav.menu.bottom}">
+    <!-- Mobile: opens the sheet below (Browse, Tags, Community, profile, admin, logout). -->
+    <button class="nav-menu-btn" id="btnNavSettings" type="button" th:if="${signedIn}"
+            th:classappend="${inMenu} ? 'active' : ''"
+            th:aria-label="#{nav.menu}" aria-expanded="false" aria-controls="navSettingsSheet">
+        <i data-lucide="menu" aria-hidden="true"></i>
+    </button>
+
+    <nav class="bottom-nav" th:if="${signedIn}" th:aria-label="#{nav.menu.bottom}">
         <a class="bottom-nav-item" href="/movies" th:aria-label="#{nav.movies}" th:classappend="${active == 'movies'} ? 'active' : ''">
             <i data-lucide="film" aria-hidden="true"></i>
         </a>
@@ -44,27 +72,37 @@
         <a class="bottom-nav-item" href="/watchlist" th:aria-label="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">
             <i data-lucide="bookmark" aria-hidden="true"></i>
         </a>
-        <a class="bottom-nav-item" href="/community" th:aria-label="#{nav.community}" th:classappend="${active == 'community'} ? 'active' : ''">
-            <i data-lucide="users" aria-hidden="true"></i>
+        <a class="bottom-nav-item" href="/lists" th:aria-label="#{nav.lists}" th:classappend="${active == 'lists'} ? 'active' : ''">
+            <i data-lucide="library-big" aria-hidden="true"></i>
         </a>
-        <button class="bottom-nav-item" id="btnNavSettings" type="button"
-                th:aria-label="#{nav.settings}" aria-expanded="false" aria-controls="navSettingsSheet">
-            <i data-lucide="settings" aria-hidden="true"></i>
-        </button>
     </nav>
 
-    <div class="nav-sheet-backdrop" id="navSheetBackdrop" hidden></div>
+    <div class="nav-sheet-backdrop" id="navSheetBackdrop" th:if="${signedIn}" hidden></div>
 
-    <div class="nav-sheet" id="navSettingsSheet" role="dialog" aria-modal="true" th:aria-label="#{nav.settings}" hidden>
+    <div class="nav-sheet" id="navSettingsSheet" role="dialog" aria-modal="true" th:if="${signedIn}" th:aria-label="#{nav.menu}" hidden>
         <button class="nav-sheet-close" id="btnNavSettingsClose" type="button" th:aria-label="#{modal.close}">
             <i data-lucide="x" aria-hidden="true"></i>
         </button>
-        <a class="nav-sheet-item" href="/profile">
+        <a class="nav-sheet-item" href="/browse" th:classappend="${active == 'browse'} ? 'active' : ''">
+            <i data-lucide="compass" aria-hidden="true"></i>
+            <span th:text="#{nav.browse}">Browse</span>
+        </a>
+        <a class="nav-sheet-item" href="/tags" th:classappend="${active == 'tags'} ? 'active' : ''">
+            <i data-lucide="tags" aria-hidden="true"></i>
+            <span th:text="#{nav.tags}">Tags</span>
+        </a>
+        <a class="nav-sheet-item" href="/community" th:classappend="${active == 'community'} ? 'active' : ''">
+            <i data-lucide="users" aria-hidden="true"></i>
+            <span th:text="#{nav.community}">Community</span>
+        </a>
+        <div class="nav-sheet-divider" role="separator"></div>
+        <a class="nav-sheet-item" href="/profile" th:classappend="${active == 'profile'} ? 'active' : ''">
             <i data-lucide="user" aria-hidden="true"></i>
             <span th:text="#{nav.profile}">Profile</span>
         </a>
         <a class="nav-sheet-item" href="/admin/configuration"
-           th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}">
+           th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}"
+           th:classappend="${active == 'admin'} ? 'active' : ''">
             <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
             <span th:text="#{admin.title}">Configuration</span>
         </a>
