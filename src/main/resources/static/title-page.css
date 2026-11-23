@@ -846,3 +846,22 @@ button.title-nudge-score {
     margin-top: 24px;
   }
 }
+
+/* ----- "Delete rating" in the rate modals (edit mode only, see title-page.js) ----- */
+
+.rate-modal-delete {
+  margin-top: 10px;
+  justify-content: center;
+  gap: 8px;
+  color: var(--danger, #e5484d);
+
+  /* The base button style sets display: inline-flex, which beats [hidden]. */
+  &[hidden] {
+    display: none;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}

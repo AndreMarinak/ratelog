@@ -38,9 +38,31 @@
         hd.src = img.getAttribute('data-hd-src');
     }
 
+    // "Delete rating" inside the rate modals: only when editing. It closes the editor and opens the existing
+    // confirmation modal; for TV the season travels on the button's data-season (read by that modal).
+    function initRateDelete() {
+        document.querySelectorAll('.rate-modal-delete').forEach(function (button) {
+            var rateModal = button.closest('.modal');
+            if (!rateModal) return;
+            rateModal.addEventListener('modal:open', function (e) {
+                var trigger = e.detail && e.detail.trigger;
+                var editing = !!trigger && trigger.dataset.modalMode === 'edit';
+                button.hidden = !editing;
+                if (editing && trigger.dataset.season !== undefined) button.dataset.season = trigger.dataset.season;
+                else delete button.dataset.season;
+            });
+            button.addEventListener('click', function () {
+                if (!window.Modals) return;
+                window.Modals.close(rateModal.id);
+                window.Modals.open(button.dataset.deleteModal, button);
+            });
+        });
+    }
+
     function init() {
         initOverview();
         initTrailerHd();
+        initRateDelete();
     }
 
     if (document.readyState === 'loading') {

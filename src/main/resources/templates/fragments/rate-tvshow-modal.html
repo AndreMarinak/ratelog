@@ -42,6 +42,11 @@
 
             <button class="primary w-100" type="submit" th:text="#{profile.save}">Save</button>
         </form>
+        <!--/* Fork: delete from the editor (title-page.js shows it in edit mode, closes this modal and opens the confirmation). */-->
+        <button type="button" class="secondary w-100 rate-modal-delete" hidden data-delete-modal="deleteTvShowRatingModal">
+            <i data-lucide="trash-2" aria-hidden="true"></i>
+            <span th:text="#{rating.delete.title}">Delete rating</span>
+        </button>
     </div>
 
     <script>

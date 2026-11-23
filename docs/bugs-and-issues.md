@@ -28,6 +28,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **No way to delete a rating from the rating editor** (user, 2026-11-23: "im not able to delete a rating when i go to edit"): the
+  panel's "Edit rating" opens the rate modal, which only had Quick / Detailed / Save; the delete was a 28px trash icon at the bottom
+  of the "Your rating" card. Both rate modals (movie, TV season) now show "Delete rating" under Save in edit mode; it closes the
+  editor and opens the existing confirmation (`title-page.js`, the TV season travels on `data-season`).
+
 - **The add-to-list toast was hidden behind the sheet** (found in the In-your-lists browser check, 2026-11-23): once the
   sheet stayed open after a tap, the "Added to X" toast (z-index 90) sat under the modal backdrop (z-index 1000). It now
   shows above the backdrop while the sheet is open, and on phones at the top of the screen so it doesn't cover the lists.
