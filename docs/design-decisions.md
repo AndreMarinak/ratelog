@@ -126,6 +126,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 - **`ADMIN_PASSWORD`** replaces the seeded `admin`/`admin` password at startup, but only while the default is still active and only if 12+ characters; it never overwrites a password changed in the UI.
 - **`TMDB_API_KEY` env var always wins** over the value stored in Admin > Configuration (upstream only read it on first start). Obvious placeholders (`<...>`, `REPLACE_ME`, whitespace) are refused with a warning. To manage the key in the UI instead, remove the variable.
 - **Readable TMDB error page** instead of a raw JSON 500 when TMDB rejects the key or is down.
+- **Runtime image pinned to an exact tag** (`eclipse-temurin:21.0.13.1_2-jre-alpine`, 2026-11-23) instead of the floating `21-jre-alpine`: a rebuild could reuse an old cached copy of a floating tag and miss Java security fixes. Bump the tag deliberately.
 
 ## UI
 

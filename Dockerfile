@@ -8,7 +8,9 @@ RUN mvn -q -DskipTests dependency:go-offline
 COPY src ./src
 RUN mvn -q -DskipTests package
 
-FROM eclipse-temurin:21-jre-alpine
+# Pinned to an exact runtime tag: a floating tag can be served from an old cached copy on rebuilds.
+# Bump it deliberately (check the Temurin tags on Docker Hub).
+FROM eclipse-temurin:21.0.13.1_2-jre-alpine
 
 WORKDIR /app
 
