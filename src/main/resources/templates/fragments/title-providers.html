@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  Fork: "Where to watch" on movie / TV title pages (styles in /title-page.css).
+  `providers` is the page's `watchProviders` (TMDB watch providers, may be null). TMDB's terms require
+  crediting JustWatch wherever this data is shown, hence the line under the logos.
+*/-->
+<section th:fragment="titleProviders(providers)" th:if="${providers != null and !#lists.isEmpty(providers.flatrate)}"
+         class="title-providers">
+    <span class="title-section-label" th:text="#{title.layout.where.to.watch}">Where to watch</span>
+    <div class="title-provider-list">
+        <a th:each="provider : ${providers.flatrate}"
+           class="title-provider"
+           th:href="${providers.link != null} ? ${providers.link.value} : null"
+           th:title="${provider.name.value}"
+           target="_blank" rel="noopener noreferrer">
+            <img th:src="@{'https://image.tmdb.org/t/p/w92' + ${provider.logoPath.value}}" alt="" loading="lazy" />
+            <span th:text="${provider.name.value}">Netflix</span>
+        </a>
+    </div>
+    <a class="title-providers-credit" href="https://www.justwatch.com" target="_blank" rel="noopener noreferrer"
+       th:text="#{title.providers.justwatch}">Streaming data by JustWatch</a>
+</section>
+</body>
+</html>
