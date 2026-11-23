@@ -15,8 +15,8 @@ class OfficialListDeleteTest {
 
     @Test
     fun `the owner deletes an official list and it is gone everywhere`() {
-        val keep = f.list(f.admin, "Keep")
-        val gone = f.list(f.admin, "Gone")
+        val keep = f.list(f.admin, "Keep", isPublic = true)
+        val gone = f.list(f.admin, "Gone", isPublic = true)
         f.markOfficial(keep)
         f.markOfficial(gone)
 
@@ -32,7 +32,7 @@ class OfficialListDeleteTest {
 
     @Test
     fun `someone else can't delete an official list`() {
-        val list = f.list(f.admin, "AFI 100")
+        val list = f.list(f.admin, "AFI 100", isPublic = true)
         f.markOfficial(list)
 
         DeleteListHandler(f.lists).handle(DeleteListCommand(list.id!!, f.andre.id!!))

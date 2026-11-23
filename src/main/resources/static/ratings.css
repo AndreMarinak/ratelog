@@ -94,3 +94,98 @@
     font-size: 0.78rem;
   }
 }
+
+/* Filters that apply at once (ratings-filters.js, 2026-11-23). The script wraps each control in .filter-field with an
+   ✕ that clears it, and marks the form .is-live, which hides the Search button. Without JS none of this applies. */
+.ratings-switch ~ .grid form.filter.is-live {
+  > button[type="submit"] {
+    display: none;
+  }
+}
+
+.ratings-switch ~ .grid .filter-field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+
+  > select,
+  > input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* A filter with a value: accent border, and the ✕ takes the chevron's place (the field still opens on tap). */
+  &.has-value > select,
+  &.has-value > input {
+    border-color: hsl(var(--_brand-clay) / 0.5);
+  }
+
+  &.has-value > select {
+    background-image: none;
+  }
+
+  /* Room for the ✕ from the start, so the field doesn't grow when the first letter is typed. */
+  > input {
+    padding-right: 42px;
+  }
+}
+
+.ratings-switch ~ .grid .filter-clear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  transform: translateY(-50%);
+  color: var(--accent);
+  transition: color 0.15s ease, background 0.15s ease;
+
+  svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  &:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 0;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* The ranking dims while the next one loads; the delay keeps fast loads from flickering. */
+.ratings-switch ~ .grid .ratings-loading {
+  opacity: 0.55;
+  transition: opacity 0.15s ease 0.12s;
+}
+
+/* Phones, live: still two rows, genre | score type, then name | count. Flex instead of the no-JS grid's quarter
+   columns: the count gets a fixed 96px so "100" and its ✕ fit at 360px (a quarter is ~76px), the name takes the rest. */
+@media (max-width: 720px) {
+  .ratings-switch ~ .grid form.filter.is-live {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    > .filter-field {
+      flex: 1 1 calc(50% - 4px);
+    }
+
+    > .filter-field[data-filter="limit"] {
+      flex: 0 0 96px;
+
+      > select {
+        padding-left: 14px;
+      }
+    }
+  }
+}

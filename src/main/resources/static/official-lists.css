@@ -35,6 +35,19 @@
   }
 }
 
+/* A private official list (only its owner sees the page): muted, with a one-line hint, since phones have no tooltip. */
+.list-official-badge.is-hidden {
+  background: var(--tag-bg);
+  color: var(--text-soft);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.list-official-hint {
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
 .list-official-toggle {
   display: inline-flex;
   margin: 0;

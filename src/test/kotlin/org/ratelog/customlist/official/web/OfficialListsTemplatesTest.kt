@@ -56,8 +56,8 @@ class OfficialListsTemplatesTest {
         return engine.process(template, setOf(fragment), context).also { assertFalse(it.contains("??"), "every message key resolves: $it") }
     }
 
-    private fun card(name: String, official: Boolean = true, owner: String? = null, seen: Int? = 3) =
-        ListCardView("/list/7", name, 25, true, owner, listOf(null, null, null, null), seen, isOfficial = official)
+    private fun card(name: String, official: Boolean = true, owner: String? = null, seen: Int? = 3, isPublic: Boolean = true) =
+        ListCardView("/list/7", name, 25, isPublic, owner, listOf(null, null, null, null), seen, isOfficial = official)
 
     private fun row(total: Int = 3, id: String = "official-lists") =
         OfficialListsRowView(listOf(card("AFI 100"), card("Sight and Sound")), total = total, id = id)
@@ -143,7 +143,8 @@ class OfficialListsTemplatesTest {
         assertFalse(forAdmin.contains("list-official-badge"))
         assertTrue(forAdmin.contains("""name="official" value="true""""))
         assertTrue(forAdmin.contains(">Make official<"))
-        assertTrue(forAdmin.contains("so it becomes public"), "the confirmation says it goes public")
+        assertTrue(forAdmin.contains("Every account will see it on their Lists tab and on Discover."), "a public list: everyone will see it")
+        assertFalse(forAdmin.contains("becomes public"), "marking no longer publishes a list")
 
         val forUser = header(ListOfficialView(official = false, canToggle = false, toggleHref = "/list/7/official"))
         assertFalse(forUser.contains("list-official-bar"))
@@ -219,5 +220,50 @@ class OfficialListsTemplatesTest {
         val title = detail.indexOf("th:text=\"\${list.name}\">List Name</h1>")
         val badge = detail.indexOf("fragments/official-lists :: listHeader")
         assertTrue(title in 0 until badge && badge < detail.indexOf("data-open-modal=\"editModal\""), "right under the title")
+    }
+
+    // --- Hidden (private) official lists, 2026-11-23 ---
+
+    @Test
+    fun `a private official card reads Official, Hidden, muted, on its owner's lists`() {
+        val html = render("fragments/list-card", "listCard", mapOf("card" to card("Drafts", isPublic = false)))
+
+        assertTrue(html.contains("list-tile-visibility list-tile-official is-hidden"), html)
+        assertTrue(html.contains(">Official · Hidden<"))
+        assertTrue(html.contains("""data-lucide="eye-off""""))
+        assertTrue(html.contains("only you can see it"))
+        assertFalse(html.contains(">Official<"), "not the shared badge")
+        assertFalse(html.contains(">Private<"), "one pill, not two")
+
+        val shown = render("fragments/list-card", "listCard", mapOf("card" to card("AFI 100")))
+        assertFalse(shown.contains("is-hidden"))
+        assertFalse(shown.contains("Hidden"))
+    }
+
+    @Test
+    fun `the list page says Official list, Hidden, with a hint, to the owner of a private official list`() {
+        val hidden = header(ListOfficialView(official = true, canToggle = false, toggleHref = "/list/7/official", listPublic = false))
+
+        assertTrue(hidden.contains("""class="list-official-badge is-hidden""""), hidden)
+        assertTrue(hidden.contains(">Official list · Hidden<"))
+        assertTrue(hidden.contains("""data-lucide="eye-off""""))
+        assertTrue(hidden.contains("""class="list-official-hint">Only you can see it. Make it public to show it in Official lists.<"""))
+
+        val shown = header(ListOfficialView(official = true, canToggle = false, toggleHref = "/list/7/official", listPublic = true))
+        assertTrue(shown.contains(">Official list<"))
+        assertFalse(shown.contains("is-hidden"))
+        assertFalse(shown.contains("list-official-hint"))
+    }
+
+    @Test
+    fun `the admin toggle's confirmation says what happens to who can see it`() {
+        fun confirmOf(view: ListOfficialView) = Regex("""data-confirm="([^"]*)"""").find(header(view))!!.groupValues[1]
+        fun view(official: Boolean, listPublic: Boolean) =
+            ListOfficialView(official = official, canToggle = true, toggleHref = "/list/7/official", listPublic = listPublic)
+
+        assertTrue(confirmOf(view(official = false, listPublic = true)).endsWith("an official list? Every account will see it on their Lists tab and on Discover."))
+        assertTrue(confirmOf(view(official = false, listPublic = false)).endsWith("It is private, so it stays hidden (only you can see it) until you make it public."))
+        assertTrue(confirmOf(view(official = true, listPublic = true)).endsWith("It stays public; its owner can make it private again."))
+        assertTrue(confirmOf(view(official = true, listPublic = false)).endsWith("from the official lists? It stays private."))
     }
 }

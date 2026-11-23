@@ -82,7 +82,7 @@ interface ListSummaryDAO : Repository<ListSummaryMarker, Long> {
     )
     fun findPublicExcludingOwners(excludedOwnerIds: List<Long>, limit: Int): List<ListSummaryRow>
 
-    /** Every official list, any owner. Official lists are public; the check is repeated so a stray row can't leak a private one. */
+    /** Every public official list, any owner. A private official list is hidden (its owner's draft) and listed nowhere else. */
     @Query(
         """
         SELECT $SUMMARY_COLUMNS

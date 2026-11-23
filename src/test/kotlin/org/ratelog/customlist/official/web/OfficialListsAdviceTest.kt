@@ -79,7 +79,7 @@ class OfficialListsAdviceTest {
 
     @Test
     fun `Discover gets a lazy row with the viewer's progress`() {
-        val list = f.list(f.admin, "AFI 100", titles = 0)
+        val list = f.list(f.admin, "AFI 100", isPublic = true, titles = 0)
         val kane = f.p.movie("Citizen Kane")
         f.p.add(list, kane, f.p.movie("Vertigo"))
         f.markOfficial(list)

@@ -89,7 +89,7 @@ class ApiOfficialListsTest {
 
     @Test
     fun `any token can read an official list, with its own progress`() {
-        val list = f.list(admin, "AFI 100", titles = 0)
+        val list = f.list(admin, "AFI 100", isPublic = true, titles = 0)
         val kane = f.p.movie("Citizen Kane")
         val vertigo = f.p.movie("Vertigo")
         f.p.add(list, kane, vertigo)
@@ -118,7 +118,7 @@ class ApiOfficialListsTest {
 
     @Test
     fun `an official list can be read but not changed by someone else`() {
-        val list = f.list(admin, "AFI 100")
+        val list = f.list(admin, "AFI 100", isPublic = true)
         f.markOfficial(list)
         val id = list.id!!.value
 
@@ -137,14 +137,29 @@ class ApiOfficialListsTest {
     // --- PATCH isOfficial ---
 
     @Test
-    fun `an admin token marks a private list official, which makes it public`() {
+    fun `an admin token marks a private list official, which keeps it private (hidden)`() {
         val list = f.list(admin, "IMDb Top 100")
 
         val detail = controller.update(admin, list.id!!.value, UpdateListRequest(isOfficial = true))
 
         assertTrue(detail.isOfficial)
-        assertTrue(detail.isPublic)
+        assertFalse(detail.isPublic, "marking never changes the visibility")
         assertTrue(f.official.isOfficial(list.id!!))
+        assertTrue(officialController.official(andre).isEmpty(), "hidden until it is public")
+
+        val published = controller.update(admin, list.id!!.value, UpdateListRequest(isPublic = true))
+        assertTrue(published.isOfficial && published.isPublic)
+        assertEquals(listOf("IMDb Top 100"), officialController.official(andre).map { it.name })
+    }
+
+    @Test
+    fun `marking and publishing can go in one request`() {
+        val list = f.list(admin, "IMDb Top 250")
+
+        val detail = controller.update(admin, list.id!!.value, UpdateListRequest(isPublic = true, isOfficial = true))
+
+        assertTrue(detail.isOfficial && detail.isPublic)
+        assertEquals(listOf("IMDb Top 250"), officialController.official(andre).map { it.name })
     }
 
     @Test
@@ -152,12 +167,17 @@ class ApiOfficialListsTest {
         val andresList = f.list(andre, "Andre's canon")
 
         val marked = controller.update(admin, andresList.id!!.value, UpdateListRequest(isOfficial = true))
-        assertTrue(marked.isOfficial && marked.isPublic)
+        assertTrue(marked.isOfficial)
+        assertFalse(marked.isPublic, "an admin marking someone's private list doesn't publish it")
 
         val unmarked = controller.update(admin, andresList.id!!.value, UpdateListRequest(isOfficial = false))
         assertFalse(unmarked.isOfficial)
-        assertTrue(unmarked.isPublic, "un-marking leaves it public")
+        assertFalse(unmarked.isPublic, "un-marking doesn't change it either")
         assertEquals(andre.id, f.reload(andresList)!!.userId)
+
+        val andresPublic = f.list(andre, "Andre's public", isPublic = true)
+        controller.update(admin, andresPublic.id!!.value, UpdateListRequest(isOfficial = true))
+        assertTrue(controller.update(admin, andresPublic.id!!.value, UpdateListRequest(isOfficial = false)).isPublic, "a public one stays public")
     }
 
     @Test
@@ -173,7 +193,7 @@ class ApiOfficialListsTest {
     @Test
     fun `a regular token gets 403 for changing isOfficial, on any list, and nothing changes`() {
         val own = f.list(andre, "Mine")
-        val official = f.list(admin, "AFI 100")
+        val official = f.list(admin, "AFI 100", isPublic = true)
         f.markOfficial(official)
 
         assertForbidden(error { controller.update(andre, own.id!!.value, UpdateListRequest(isOfficial = true)) })
@@ -202,19 +222,60 @@ class ApiOfficialListsTest {
     }
 
     @Test
-    fun `an official list can't be made private until it is un-marked`() {
-        val list = f.list(admin, "AFI 100")
+    fun `the owner can make an official list private, which hides it, and public again`() {
+        val list = f.list(admin, "AFI 100", isPublic = true)
         f.markOfficial(list)
         val id = list.id!!.value
 
-        val e = error { controller.update(admin, id, UpdateListRequest(isPublic = false)) }
-        assertEquals(HttpStatus.BAD_REQUEST, e.status)
-        assertEquals("official_list_public", e.code)
-        assertTrue(f.reload(list)!!.isPublic)
+        val hidden = controller.update(admin, id, UpdateListRequest(isPublic = false))
+        assertTrue(hidden.isOfficial, "still official")
+        assertFalse(hidden.isPublic, "isPublic: false is no longer refused (official_list_public is gone)")
+        assertFalse(f.reload(list)!!.isPublic)
+        assertTrue(officialController.official(andre).isEmpty())
+        assertEquals(HttpStatus.NOT_FOUND, error { controller.list(andre, id) }.status)
+
+        val shown = controller.update(admin, id, UpdateListRequest(isPublic = true))
+        assertTrue(shown.isOfficial && shown.isPublic)
+        assertEquals(listOf("AFI 100"), officialController.official(andre).map { it.name })
+        assertEquals("AFI 100", controller.list(andre, id).name)
 
         val both = controller.update(admin, id, UpdateListRequest(isOfficial = false, isPublic = false))
         assertFalse(both.isOfficial)
-        assertFalse(both.isPublic, "un-marked first, then made private, in one request")
+        assertFalse(both.isPublic, "both in one request")
+    }
+
+    @Test
+    fun `a hidden official list is only its owner's, like any private list`() {
+        val list = f.list(admin, "Drafts")
+        f.markOfficial(list)
+        val id = list.id!!.value
+
+        assertEquals("Drafts", controller.list(admin, id).name, "the owner reads it")
+        assertTrue(controller.lists(admin).single { it.name == "Drafts" }.let { it.isOfficial && !it.isPublic })
+        listOf<() -> Unit>(
+            { controller.list(andre, id) },
+            { controller.update(andre, id, UpdateListRequest(name = "Mine now")) },
+            { controller.update(andre, id, UpdateListRequest(isOfficial = false)) },
+            { controller.delete(andre, id) },
+            { controller.addItems(andre, id, AddItemsRequest(listOf(ItemInput(tmdbId = 1, type = "movie")))) },
+            { controller.removeItem(andre, id, "movie", 1) },
+        ).forEach { call -> assertEquals(HttpStatus.NOT_FOUND, error(call).status, "404, not 403: its id is no one else's business") }
+        assertTrue(officialController.official(andre).isEmpty())
+        assertTrue(officialController.official(admin).isEmpty(), "the Official sections only list public ones, the owner's too")
+    }
+
+    @Test
+    fun `another admin can still un-mark a hidden official list`() {
+        val mod: User = f.users.save(UserFactory.aUser(username = "mod", role = Role.ADMIN))
+        val list = f.list(andre, "Andre's drafts")
+        f.markOfficial(list)
+
+        val detail = controller.update(mod, list.id!!.value, UpdateListRequest(isOfficial = false))
+
+        assertFalse(detail.isOfficial)
+        assertFalse(detail.isPublic)
+        assertEquals(HttpStatus.NOT_FOUND, error { controller.update(mod, f.list(andre, "Other").id!!.value, UpdateListRequest(isOfficial = false)) }.status,
+            "un-marking a list that isn't official doesn't open someone's private list")
     }
 
     @Test
@@ -231,11 +292,12 @@ class ApiOfficialListsTest {
 
     @Test
     fun `an admin token creates an official list in one request`() {
-        val created = controller.create(admin, CreateListRequest(name = "Sight and Sound", isOfficial = true)).body!!
+        val created = controller.create(admin, CreateListRequest(name = "Sight and Sound", isPublic = true, isOfficial = true)).body!!
 
         assertTrue(created.list.isOfficial)
         assertTrue(created.list.isPublic)
         assertTrue(f.official.isOfficial(CustomList.Id(created.list.id)))
+        assertEquals(listOf("Sight and Sound"), officialController.official(andre).map { it.name })
     }
 
     @Test
@@ -247,11 +309,15 @@ class ApiOfficialListsTest {
     }
 
     @Test
-    fun `creating an official private list is refused`() {
-        val e = error { controller.create(admin, CreateListRequest(name = "Contradiction", isPublic = false, isOfficial = true)) }
+    fun `creating an official list without isPublic makes a hidden one, private like any list`() {
+        val omitted = controller.create(admin, CreateListRequest(name = "Draft canon", isOfficial = true)).body!!.list
+        val explicit = controller.create(admin, CreateListRequest(name = "Private canon", isPublic = false, isOfficial = true)).body!!.list
 
-        assertEquals("official_list_public", e.code)
-        assertTrue(f.lists.findByUserId(admin.id!!).isEmpty())
+        listOf(omitted, explicit).forEach {
+            assertTrue(it.isOfficial)
+            assertFalse(it.isPublic)
+        }
+        assertTrue(officialController.official(andre).isEmpty())
     }
 
     @Test
@@ -268,10 +334,11 @@ class ApiOfficialListsTest {
 
     @Test
     fun `official returns every official list with the token user's progress`() {
-        val afi = f.list(admin, "AFI 100", titles = 0, createdAt = 10_000)
+        val afi = f.list(admin, "AFI 100", isPublic = true, titles = 0, createdAt = 10_000)
         val kane = f.p.movie("Citizen Kane")
         f.p.add(afi, kane, f.p.movie("Casablanca"), f.p.movie("Vertigo"))
-        val andres = f.list(andre, "Andre's canon", createdAt = 20_000)
+        val andres = f.list(andre, "Andre's canon", isPublic = true, createdAt = 20_000)
+        f.markOfficial(f.list(admin, "Hidden draft", createdAt = 40_000))
         f.list(admin, "Not official", isPublic = true, createdAt = 30_000)
         f.markOfficial(afi)
         f.markOfficial(andres)
@@ -301,7 +368,7 @@ class ApiOfficialListsTest {
 
     @Test
     fun `deleting an official list takes it out of official`() {
-        val list = f.list(admin, "AFI 100")
+        val list = f.list(admin, "AFI 100", isPublic = true)
         f.markOfficial(list)
 
         controller.delete(admin, list.id!!.value)

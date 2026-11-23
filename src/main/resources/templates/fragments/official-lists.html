@@ -53,16 +53,21 @@
     </div>
 </section>
 
-<!--/* List page, under the title: the badge for everyone, and for admins the toggle (POST, CSRF, asks first). */-->
+<!--/* List page, under the title: the badge for everyone, and for admins the toggle (POST, CSRF, asks first).
+       A private official list is hidden: only its owner can open it, so only they ever see "Official list · Hidden". */-->
 <th:block th:fragment="listHeader(official, listName)">
 <div th:if="${official != null and (official.official or official.canToggle)}" class="list-official-bar">
     <link rel="stylesheet" href="/official-lists.css">
-    <span th:if="${official.official}" class="list-official-badge" th:title="#{lists.official.badge.title}">
-        <i data-lucide="badge-check" aria-hidden="true"></i>
-        <span th:text="#{lists.official.badge.list}">Official list</span>
+    <span th:if="${official.official}" class="list-official-badge" th:classappend="${official.hidden} ? 'is-hidden' : ''"
+          th:title="${official.hidden} ? #{lists.official.hidden.title} : #{lists.official.badge.title}">
+        <i th:data-lucide="${official.hidden} ? 'eye-off' : 'badge-check'" aria-hidden="true"></i>
+        <span th:text="${official.hidden} ? #{list.official.hidden.badge} : #{lists.official.badge.list}">Official list</span>
     </span>
+    <span th:if="${official.hidden}" class="list-official-hint" th:text="#{list.official.hidden.hint}">Only you can see it.</span>
     <form th:if="${official.canToggle}" class="list-official-toggle" method="post" th:action="${official.toggleHref}" data-inplace="#listRegion"
-          th:data-confirm="${official.official} ? #{list.official.unmark.confirm(${listName})} : #{list.official.mark.confirm(${listName})}">
+          th:data-confirm="${official.official}
+              ? (${official.listPublic} ? #{list.official.unmark.confirm(${listName})} : #{list.official.unmark.confirm.private(${listName})})
+              : (${official.listPublic} ? #{list.official.mark.confirm.public(${listName})} : #{list.official.mark.confirm.hidden(${listName})})">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" name="official" th:value="${official.nextValue}" />
         <button type="submit" class="list-official-button" th:title="#{list.official.admin.only}">

@@ -17,26 +17,28 @@ class SetListOfficialHandlerTest {
         f.setOfficial.handle(SetListOfficial(list.id!!, by.id!!, official))
 
     @Test
-    fun `marking a private list official makes it public`() {
+    fun `marking a private list official keeps it private, so it is hidden`() {
         val list = f.list(f.admin, "AFI 100", isPublic = false)
 
         val change = set(list, f.admin, official = true).getOrNull()!!
 
         assertTrue(change.official)
         assertTrue(change.changed)
-        assertTrue(change.madePublic)
+        assertFalse(change.isPublic, "reported so the flash can say it stays hidden")
         assertTrue(f.official.isOfficial(list.id!!))
-        assertTrue(f.reload(list)!!.isPublic, "official implies public")
+        assertFalse(f.reload(list)!!.isPublic, "official no longer implies public")
+        assertTrue(f.getOfficial.handle(f.andre.id!!).isEmpty(), "a hidden official list is in no Official section")
     }
 
     @Test
-    fun `marking an already public list keeps it public and reports no visibility change`() {
+    fun `marking a public list keeps it public and shows it to everyone`() {
         val list = f.list(f.admin, "Sight and Sound", isPublic = true)
 
         val change = set(list, f.admin, official = true).getOrNull()!!
 
-        assertFalse(change.madePublic)
+        assertTrue(change.isPublic)
         assertTrue(f.reload(list)!!.isPublic)
+        assertEquals(listOf("Sight and Sound"), f.getOfficial.handle(f.andre.id!!).map { it.list.name })
     }
 
     @Test
@@ -59,7 +61,7 @@ class SetListOfficialHandlerTest {
 
         assertTrue(change.isRight())
         assertTrue(f.official.isOfficial(andresList.id!!))
-        assertTrue(f.reload(andresList)!!.isPublic)
+        assertFalse(f.reload(andresList)!!.isPublic, "an admin marking someone's private list doesn't publish it")
         assertEquals(f.andre.id, f.reload(andresList)!!.userId, "the owner doesn't change")
     }
 
@@ -98,17 +100,23 @@ class SetListOfficialHandlerTest {
     }
 
     @Test
-    fun `un-marking leaves the list public`() {
-        val list = f.list(f.admin, "Pixar", isPublic = false)
-        f.markOfficial(list)
+    fun `un-marking never changes the visibility either`() {
+        val shown = f.list(f.admin, "Pixar", isPublic = true)
+        val hidden = f.list(f.admin, "Drafts", isPublic = false)
+        f.markOfficial(shown)
+        f.markOfficial(hidden)
 
-        val change = set(list, f.admin, official = false).getOrNull()!!
+        val change = set(shown, f.admin, official = false).getOrNull()!!
 
         assertFalse(change.official)
         assertTrue(change.changed)
-        assertFalse(f.official.isOfficial(list.id!!))
-        assertTrue(f.reload(list)!!.isPublic, "the owner can make it private again; un-marking doesn't")
-        assertFalse(set(list, f.admin, official = false).getOrNull()!!.changed, "un-marking twice is a no-op")
+        assertTrue(change.isPublic)
+        assertFalse(f.official.isOfficial(shown.id!!))
+        assertTrue(f.reload(shown)!!.isPublic, "still public")
+        assertFalse(set(shown, f.admin, official = false).getOrNull()!!.changed, "un-marking twice is a no-op")
+
+        assertFalse(set(hidden, f.admin, official = false).getOrNull()!!.isPublic)
+        assertFalse(f.reload(hidden)!!.isPublic, "still private")
     }
 
     @Test

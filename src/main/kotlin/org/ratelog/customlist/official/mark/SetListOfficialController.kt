@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
-/** The admin-only "Official" toggle on the list page (CSRF-protected form POST). Always returns to the list. */
+/**
+ * The admin-only "Official" toggle on the list page (CSRF-protected form POST). Always returns to the list, with a
+ * message that says whether everyone can see it (marking never changes the list's visibility).
+ */
 @Controller
 class SetListOfficialController(
     private val handler: SetListOfficialHandler,
@@ -30,7 +33,13 @@ class SetListOfficialController(
                 redirectAttributes.addFlashAttribute("error", message)
             },
             { change ->
-                redirectAttributes.addFlashAttribute("success", if (change.official) "list.official.marked" else "list.official.unmarked")
+                val message = when {
+                    change.official && change.isPublic -> "list.official.marked"
+                    change.official -> "list.official.marked.hidden"
+                    change.isPublic -> "list.official.unmarked"
+                    else -> "list.official.unmarked.private"
+                }
+                redirectAttributes.addFlashAttribute("success", message)
             },
         )
         return "redirect:/list/$id"

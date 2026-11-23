@@ -17,9 +17,14 @@ data class ListOfficialView(
     val canToggle: Boolean,
     /** POST target of the toggle (SetListOfficialController). */
     val toggleHref: String,
+    /** The shown list's visibility, set by [OfficialListVisibilityInterceptor] once the list has loaded. */
+    val listPublic: Boolean = true,
 ) {
     /** The value the toggle sends: the opposite of the current state. */
     val nextValue: Boolean get() = !official
+
+    /** Official but private: in no Official section, and only its owner can open it ("Official list · Hidden"). */
+    val hidden: Boolean get() = official && !listPublic
 }
 
 /*

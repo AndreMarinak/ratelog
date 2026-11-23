@@ -30,7 +30,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `official lists get their own section and appear in no other section`() {
-        val adminOfficial = f.list(f.admin, "AFI 100", createdAt = 10_000)
+        val adminOfficial = f.list(f.admin, "AFI 100", isPublic = true, createdAt = 10_000)
         val friendOfficial = f.list(friend, "Friend's canon", isPublic = true, createdAt = 11_000)
         val strangerOfficial = f.list(stranger, "Stranger's canon", isPublic = true, createdAt = 12_000)
         f.list(f.admin, "Admin public", isPublic = true, createdAt = 13_000)
@@ -65,7 +65,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `the owner still sees their official lists under My lists`() {
-        val list = f.list(f.admin, "AFI 100")
+        val list = f.list(f.admin, "AFI 100", isPublic = true)
         f.markOfficial(list)
 
         val page = pageFor(f.admin)
@@ -77,7 +77,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `empty official lists are shown too, unlike empty public lists`() {
-        f.markOfficial(f.list(f.admin, "Coming soon", titles = 0))
+        f.markOfficial(f.list(f.admin, "Coming soon", isPublic = true, titles = 0))
         f.list(stranger, "Empty public", isPublic = true, titles = 0)
 
         val page = pageFor(f.andre)
@@ -106,7 +106,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `the row shows official cards with the viewer's own progress and no owner`() {
-        val list = f.list(f.admin, "AFI 100", titles = 0)
+        val list = f.list(f.admin, "AFI 100", isPublic = true, titles = 0)
         val (citizenKane, casablanca, vertigo) = listOf("Citizen Kane", "Casablanca", "Vertigo").map { f.p.movie(it) }
         f.p.add(list, citizenKane, casablanca, vertigo)
         f.markOfficial(list)
@@ -142,7 +142,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `the row holds at most the row limit, the total says how many there are`() {
-        repeat(OfficialListsRowView.ROW_LIMIT + 3) { f.markOfficial(f.list(f.admin, "Official $it", titles = 1, createdAt = 10_000L + it)) }
+        repeat(OfficialListsRowView.ROW_LIMIT + 3) { f.markOfficial(f.list(f.admin, "Official $it", isPublic = true, titles = 1, createdAt = 10_000L + it)) }
         val model = ExtendedModelMap()
 
         controller.listsPage(f.andre, null, model)
@@ -155,7 +155,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `the admin's own official list is badged under My lists too`() {
-        f.markOfficial(f.list(f.admin, "AFI 100"))
+        f.markOfficial(f.list(f.admin, "AFI 100", isPublic = true))
         val model = ExtendedModelMap()
 
         controller.listsPage(f.admin, null, model)
@@ -166,7 +166,7 @@ class OfficialListsSectionsTest {
 
     @Test
     fun `the See all page lists every official list with progress`() {
-        val list = f.list(f.admin, "AFI 100", titles = 0)
+        val list = f.list(f.admin, "AFI 100", isPublic = true, titles = 0)
         val kane = f.p.movie("Citizen Kane")
         f.p.add(list, kane, f.p.movie("Casablanca"))
         f.markOfficial(list)

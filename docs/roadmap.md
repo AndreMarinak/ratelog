@@ -34,10 +34,11 @@ lists (official lists and later list features) `V1120–1129`.
   the poster grid otherwise, and a "Hide titles I've seen" switch that is on by default. `/browse` redirects; API alias `/api/v1/discover`.
   No migration needed (`V1100–1109` stay reserved for browse/discover). Requested 2026-11-23.
 - [x] **15. Official lists** (Letterboxd-style): admins mark any list official (switch under the list title, or `isOfficial`
-  in the API); official lists are public and shown to every account in an "Official lists" row at the top of the Lists tab,
+  in the API); public official lists are shown to every account in an "Official lists" row at the top of the Lists tab,
   a row on the Discover landing right after Popular now, and `/lists/official`, each with the viewer's own "9/25 seen".
-  API: `isOfficial` on lists, `GET /api/v1/lists/official`, any token can read an official list ([docs/api.md](api.md#official-lists)).
-  Table `official_lists` (`V1120`). Requested 2026-11-23 for the admin's 26 researched lists.
+  API: `isOfficial` on lists, `GET /api/v1/lists/official`, any token can read a public official list ([docs/api.md](api.md#official-lists)).
+  Table `official_lists` (`V1120`). Requested 2026-11-23 for the admin's 26 researched lists. Since 2026-11-23 (later request) an
+  official list can be private = **hidden** ("Official · Hidden", its owner's only) until made public; marking never changes visibility.
 - [x] **16. Seen and Watchlist, Letterboxd-simple** (requested 2026-11-23): title pages have four equal toggles (Seen, Watchlist,
   Rate, Add to list; shows add a small Watching / Dropped control); the follow bell only where it does something; "Rate it?" after
   Seen on unrated movies (optional). Poster tiles everywhere get a Seen eye beside the bookmark. `/watchlist` tabs read To watch ·
@@ -53,6 +54,9 @@ lists (official lists and later list features) `V1120–1129`.
 - 2026-11-23 batch: one Ratings tab (Movies | TV Shows switch), Browse renamed Discover, title page redesign (desktop three columns,
   phone action bar), small actions save in place (no reload), Classics home row, tags hidden behind a feature flag, compact
   Discover bar on phones, no white overscroll. Details in [design-decisions.md](design-decisions.md).
+- 2026-11-23 small fixes: Ratings filters apply on change with an ✕ per filter (in place, URL + Back), no full-screen loader
+  (a thin top bar after 400 ms), a Rotten Tomatoes search link next to IMDb's on title pages, hidden (private) official lists.
+  No migration.
 
 Gap research against Letterboxd, the TV trackers and the discovery apps (ranked): [competitor-gaps.md](competitor-gaps.md).
 

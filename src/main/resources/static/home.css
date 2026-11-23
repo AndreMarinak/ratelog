@@ -462,6 +462,13 @@
   font-weight: 700;
 }
 
+/* A private official list on its owner's cards: muted, so it reads as not shown to anyone yet. */
+.list-tile-official.is-hidden {
+  background: var(--tag-bg);
+  color: var(--text-soft);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
 /* /lists */
 
 .lists-head {

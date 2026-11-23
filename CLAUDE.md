@@ -64,4 +64,4 @@ The user wants Claude to build lists from research ("best heist films", "underra
 3. `POST /api/v1/lists` with `{"name": ..., "items": [{"title": ..., "year": ..., "type": ...}]}` (max 100 items per request; send more with `POST /api/v1/lists/{id}/items`).
 4. Read `unresolved` in the response. For `ambiguous`/`not_found`, pick the right entry from `candidates` (or `GET /api/v1/search?q=...`) and re-send it as `{"tmdbId": ..., "type": ...}`. Never guess silently; tell the user about anything you couldn't place.
 5. Report the summary and the list URL (`$RATELOG_URL/list/{id}`).
-6. Researched site-wide lists go on the **admin** account and only the main ones are marked official (`PATCH /api/v1/lists/{id}` `{"isOfficial": true}`); the user's second account (`andre`) only gets lists the user asks for.
+6. Researched site-wide lists go on the **admin** account and only the main ones are marked official (`PATCH /api/v1/lists/{id}` `{"isOfficial": true, "isPublic": true}`: marking alone never publishes, and a private official list stays hidden); the user's second account (`andre`) only gets lists the user asks for.

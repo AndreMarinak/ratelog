@@ -15,13 +15,13 @@ import org.ratelog.test.MutableClock
 import org.ratelog.test.UserFactory
 import org.ratelog.user.User
 
-/** Lists, users, progress and official marks wired the way the app wires them (decorated list repository included). */
+/** Lists, users, progress and official marks wired the way the app wires them. */
 class OfficialListsFixture {
     val p = ListProgressFixture()
     val users = InMemoryUserRepository()
     val official = InMemoryOfficialListRepository(p.lists)
-    /** What every injection point gets in the app: official lists stay public on save. */
-    val lists: CustomListRepository = OfficialListsStayPublicRepository(p.lists, official)
+    /** What every injection point gets in the app (no decorator since official lists can be private, 2026-11-23). */
+    val lists: CustomListRepository = p.lists
     val summaries = InMemoryListSummaryRepository(p.lists, users, p.movies, p.shows, official)
     val clock = MutableClock()
     val setOfficial = SetListOfficialHandler(lists, official, users, clock)
@@ -31,7 +31,7 @@ class OfficialListsFixture {
     val admin: User = users.save(UserFactory.aUser(username = "admin", role = Role.SUPERADMIN))
     val andre: User = users.save(UserFactory.aUser(username = "andre"))
 
-    /** A list with movies in it; `createdAt` orders the Lists tab (newest activity first). */
+    /** A list with movies in it; `createdAt` orders the Lists tab (newest activity first). Private by default, as in the app. */
     fun list(owner: User, name: String, isPublic: Boolean = false, titles: Int = 2, createdAt: Long = 1_000L): CustomList {
         val list = p.lists.save(CustomList(null, owner.id!!, org.ratelog.ListName(name), isPublic, createdAtEpochMs = createdAt))
         if (titles > 0) p.add(list, *(1..titles).map { p.movie("$name $it") }.toTypedArray())
