@@ -32,7 +32,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
 | GET | `/api/v1/lists` | | `[{id, name, isPublic, itemCount, url}]` |
 | POST | `/api/v1/lists` | `{name, isPublic?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
-| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, url, items: [{position, tmdbId, type, title, year, posterUrl}]}` |
+| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)) |
 | PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?}` | list detail |
 | DELETE | `/api/v1/lists/{id}` | | `204` |
 | POST | `/api/v1/lists/{id}/items` | `{items: [Item]}` | `AddItemsResult` |
@@ -55,6 +55,31 @@ Items are appended in the order sent. At most **100 items per request**; at most
 An item whose tags can't be applied (bad tag name, tag limit reached) is `invalid` and is not added.
 
 **Candidate**: `{tmdbId, type, title, originalTitle, year, tmdbVoteAverage, overview}`.
+
+### List progress
+
+List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) say how much of the list **you** (the token's user) have seen:
+
+```json
+{
+  "id": 1, "name": "Best Disney Movies - Top 50", "isPublic": true, "url": "/list/1",
+  "items": [
+    {"position": 1, "tmdbId": 354912, "type": "movie", "title": "Coco", "year": 2017, "posterUrl": "...",
+     "status": "watched", "score": 9.0, "seen": true},
+    {"position": 2, "tmdbId": 14160, "type": "movie", "title": "Up", "year": 2009, "posterUrl": "...",
+     "status": null, "score": null, "seen": false}
+  ],
+  "progress": {"seen": 1, "total": 2}
+}
+```
+
+- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. The first six fields are unchanged.
+  `status` is your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or `null`; `score` is your rating or `null`.
+- `seen` is `true` when you rated the title (for a show: at least one season) or its status is `watched`. Watching, Want to watch and Dropped are not seen.
+- `progress.total` counts the items in the response. Items are in list order; `position` can have gaps after removals.
+- To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
+  `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
+  The list page's "Add the N unseen to my watchlist" button applies the same filter and never changes an existing status.
 
 ## Tags
 

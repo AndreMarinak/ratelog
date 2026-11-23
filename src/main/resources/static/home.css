@@ -556,3 +556,12 @@
     font-size: 1rem;
   }
 }
+
+/* List progress (fork): "9/25 seen" on list cards, brighter once something is seen. */
+.list-tile-seen {
+  font-variant-numeric: tabular-nums;
+
+  &.has-seen {
+    color: var(--text);
+  }
+}

@@ -11,9 +11,11 @@ data class ListCardView(
     /** Shown for other people's lists (as text: the whole card is already a link). */
     val ownerUsername: String?,
     val coverPosterUrls: List<String?>,
+    /** How many of its titles the viewer has seen ("9/25 seen"); null where it isn't shown (home row). */
+    val seenCount: Int? = null,
 )
 
-fun ListSummary.toCard(showOwner: Boolean) = ListCardView(
+fun ListSummary.toCard(showOwner: Boolean, seenCount: Int? = null) = ListCardView(
     href = "/list/${id.value}",
     name = name,
     itemCount = itemCount,
@@ -21,4 +23,5 @@ fun ListSummary.toCard(showOwner: Boolean) = ListCardView(
     ownerUsername = ownerUsername.takeIf { showOwner },
     coverPosterUrls = coverPosterPaths.take(ListSummary.COVER_SIZE).map { "https://image.tmdb.org/t/p/w342$it" } +
         List((ListSummary.COVER_SIZE - coverPosterPaths.size).coerceAtLeast(0)) { null },
+    seenCount = seenCount,
 )

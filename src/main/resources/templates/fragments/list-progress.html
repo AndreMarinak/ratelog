@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: list progress on /list/{id} (roadmap item 12). Model from ListProgressModelAdvice:
+  `listProgress` is a ListProgressView (null if the list can't be shown), `listBack` a ListBackLink.
+  Styles in list-progress.css; the poster badges reuse home.css (.home-status, .home-score).
+*/-->
+
+<!--/* Above the title: the bulk-add flash (it has a count, so it can't use the page's `success` key) and the back link. */-->
+<th:block th:fragment="top(back)">
+    <div th:if="${listWatchlistAdded != null}" class="feedback success" role="status"
+         th:text="#{list.progress.added(${listWatchlistAdded})}">Added 12 titles to your watchlist.</div>
+    <a th:if="${back != null}" class="list-back" th:href="${back.href}">
+        <i data-lucide="arrow-left" aria-hidden="true"></i>
+        <span th:text="${back.labelArg != null} ? #{${back.labelKey}(${back.labelArg})} : #{${back.labelKey}}">Lists</span>
+    </a>
+</th:block>
+
+<!--/* Under the title: "You've seen 9 of 25", the bar, the All / Not seen / Seen tabs and the bulk watchlist button. */-->
+<th:block th:fragment="summary(progress, listName)">
+<section th:if="${progress != null and progress.total > 0}" class="list-progress" th:aria-label="#{list.progress.aria}">
+    <div class="list-progress-line">
+        <span class="list-progress-text" th:text="#{list.progress.seen(${progress.seen}, ${progress.total})}">You've seen 9 of 25</span>
+        <div class="list-progress-bar" role="progressbar" aria-valuemin="0"
+             th:aria-valuemax="${progress.total}" th:aria-valuenow="${progress.seen}"
+             th:aria-label="#{list.progress.seen(${progress.seen}, ${progress.total})}">
+            <span th:style="|width: ${progress.percent}%|"></span>
+        </div>
+    </div>
+
+    <div class="list-progress-toolbar">
+        <nav class="status-segmented list-filter-tabs" th:aria-label="#{list.progress.filter.label}">
+            <a th:each="tab : ${progress.tabs}" th:href="${tab.href}" class="status-segment"
+               th:classappend="${tab.active} ? 'active' : ''"
+               th:aria-current="${tab.active} ? 'page' : null">
+                <span th:text="#{${tab.labelKey}}">All</span>
+                <span class="status-count" th:text="${tab.count}">25</span>
+            </a>
+        </nav>
+
+        <form th:if="${progress.addableCount > 0}" class="list-progress-add" method="post"
+              th:action="${progress.addHref}"
+              th:data-confirm="#{list.progress.add.confirm(${progress.addableCount}, ${listName})}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input th:if="${progress.filterParam != null}" type="hidden" name="show" th:value="${progress.filterParam}" />
+            <button type="submit" class="primary">
+                <i data-lucide="bookmark-plus" aria-hidden="true"></i>
+                <span th:text="#{list.progress.add(${progress.addableCount})}">Add the 12 unseen to my watchlist</span>
+            </button>
+        </form>
+    </div>
+
+    <div th:if="${progress.emptyKey != null}" class="empty-state" th:text="#{${progress.emptyKey}}">Nothing here.</div>
+</section>
+</th:block>
+
+<!--/* On each poster: rank (bottom left), the viewer's status (top right) and score (bottom right). */-->
+<th:block th:fragment="badges(entry)">
+<th:block th:if="${entry != null}">
+    <span class="list-rank" th:title="#{list.progress.rank(${entry.rank})}" th:text="${entry.rank}">1</span>
+    <span th:if="${entry.statusIcon != null}" class="home-status list-status" th:classappend="${entry.statusClass}"
+          th:title="#{${entry.statusKey}}" th:aria-label="#{${entry.statusKey}}" role="img">
+        <i th:data-lucide="${entry.statusIcon}" aria-hidden="true"></i>
+    </span>
+    <span th:if="${entry.scoreLabel != null}" class="home-score" th:title="#{list.progress.your.score}"
+          th:text="${entry.scoreLabel}">8.5</span>
+</th:block>
+</th:block>
+</body>
+</html>

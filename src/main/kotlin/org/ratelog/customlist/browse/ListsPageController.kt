@@ -1,6 +1,7 @@
 package org.ratelog.customlist.browse
 
 import org.ratelog.annotations.CurrentUser
+import org.ratelog.customlist.progress.GetListProgressHandler
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam
 @Controller
 class ListsPageController(
     private val handler: GetListsPageHandler,
+    private val listProgressHandler: GetListProgressHandler,
 ) {
     @GetMapping("/lists")
     fun listsPage(
@@ -20,9 +22,12 @@ class ListsPageController(
     ): String {
         val page = handler.handle(GetListsPage(user.id!!, limit ?: GetListsPageHandler.PAGE_SIZE))
 
-        model.addAttribute("myLists", page.mine.map { it.toCard(showOwner = false) })
-        model.addAttribute("followedLists", page.followed.map { it.toCard(showOwner = true) })
-        model.addAttribute("otherLists", page.others.map { it.toCard(showOwner = true) })
+        // "9/25 seen" on every card: one query for all the lists on the page.
+        val seen = listProgressHandler.seenCounts(user.id, (page.mine + page.followed + page.others).map { it.id })
+
+        model.addAttribute("myLists", page.mine.map { it.toCard(showOwner = false, seenCount = seen[it.id]) })
+        model.addAttribute("followedLists", page.followed.map { it.toCard(showOwner = true, seenCount = seen[it.id]) })
+        model.addAttribute("otherLists", page.others.map { it.toCard(showOwner = true, seenCount = seen[it.id]) })
         model.addAttribute("moreHref", "/lists?limit=${page.limit + GetListsPageHandler.PAGE_SIZE}#more-lists".takeIf { page.hasMoreOthers })
         return "lists"
     }
