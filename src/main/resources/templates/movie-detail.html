@@ -45,6 +45,7 @@
                 </div>
         </div>
 
+        <div th:replace="~{fragments/watch-status :: watchStatus('movie', ${movie.id})}"></div>
         <div class="flex wrap gap" th:if="${watchProviders != null and !#lists.isEmpty(watchProviders.flatrate)}">
             <a th:each="provider : ${watchProviders.flatrate}"
                class="watch-provider"
