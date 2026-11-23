@@ -119,7 +119,7 @@ class BrowseTemplatesTest {
     }
 
     @Test
-    fun `given tiles then each has a bookmark form beside the link, never inside it`() {
+    fun `given tiles then each has a bookmark and a Seen form beside the link, never inside it`() {
         val matrix = BrowseTitle(603, MediaType.movie, "The Matrix", LocalDate.parse("1999-03-31"), "/m.jpg", 8.2, 100, emptyList(), "en")
         val tiles = views.tiles(
             listOf(
@@ -139,18 +139,25 @@ class BrowseTemplatesTest {
             ),
         )
 
-        assertEquals(2, Regex("""<form class="browse-bookmark""").findAll(html).count())
+        val bookmarks = Regex("""<form class="tile-act tile-watchlist[^"]*"[^>]*>""").findAll(html).map { it.value }.toList()
+        assertEquals(2, bookmarks.size, "rendered for both, so un-seeing can bring it back")
+        assertEquals(1, bookmarks.count { it.contains("hidden") }, "the Watched title's bookmark is hidden")
+        assertEquals(2, Regex("""<form class="tile-act tile-seen""").findAll(html).count())
         Regex("""<a href="[^"]+" class="browse-tile-link">(.*?)</a>""", RegexOption.DOT_MATCHES_ALL).findAll(html).forEach {
-            assertFalse(it.groupValues[1].contains("<form"), "bookmark must not be nested in the tile link")
+            assertFalse(it.groupValues[1].contains("<form"), "quick actions must not be nested in the tile link")
         }
         assertTrue(html.contains("""action="/watchlist/toggle""""))
+        assertTrue(html.contains("""action="/seen/toggle""""))
         assertTrue(html.contains("""name="_csrf" value="tok123""""))
         assertTrue(html.contains("""name="tmdbId" value="603""""))
         assertTrue(html.contains("""name="type" value="movie""""))
-        assertTrue(html.contains("""class="browse-bookmark is-on""""), "Want to watch is shown as set")
-        assertTrue(html.contains("""aria-label="Remove from watchlist""""))
-        assertTrue(html.contains("""aria-label="Add to watchlist""""))
+        assertTrue(html.contains("""class="tile-act tile-watchlist is-on""""), "Want to watch is shown as set")
+        assertTrue(html.contains("""aria-label="Remove from watchlist: The Matrix""""))
+        assertTrue(html.contains("""aria-label="Mark as seen: The Matrix""""))
+        assertTrue(html.contains("""class="tile-act tile-seen is-on is-locked""""), "rated: seen, locked")
+        assertTrue(html.contains("""aria-label="Seen (you rated it): Reloaded""""))
         assertTrue(html.contains("""data-lucide="bookmark-check""""))
+        assertFalse(html.contains("tile-upcoming"), "released titles get no Upcoming badge")
         assertTrue(html.contains("""href="/movie/603""""))
         assertTrue(html.contains("""data-key="movie-604""""))
         assertTrue(html.contains("Load more"))
@@ -196,12 +203,14 @@ class BrowseTemplatesTest {
         assertTrue(horror.contains("w500/m.jpg 500w"))
         assertFalse(horror.contains("data-src"))
         assertFalse(horror.contains("aria-busy"))
-        assertEquals(1, Regex("<form class=\"home-quick").findAll(horror).count(), "no bookmark on the Watched title")
+        val bookmarks = Regex("""<form class="tile-act tile-watchlist[^"]*"[^>]*>""").findAll(horror).map { it.value }.toList()
+        assertEquals(1, bookmarks.count { !it.contains("hidden") }, "no bookmark on the Watched title")
         assertTrue(horror.contains("""aria-label="Add to watchlist: The Matrix""""))
         assertTrue(horror.contains("""data-title="The Matrix""""))
         assertTrue(horror.contains("""name="_csrf" value="tok123""""))
         assertTrue(horror.contains("""action="/watchlist/toggle""""))
-        assertTrue(horror.contains("""aria-label="Watched""""), "status badge")
+        assertTrue(horror.contains("""action="/seen/toggle""""))
+        assertTrue(horror.contains("""aria-label="Seen (you rated it): Reloaded""""), "Watched shows as the Seen eye")
         assertTrue(horror.contains(">8.0<"), "your score")
         assertTrue(horror.contains(">8.2<"), "TMDB score")
         Regex("<a class=\"home-tile\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(horror).forEach {

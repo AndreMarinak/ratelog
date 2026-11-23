@@ -231,7 +231,7 @@ class BrowseBarViewsTest {
             assertFalse(it.canToggleWatchlist, "Watched: the bookmark would only toggle Want to watch")
             assertEquals("8.2", it.tmdbScore)
             assertEquals("8.5", it.userScore)
-            assertEquals("circle-check", it.statusIcon)
+            assertEquals("eye", it.statusIcon)
             assertEquals("Watched", it.statusLabel)
             assertFalse(it.onWatchlist)
             assertEquals("watched", it.status)

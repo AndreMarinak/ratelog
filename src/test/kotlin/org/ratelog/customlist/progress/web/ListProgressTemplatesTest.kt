@@ -140,7 +140,7 @@ class ListProgressTemplatesTest {
         assertTrue(watched.contains("""title="No. 1 on this list""""))
         assertTrue(watched.contains("""class="home-status list-status is-watched""""))
         assertTrue(watched.contains("""aria-label="Watched""""))
-        assertTrue(watched.contains("""data-lucide="circle-check""""))
+        assertTrue(watched.contains("""data-lucide="eye""""))
         assertTrue(watched.contains("""class="home-score" title="Your score">9.0<"""))
 
         val none = render("fragments/list-progress", "badges", mapOf("entry" to view.entry(102)))

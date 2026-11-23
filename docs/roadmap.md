@@ -12,7 +12,7 @@ lists (official lists and later list features) `V1120–1129`.
 
 - [x] **1. API for Claude**: token auth (`/settings/api`), lists CRUD, add titles by TMDB id or by title + year with strict matching. See [docs/api.md](api.md). No MCP connector.
 - [x] **2. Optional quick rating**: one 0–10 score as an alternative to the 5 category sliders. Rankings must handle both kinds. API: `/api/v1/ratings` ([docs/api.md](api.md#ratings)).
-- [x] **3. Watchlist and statuses**: Want to watch, Watching, Watched, Dropped on every title; `/watchlist` page; rating auto-sets Watched. API: `/api/v1/statuses`.
+- [x] **3. Watchlist and statuses**: Want to watch, Watching, Watched, Dropped on every title; `/watchlist` page; rating auto-sets Watched. API: `/api/v1/statuses`. Simplified in the UI by #16.
 - [x] **4. Custom tags and categories**: user-defined tags with colors on title pages, `/tags` management, tag filter on Top pages, tags during list import. API: `/api/v1/tags`.
 - [ ] **5. Watch diary and history**: log each watch with a date, including rewatches. Timeline/history page.
 - [ ] **6. CSV export and more imports**: full export, plus imports from IMDb (ratings/watchlist CSV), Trakt, and a generic CSV format (title, year, tmdb_id, rating, status, date, tags, list).
@@ -28,7 +28,8 @@ lists (official lists and later list features) `V1120–1129`.
   (only titles with no status). "9/25 seen" on `/lists` cards, a back link above the title. API: `status`/`score`/`seen` per item and
   `progress` on `GET /api/v1/lists/{id}` ([docs/api.md](api.md#list-progress)).
 - [ ] **13. Poster hover card**: hovering (or long-pressing on phones) a poster anywhere shows a small card with the year, basic
-  scores (TMDB / IMDb, your rating) and quick actions: add to watchlist, add to a list. Requested 2026-11-23.
+  scores (TMDB / IMDb, your rating) and quick actions: add to watchlist, add to a list. Requested 2026-11-23. First step done in #16:
+  every poster has Seen and Watchlist toggles (always visible on touch).
 - [x] **14. Discover** (was Browse): `/discover` with category rows (Popular now + genres, movies and TV) when no filter is set,
   the poster grid otherwise, and a "Hide titles I've seen" switch that is on by default. `/browse` redirects; API alias `/api/v1/discover`.
   No migration needed (`V1100–1109` stay reserved for browse/discover). Requested 2026-11-23.
@@ -37,6 +38,12 @@ lists (official lists and later list features) `V1120–1129`.
   a row on the Discover landing right after Popular now, and `/lists/official`, each with the viewer's own "9/25 seen".
   API: `isOfficial` on lists, `GET /api/v1/lists/official`, any token can read an official list ([docs/api.md](api.md#official-lists)).
   Table `official_lists` (`V1120`). Requested 2026-11-23 for the admin's 26 researched lists.
+- [x] **16. Seen and Watchlist, Letterboxd-simple** (requested 2026-11-23): title pages have four equal toggles (Seen, Watchlist,
+  Rate, Add to list; shows add a small Watching / Dropped control); the follow bell only where it does something; "Rate it?" after
+  Seen on unrated movies (optional). Poster tiles everywhere get a Seen eye beside the bookmark. `/watchlist` tabs read To watch ·
+  Watching · Seen · Dropped, with Seen / Watching / Remove (Undo) on every tile. Lists get "Mark what you've seen" tick-off mode.
+  "Upcoming · Dec 18" badges on tiles and title pages. Rating a show's season makes it Watching, Watched once every aired season
+  is rated. All in place, no reloads. No migration (data model and API unchanged).
 
 ## Fixes and housekeeping done
 

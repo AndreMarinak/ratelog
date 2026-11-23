@@ -58,10 +58,7 @@
                          th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
                          sizes="(max-width: 900px) 31vw, 152px" alt="" loading="lazy" decoding="async">
                     <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
-                    <span th:if="${tile.statusIcon != null}" class="home-status"
-                          th:title="${tile.statusLabel}" th:aria-label="${tile.statusLabel}" role="img">
-                        <i th:data-lucide="${tile.statusIcon}" aria-hidden="true"></i>
-                    </span>
+                    <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
                     <span th:if="${tile.userScore != null}" class="home-score" th:title="#{browse.your.score}"
                           th:text="${tile.userScore}">8.5</span>
                 </div>
@@ -73,20 +70,8 @@
                     </span>
                 </span>
             </a>
-            <!--/* One-click "Want to watch" (POST /watchlist/toggle), beside the link. discover.js submits it in place. */-->
-            <form th:if="${tile.canToggleWatchlist}" class="home-quick" th:classappend="${tile.onWatchlist} ? 'is-on' : ''"
-                  action="/watchlist/toggle" method="post"
-                  th:attr="data-status=${tile.status},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove},data-title=${tile.title}">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                <input type="hidden" name="tmdbId" th:value="${tile.tmdbId}" />
-                <input type="hidden" name="type" th:value="${tile.type}" />
-                <button type="submit"
-                        th:title="${tile.onWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}"
-                        th:aria-label="(${tile.onWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}) + ': ' + ${tile.title}"
-                        th:aria-pressed="${tile.onWatchlist}">
-                    <i th:data-lucide="${tile.onWatchlist} ? 'bookmark-check' : 'bookmark'" aria-hidden="true"></i>
-                </button>
-            </form>
+            <!--/* Watchlist bookmark + Seen eye, beside the link; tile-actions.js posts them in place. */-->
+            <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
         </div>
     </div>
 </section>

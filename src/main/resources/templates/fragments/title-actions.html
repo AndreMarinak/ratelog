@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  Fork: the title page's Letterboxd-style actions. `a` is an org.ratelog.watchlist.seen.TitleActionsView
+  (TitleActionsInterceptor). Plain POST forms that come back to the page; with JS, static/title-actions.js saves them
+  in place (`data-title-act`) and keeps every toggle in sync; the bell uses inplace.js (`data-inplace`). Styles in static/title-page.css.
+
+  In the panel's four toggles (with Rate and Add to list, which stay in the page templates):
+    <th:block th:replace="~{fragments/title-actions :: seen(${titleActions})}"></th:block>
+    <th:block th:replace="~{fragments/title-actions :: watchlist(${titleActions})}"></th:block>
+  Under them (movies only), the "Rate it?" nudge shown after Seen:
+    <div th:replace="~{fragments/title-actions :: rateNudge(${titleActions})}"></div>
+  Then the small extras (Watching / Dropped for shows, the follow bell):
+    <div th:replace="~{fragments/title-actions :: extras(${titleActions})}"></div>
+  Under the title:
+    <span th:replace="~{fragments/title-actions :: upcoming(${titleActions})}"></span>
+*/-->
+
+<!--/* Seen: one tap marks it Watched, a second clears it. A rated movie stays seen (tapping explains). Upcoming: a date tile instead. */-->
+<th:block th:fragment="seen(a)">
+    <form th:if="${a != null and a.canToggleSeen}" action="/seen/toggle" method="post" class="title-action-form" data-title-act="seen">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+        <input type="hidden" name="type" th:value="${a.tileType}" />
+        <input type="hidden" name="back" th:value="${a.back}" />
+        <button type="submit" class="title-action title-toggle title-toggle-seen" data-title-seen
+                th:classappend="(${a.seen} ? 'is-on' : '') + (${a.seenLocked} ? ' is-locked' : '')"
+                th:aria-pressed="${a.seen}"
+                th:title="${a.seenLocked} ? #{title.seen.title.locked} : (${a.seen} ? #{title.seen.title.on} : #{title.seen.title.off})"
+                th:attr="data-label-on=#{title.seen.on},data-label-off=#{title.seen.off},data-title-on=#{title.seen.title.on},data-title-off=#{title.seen.title.off},data-title-locked=#{title.seen.title.locked}">
+            <i data-lucide="eye" aria-hidden="true"></i>
+            <span class="title-toggle-label" th:text="${a.seen} ? #{title.seen.on} : #{title.seen.off}">Mark seen</span>
+            <span class="title-toggle-note" th:hidden="${!a.seenLocked}" th:text="#{title.seen.hint.rated}">Rated</span>
+        </button>
+    </form>
+    <div th:if="${a != null and !a.canToggleSeen}" class="title-action title-toggle title-toggle-upcoming" th:title="#{title.upcoming.hint}">
+        <i data-lucide="calendar-clock" aria-hidden="true"></i>
+        <span class="title-toggle-label"
+              th:text="${a.upcomingShortDate != null} ? #{title.upcoming.out(${a.upcomingShortDate})} : #{title.upcoming.soon}">Out Dec 18</span>
+    </div>
+</th:block>
+
+<!--/* Watchlist: toggles Want to watch (POST /status). From an unrated Watched it asks first: it would stop counting as seen. */-->
+<form th:fragment="watchlist(a)" th:if="${a != null}" action="/status" method="post" class="title-action-form" data-title-act="watchlist"
+      th:data-confirm="${a.watchlistReplacesSeen} ? #{title.watchlist.confirm.seen} : null"
+      th:data-confirm-seen="#{title.watchlist.confirm.seen}">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <input type="hidden" name="mediaType" th:value="${a.mediaType}" />
+    <input type="hidden" name="mediaId" th:value="${a.mediaId}" />
+    <input type="hidden" name="status" th:value="${a.onWatchlist} ? '' : 'want_to_watch'" />
+    <button type="submit" class="title-action title-toggle title-toggle-watchlist" data-title-watchlist
+            th:classappend="${a.onWatchlist} ? 'is-on' : ''" th:aria-pressed="${a.onWatchlist}"
+            th:title="${a.onWatchlist} ? #{title.watchlist.title.on} : #{title.watchlist.title.off}"
+            th:attr="data-label-on=#{title.watchlist.on},data-label-off=#{title.watchlist.off},data-title-on=#{title.watchlist.title.on},data-title-off=#{title.watchlist.title.off}">
+        <i th:data-lucide="${a.onWatchlist} ? 'bookmark-check' : 'bookmark'" aria-hidden="true"></i>
+        <span class="title-toggle-label" th:text="${a.onWatchlist} ? #{title.watchlist.on} : #{title.watchlist.off}">Watchlist</span>
+    </button>
+</form>
+
+<!--/* "Rate it?": movies with no rating, shown by title-actions.js right after Seen (never without JS, never for shows,
+       which are rated per season). One tap on a score saves a quick rating through the Rate modal's own POST /movie/rate. */-->
+<div th:fragment="rateNudge(a)" th:if="${a != null and !a.isTv and !a.seenLocked}" class="title-nudge" data-rate-nudge hidden
+     role="group" th:aria-label="#{title.nudge.aria}">
+    <form action="/movie/rate" method="post" class="title-nudge-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="movieId" th:value="${a.mediaId}" />
+        <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+        <div class="title-nudge-head">
+            <span class="title-nudge-question" th:text="#{title.nudge.question}">Rate it?</span>
+            <span class="title-nudge-hint" th:text="#{title.nudge.hint}">Optional. Tap a score.</span>
+            <button type="button" class="title-nudge-skip" data-nudge-skip th:text="#{title.nudge.skip}">Skip</button>
+        </div>
+        <div class="title-nudge-scores">
+            <button th:each="n : ${#numbers.sequence(1, 10)}" type="submit" name="score" th:value="${n}" class="title-nudge-score"
+                    th:text="${n}" th:aria-label="#{title.nudge.score(${n})}">7</button>
+        </div>
+    </form>
+</div>
+
+<!--/* The small extras: Watching / Dropped (shows only), a movie's leftover Watching / Dropped, the follow bell. */-->
+<div th:fragment="extras(a)" th:if="${a != null and (a.isTv or a.movieExtraStatus != null or a.showFollow)}"
+     class="title-extras" role="group" th:aria-label="#{title.extras.aria}">
+    <form th:if="${a.isTv}" action="/status" method="post" class="title-progress" role="group" th:aria-label="#{title.progress.aria}" data-title-act="status">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="mediaType" th:value="${a.mediaType}" />
+        <input type="hidden" name="mediaId" th:value="${a.mediaId}" />
+        <button type="submit" name="status" th:value="${a.watching} ? '' : 'watching'" class="title-chip" data-progress-value="watching"
+                th:classappend="${a.watching} ? 'is-on' : ''" th:aria-pressed="${a.watching}" th:title="#{title.progress.title.watching}">
+            <i data-lucide="circle-play" aria-hidden="true"></i>
+            <span th:text="#{title.progress.watching}">Watching</span>
+        </button>
+        <button type="submit" name="status" th:value="${a.dropped} ? '' : 'dropped'" class="title-chip" data-progress-value="dropped"
+                th:classappend="${a.dropped} ? 'is-on is-dropped' : ''" th:aria-pressed="${a.dropped}" th:title="#{title.progress.title.dropped}">
+            <i data-lucide="circle-x" aria-hidden="true"></i>
+            <span th:text="#{title.progress.dropped}">Dropped</span>
+        </button>
+    </form>
+
+    <form th:if="${a.movieExtraStatus != null}" action="/status" method="post" class="title-chip-group" data-title-act="status" data-extra-status>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="mediaType" th:value="${a.mediaType}" />
+        <input type="hidden" name="mediaId" th:value="${a.mediaId}" />
+        <input type="hidden" name="status" value="" />
+        <span class="title-chip is-static">
+            <i th:data-lucide="${a.movieExtraStatus.icon}" aria-hidden="true"></i>
+            <span th:text="#{${'title.movie.status.' + a.movieExtraStatus.apiName}}">Marked Dropped</span>
+        </span>
+        <button type="submit" class="title-chip title-chip-clear" th:text="#{title.movie.status.clear}">Clear</button>
+    </form>
+
+    <!--/* Follow only adds release dates to Premieres (Ratings page), so the bell shows only where that can do something
+           (ReleaseRules.showFollow), and always while followed, so a follow can be undone. */-->
+    <form th:if="${a.showFollow}" th:action="${a.isTv} ? '/tvshow/follow' : '/movie/follow'" method="post" class="title-follow"
+          data-inplace=".title-panel" th:data-inplace-done="${a.followed} ? #{title.follow.done.off} : #{title.follow.done.on}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" th:name="${a.isTv} ? 'tvShowId' : 'movieId'" th:value="${a.mediaId}" />
+        <button type="submit" class="title-chip title-follow-btn" th:classappend="${a.followed} ? 'is-on' : ''"
+                th:aria-pressed="${a.followed}" th:title="${a.followed} ? #{title.follow.title.on} : #{title.follow.title.off}">
+            <i th:data-lucide="${a.followed} ? 'bell-ring' : 'bell'" aria-hidden="true"></i>
+            <span class="title-follow-text">
+                <span th:text="${a.followed} ? #{title.follow.on} : #{title.follow.off}">Notify me</span>
+                <span class="title-follow-hint" th:text="#{title.follow.hint}">Adds release dates to Premieres</span>
+            </span>
+        </button>
+    </form>
+</div>
+
+<!--/* "Upcoming · Dec 18, 2026" under the title. */-->
+<span th:fragment="upcoming(a)" th:if="${a != null and a.upcoming}" class="title-upcoming">
+    <i data-lucide="calendar-clock" aria-hidden="true"></i>
+    <span th:text="#{title.upcoming}">Upcoming</span>
+    <span th:if="${a.upcomingDate != null}" class="title-upcoming-date" th:text="${a.upcomingDate}">Dec 18, 2026</span>
+</span>
+</body>
+</html>

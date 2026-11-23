@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  Fork: quick actions on poster tiles (home rows, Discover rows and grid, search results, list pages).
+  `a` is an org.ratelog.watchlist.seen.TileActionsView. Styles in static/tile-actions.css; static/tile-actions.js posts
+  both forms in place (JSON) and keeps the stack in sync. Without JS they are plain POST forms that redirect back.
+
+  Quick actions (a sibling of the tile link, inside a position: relative wrapper):
+    <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
+  Upcoming badge (inside the poster):
+    <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
+*/-->
+<div th:fragment="actions(a, title)" th:if="${a != null}" class="tile-actions" data-tile-actions
+     th:attr="data-label-seen-off=#{tile.seen.mark},data-label-seen-on=#{tile.seen.on},data-label-seen-locked=#{tile.seen.locked},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove},data-title=${title},data-key=${a.type + ':' + a.tmdbId}">
+    <!--/* Watchlist: rendered even when it can't toggle (Watching / Watched / Dropped), hidden, so un-seeing can bring it back. */-->
+    <form class="tile-act tile-watchlist" th:classappend="${a.onWatchlist} ? 'is-on' : ''" th:hidden="${!a.canToggleWatchlist}"
+          action="/watchlist/toggle" method="post" data-tile-act="watchlist">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+        <input type="hidden" name="type" th:value="${a.type}" />
+        <button type="submit"
+                th:with="label=${a.onWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}"
+                th:title="${label}" th:aria-label="${label} + ': ' + ${title}" th:aria-pressed="${a.onWatchlist}">
+            <i th:data-lucide="${a.onWatchlist} ? 'bookmark-check' : 'bookmark'" aria-hidden="true"></i>
+        </button>
+    </form>
+    <span th:if="${a.badgeIcon != null}" class="tile-act tile-badge" th:classappend="${'is-' + a.status}" role="img"
+          th:title="#{${a.badgeKey}}" th:aria-label="#{${a.badgeKey}}">
+        <i th:data-lucide="${a.badgeIcon}" aria-hidden="true"></i>
+    </span>
+    <!--/* Seen: not offered on upcoming titles. A rated title is locked on: tapping it only explains why. */-->
+    <form th:if="${a.canToggleSeen}" class="tile-act tile-seen"
+          th:classappend="(${a.seen} ? 'is-on' : '') + (${a.seenLocked} ? ' is-locked' : '')"
+          action="/seen/toggle" method="post" data-tile-act="seen">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+        <input type="hidden" name="type" th:value="${a.type}" />
+        <button type="submit"
+                th:with="label=${a.seenLocked} ? #{tile.seen.locked} : (${a.seen} ? #{tile.seen.on} : #{tile.seen.mark})"
+                th:title="${label}" th:aria-label="${label} + ': ' + ${title}" th:aria-pressed="${a.seen}">
+            <i data-lucide="eye" aria-hidden="true"></i>
+            <!--/* Shown instead of the eye in list tick-off mode (tile-actions.css). */-->
+            <i data-lucide="check" aria-hidden="true"></i>
+        </button>
+    </form>
+</div>
+
+<!--/* "Upcoming · Dec 18" on the poster (bottom left). The word and the date wrap onto two lines on narrow tiles. */-->
+<span th:fragment="upcoming(a)" th:if="${a != null and a.upcoming}" class="tile-upcoming">
+    <span class="tile-upcoming-word" th:text="#{tile.upcoming}">Upcoming</span>
+    <span th:if="${a.upcomingDate != null}" class="tile-upcoming-date" th:text="${a.upcomingDate}">Dec 18</span>
+</span>
+</body>
+</html>

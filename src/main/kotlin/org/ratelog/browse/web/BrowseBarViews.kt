@@ -16,6 +16,7 @@ import org.ratelog.browse.TmdbBrowseClient
 import org.ratelog.browse.discover.BrowseTile
 import org.ratelog.user.UserDetailsService
 import org.ratelog.watchlist.WatchStatus
+import org.ratelog.watchlist.seen.TileActionsView
 import org.springframework.context.MessageSource
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.stereotype.Component
@@ -90,6 +91,7 @@ class BrowseBarViews(
 
     fun tiles(tiles: List<BrowseTile>, locale: Locale = LocaleContextHolder.getLocale()): List<BrowseTileView> {
         val m = Messages(messages, locale)
+        val today = LocalDate.now(clock)
         return tiles.map { tile ->
             val t = tile.title
             val typeParam = BrowseFilters.typeParam(t.type)
@@ -111,6 +113,7 @@ class BrowseBarViews(
                 onWatchlist = status == WatchStatus.WANT_TO_WATCH,
                 statusIcon = badge?.icon,
                 statusLabel = badge?.let { m(it.messageKey) },
+                actions = TileActionsView.of(t.tmdbId, t.type, status, tile.mark?.rated == true, t.releaseDate, today, locale),
             )
         }
     }

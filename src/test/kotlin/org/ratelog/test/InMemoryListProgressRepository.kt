@@ -38,7 +38,7 @@ class InMemoryListProgressRepository(
 
     override fun countSeen(userId: User.Id, listIds: Collection<CustomList.Id>): Map<CustomList.Id, Int> =
         listIds.distinct().mapNotNull { id ->
-            val seen = lists.findById(id)?.items?.count { mark(userId, it.mediaType, it.mediaId).seen } ?: 0
+            val seen = lists.findById(id)?.items?.count { mark(userId, it.mediaType, it.mediaId).seen(it.mediaType) } ?: 0
             if (seen > 0) id to seen else null
         }.toMap()
 

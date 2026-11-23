@@ -1,5 +1,7 @@
 package org.ratelog.browse.web
 
+import org.ratelog.watchlist.seen.TileActionsView
+
 /**
  * Everything `templates/fragments/browse-bar.html` renders, with labels already resolved.
  * Every option is a plain link to `/discover?...`, so the bar works without JavaScript.
@@ -74,6 +76,8 @@ data class BrowseTileView(
     val statusLabel: String?,
     /** `w500` for 2x screens (`srcset`). */
     val posterUrl2x: String? = null,
+    /** Fork: the Seen / Watchlist quick actions and the Upcoming badge (fragments/tile-actions.html). */
+    val actions: TileActionsView? = null,
 ) {
     /** Rows show the one-click bookmark only when it can't downgrade a status (none yet, or Want to watch). */
     val canToggleWatchlist: Boolean get() = status == null || onWatchlist

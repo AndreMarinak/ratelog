@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="/browse.css">
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/discover.css">
+<link rel="stylesheet" href="/tile-actions.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='browse')}"></header>
@@ -64,10 +65,7 @@
                              th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
                              sizes="(max-width: 600px) 31vw, 200px" th:alt="${tile.title}" loading="lazy" decoding="async">
                         <div th:unless="${tile.posterUrl != null}" class="poster-fallback" aria-hidden="true" th:text="${tile.initial}">?</div>
-                        <span th:if="${tile.statusIcon != null}" class="browse-status" th:title="${tile.statusLabel}">
-                            <i th:data-lucide="${tile.statusIcon}" aria-hidden="true"></i>
-                            <span class="visually-hidden" th:text="${tile.statusLabel}">Watched</span>
-                        </span>
+                        <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
                         <span th:if="${tile.userScore != null}" class="browse-user-score" th:title="#{browse.your.score}">
                             <span class="visually-hidden" th:text="#{browse.your.score}">Your score</span>
                             <span th:text="${tile.userScore}">8.4</span>
@@ -83,19 +81,8 @@
                         </span>
                     </div>
                 </a>
-                <!--/* One-click "Want to watch". A sibling of the link (never inside it); browse.js submits it in place. */-->
-                <form class="browse-bookmark" method="post" action="/watchlist/toggle"
-                      th:classappend="${tile.onWatchlist} ? 'is-on' : ''"
-                      th:attr="data-status=${tile.status},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove}">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <input type="hidden" name="tmdbId" th:value="${tile.tmdbId}">
-                    <input type="hidden" name="type" th:value="${tile.type}">
-                    <button type="submit" class="browse-bookmark-btn"
-                            th:with="label=${tile.onWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}"
-                            th:aria-label="${label}" th:title="${label}">
-                        <i th:data-lucide="${tile.onWatchlist} ? 'bookmark-check' : 'bookmark'" aria-hidden="true"></i>
-                    </button>
-                </form>
+                <!--/* Watchlist bookmark + Seen eye, beside the link (never inside it); tile-actions.js posts them in place. */-->
+                <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
             </li>
         </ul>
 
@@ -116,5 +103,6 @@
 </div>
 <script src="/browse.js" defer></script>
 <script src="/discover.js" defer></script>
+<script src="/tile-actions.js" defer></script>
 </body>
 </html>

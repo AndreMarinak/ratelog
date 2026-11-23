@@ -28,6 +28,8 @@ data class SearchResultItem(
     val year: Int?,
     val posterPath: String?,
     val type: String,
+    /** Fork: release date (movies) / first air date (TV) as TMDB sends it, for the Upcoming badge. */
+    val releaseDate: String? = null,
 )
 
 @org.springframework.stereotype.Service
@@ -84,6 +86,7 @@ class SearchHandler(
                     year = it.releaseDate?.takeIf { d -> d.isNotBlank() }?.take(4)?.toIntOrNull(),
                     posterPath = it.posterPath,
                     type = MediaType.movie.name,
+                    releaseDate = it.releaseDate,
                 )
             }
             items to totalPages
@@ -100,6 +103,7 @@ class SearchHandler(
                     year = it.firstAirDate?.takeIf { d -> d.isNotBlank() }?.take(4)?.toIntOrNull(),
                     posterPath = it.posterPath,
                     type = MediaType.tvshow.name,
+                    releaseDate = it.firstAirDate,
                 )
             }
             items to totalPages

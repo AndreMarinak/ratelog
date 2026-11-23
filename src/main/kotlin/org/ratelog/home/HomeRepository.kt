@@ -16,7 +16,7 @@ data class HomeTitle(
     val status: WatchStatus? = null,
     /** The viewer's own score (a show's is the average of its rated seasons). */
     val score: Double? = null,
-    /** Set for TMDB titles (used by "Coming soon"). */
+    /** TMDB's date for TMDB rows ("Coming soon" sorts by it); the stored date for personal rows (Upcoming badge). */
     val releaseDate: LocalDate? = null,
 )
 

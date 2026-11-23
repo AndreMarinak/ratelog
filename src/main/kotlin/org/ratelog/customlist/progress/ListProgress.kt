@@ -5,6 +5,7 @@ import org.ratelog.customlist.CustomList
 import org.ratelog.customlist.CustomListItem
 import org.ratelog.user.User
 import org.ratelog.watchlist.WatchStatus
+import org.ratelog.watchlist.seen.SeenState
 
 /*
  * List progress (fork, roadmap item 12): how much of a list the *viewer* has seen, on their own lists and on
@@ -18,8 +19,11 @@ data class ViewerMark(
     val score: Double?,
     val rated: Boolean,
 ) {
-    /** "Seen" means rated, or marked Watched. Watching, Want to watch and Dropped are not seen. */
-    val seen: Boolean get() = rated || status == WatchStatus.WATCHED
+    /**
+     * "Seen" is the Seen toggle's rule (SeenState): a movie that is rated or Watched; a show that is Watched, or rated
+     * with no status. Watching, Want to watch and Dropped are not seen (for a show, even with rated seasons).
+     */
+    fun seen(type: MediaType): Boolean = SeenState(status, rated, isTv = type == MediaType.tvshow).seen
 
     companion object {
         val NONE = ViewerMark(status = null, score = null, rated = false)
@@ -66,6 +70,8 @@ data class ListProgressEntry(
     val status: WatchStatus?,
     val score: Double?,
     val seen: Boolean,
+    /** Rated (a show: at least one rated season). Such a title stays seen; the Seen toggle can't clear it. */
+    val rated: Boolean = false,
 ) {
     /** "Add the unseen to my watchlist" would mark it Want to watch: not seen and no status at all. */
     val addable: Boolean get() = !seen && status == null
@@ -110,7 +116,8 @@ data class ListProgress(
                         rank = index + 1,
                         status = mark.status,
                         score = mark.score,
-                        seen = mark.seen,
+                        seen = mark.seen(item.mediaType),
+                        rated = mark.rated,
                     )
                 },
         )

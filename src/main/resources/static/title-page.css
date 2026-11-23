@@ -1,7 +1,16 @@
 /* Fork: movie and TV title pages (templates/movie-detail.html, tvshow-detail.html; behaviour in title-page.js).
    Desktop (>= 1100px): poster + where to watch | title, facts, scores, overview, trailer, your rating | action panel.
    Tablet (700-1099px): poster + where to watch | everything else, with the action panel right under the title.
-   Phone (< 700px): small poster beside the title, a one-row action bar, then the rest. Seasons (TV) are full width below. */
+   Phone (< 700px): small poster beside the title, a one-row action bar, then the rest. Seasons (TV) are full width below.
+   Actions (fork, fragments/title-actions.html): four equal toggles, Seen · Watchlist · Rate · Add to list (2x2 in the
+   desktop panel, one row of four on tablets and phones), then a row of small extras: Watching / Dropped (shows) and the
+   follow bell (only where following does something). */
+
+.title-layout {
+  --seen: hsl(138 40% 60%);
+  --seen-soft: hsl(138 40% 60% / 0.14);
+  --upcoming: hsl(40 85% 76%);
+}
 
 .title-layout {
   display: grid;
@@ -61,6 +70,35 @@
     letter-spacing: 0;
     opacity: 0.8;
     white-space: nowrap;
+  }
+}
+
+/* "Upcoming · Dec 18, 2026" right under the title and year. */
+.title-upcoming {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid hsl(40 70% 60% / 0.4);
+  border-radius: 999px;
+  background: hsl(40 70% 50% / 0.14);
+  color: var(--upcoming);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .title-upcoming-date::before {
+    content: "\00b7";
+    margin-right: 5px;
+    opacity: 0.7;
   }
 }
 
@@ -156,69 +194,16 @@ button.title-overview-toggle {
   }
 }
 
-/* Watchlist statuses as labeled tiles (2x2 in the panel and in the phone sheet). */
-.title-panel .status-segmented,
-.watch-status-modal .status-segmented {
+/* The four toggles: equal tiles separated by hairlines (the grid gap shows the border colour). */
+.title-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-}
+  gap: 1px;
+  background: var(--border);
 
-.title-panel .status-segment,
-.watch-status-modal .status-segment {
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  min-height: 56px;
-  padding: 8px 4px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.92rem;
-  line-height: 1.15;
-  text-align: center;
-  white-space: normal;
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  &.active {
-    border-color: hsl(var(--_brand-clay) / 0.45);
-  }
-}
-
-.watch-status-modal {
-  .watch-status {
-    margin: 16px 0 4px;
-  }
-
-  .watch-status .title-section-label {
-    display: none;
-  }
-
-  .status-segment {
-    min-height: 68px;
-    font-size: 1rem;
-  }
-
-  h2 {
-    margin: 0;
-  }
-}
-
-.title-actions {
-  display: flex;
-  flex-direction: column;
-
-  & > * + * {
-    border-top: 1px solid var(--border);
+  & > * {
+    min-width: 0;
+    background: var(--surface-strong);
   }
 }
 
@@ -230,18 +215,20 @@ button.title-overview-toggle {
 .title-action {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
+  justify-content: center;
+  gap: 5px;
   width: 100%;
-  min-height: 46px;
-  padding: 10px 16px;
+  min-height: 74px;
+  padding: 10px 6px;
   border-radius: 0;
   color: var(--text);
   font-family: var(--font);
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
-  text-align: left;
+  line-height: 1.15;
+  text-align: center;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
 
@@ -267,37 +254,249 @@ button.title-overview-toggle {
     outline-offset: -2px;
   }
 
-  /* Followed: filled heart. */
-  &.is-active svg {
-    color: var(--accent);
-    fill: var(--accent);
+  /* Rated: the score takes the icon's place. */
+  &.is-rated svg {
+    display: none;
   }
-
-  /* Has a watch status: accent icon (outline icons, no fill). */
-  &.is-set svg {
-    color: var(--accent);
-  }
-}
-
-/* The status tiles are inline on desktop and tablet; only phones use this button and its sheet. */
-.title-action-watchlist {
-  display: none;
-}
-
-.title-action-hint {
-  margin-left: auto;
-  color: var(--text-soft);
-  font-size: 0.85rem;
-  font-weight: 500;
 }
 
 .title-action-score {
-  margin-left: auto;
+  order: -1;
   color: hsl(20 83% 84%);
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+/* On: Seen is green (like Letterboxd's eye), Watchlist uses the accent. */
+.title-toggle.is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+
+  svg {
+    color: var(--accent);
+  }
+
+  &:hover {
+    color: var(--accent);
+    background: hsl(var(--_brand-clay) / 0.22);
+  }
+}
+
+.title-toggle-seen.is-on {
+  background: var(--seen-soft);
+  color: var(--seen);
+
+  svg {
+    color: var(--seen);
+  }
+
+  &:hover {
+    color: var(--seen);
+    background: hsl(138 40% 60% / 0.2);
+  }
+
+  &:hover svg {
+    color: var(--seen);
+  }
+}
+
+/* Rated: seen through the rating (can't be cleared here). */
+.title-toggle-note {
+  margin-top: -2px;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Upcoming: no Seen toggle yet, the release date stands in. */
+.title-toggle-upcoming {
+  color: var(--upcoming);
+  cursor: default;
+
+  svg {
+    color: var(--upcoming);
+  }
+
+  &:hover {
+    color: var(--upcoming);
+    background: none;
+  }
+
+  &:hover svg {
+    color: var(--upcoming);
+  }
+}
+
+/* ----- "Rate it?" after Seen (movies with no rating; title-actions.js) ----- */
+
+.title-nudge {
+  padding: 12px 14px 14px;
+  background: hsl(138 40% 60% / 0.06);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.title-nudge-form {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.title-nudge-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.title-nudge-question {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.title-nudge-hint {
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+
+button.title-nudge-skip {
+  margin-left: auto;
+  padding: 2px 4px;
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.title-nudge-scores {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+button.title-nudge-score {
+  justify-content: center;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  &:hover,
+  &:focus-visible {
+    border-color: hsl(20 83% 70% / 0.7);
+    background: hsl(20 83% 60% / 0.16);
+    color: hsl(20 83% 84%);
+  }
+}
+
+/* ----- Extras: Watching / Dropped (shows), a movie's leftover status, the follow bell ----- */
+
+.title-extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.title-progress,
+.title-chip-group,
+.title-follow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.title-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 5px 13px 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(.is-static) {
+    color: var(--text);
+    background: var(--surface-muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &.is-on {
+    border-color: hsl(var(--_brand-clay) / 0.5);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  &.is-on.is-dropped {
+    border-color: var(--border-strong);
+    background: var(--surface-muted);
+    color: var(--text);
+  }
+
+  &.is-static {
+    border-style: dashed;
+    cursor: default;
+  }
+}
+
+.title-chip-clear {
+  padding: 5px 13px;
+}
+
+/* The bell: secondary on purpose (following only adds release dates to Premieres). Label over a one-line hint. */
+.title-follow-btn {
+  padding-right: 16px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.title-follow-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.title-follow-hint {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 /* ----- Where to watch ----- */
@@ -426,45 +625,29 @@ button.title-overview-toggle {
   .title-trailer { order: 4; }
   .title-rating { order: 5; }
 
-  /* A wide panel: the four statuses in one row, then the actions as tiles in one row. */
-  .title-panel .status-segmented {
+  /* A wide panel: the four toggles in one row. */
+  .title-actions {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .title-actions {
-    display: grid;
-    grid-auto-columns: minmax(0, 1fr);
-    grid-auto-flow: column;
-
-    & > * + * {
-      border-top: 0;
-      border-left: 1px solid var(--border);
-    }
-  }
-
   .title-action {
-    flex-direction: column;
-    justify-content: center;
     gap: 4px;
-    min-height: 62px;
+    min-height: 64px;
     padding: 8px 4px;
     font-size: 0.95rem;
-    line-height: 1.15;
-    text-align: center;
-  }
-
-  .title-action-hint {
-    display: none;
-  }
-
-  .title-action.is-rated svg {
-    display: none;
   }
 
   .title-action-score {
-    order: -1;
-    margin: 0;
     font-size: 1.15rem;
+  }
+
+  .title-extras {
+    padding: 10px 12px;
+  }
+
+  /* A wide panel: the ten scores in one row. */
+  .title-nudge-scores {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
   }
 }
 
@@ -602,27 +785,45 @@ button.title-overview-toggle {
     }
   }
 
-  /* The action bar: four equal tiles; statuses move to the sheet behind "Watchlist". */
-  .title-panel > .watch-status {
-    display: none;
-  }
-
-  .title-panel > * + .title-actions {
-    border-top: 0;
-  }
-
-  .title-action-watchlist {
-    display: flex;
-  }
-
+  /* The action bar: four equal tiles (Seen, Watchlist, Rate, Add to list), the extras as small chips under them. */
   .title-action {
-    min-height: 60px;
+    min-height: 62px;
     padding: 8px 2px;
     font-size: 0.88rem;
   }
 
   .title-action-score {
     font-size: 1.05rem;
+  }
+
+  .title-toggle-note {
+    font-size: 0.75rem;
+  }
+
+  .title-extras {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .title-chip {
+    min-height: 34px;
+    padding: 4px 11px 4px 9px;
+    font-size: 0.88rem;
+  }
+
+  .title-follow-hint {
+    font-size: 0.78rem;
+  }
+
+  .title-upcoming {
+    margin-top: 8px;
+    padding: 2px 9px 2px 7px;
+    font-size: 0.85rem;
+
+    svg {
+      width: 13px;
+      height: 13px;
+    }
   }
 
   .title-overview {

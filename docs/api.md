@@ -76,7 +76,7 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 
 - **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. The first six fields are unchanged.
   `status` is your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or `null`; `score` is your rating or `null`.
-- `seen` is `true` when you rated the title (for a show: at least one season) or its status is `watched`. Watching, Want to watch and Dropped are not seen.
+- `seen` is `true` when its status is `watched`, or when you rated it: a movie with any status, a show only if it has no status (a show you're Watching, have on your watchlist or Dropped isn't seen, even with rated seasons). Watching, Want to watch and Dropped are otherwise not seen. Rating a show's season sets it to `watching`, and to `watched` once every aired season is rated.
 - `progress.total` counts the items in the response. Items are in list order; `position` can have gaps after removals.
 - To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
   `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
@@ -238,7 +238,7 @@ Row ids, in this order:
 | `popular_tv` | TMDB popular TV |
 
 **HomeTitle**: `{tmdbId, type, title, year, posterUrl, status, score, releaseDate}`. `status` (`want_to_watch`, `watching`, `watched`, `dropped`) and `score`
-are yours, `null` when you have none. `releaseDate` is an ISO date on TMDB rows.
+are yours, `null` when you have none. `releaseDate` is an ISO date: TMDB's on TMDB rows, the stored one on your own rows.
 
 **HomeList**: `{id, name, isPublic, itemCount, url, posterUrls}`. `posterUrls` are the first (up to 4) posters, in list order.
 

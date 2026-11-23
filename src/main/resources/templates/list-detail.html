@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/watchlist.css">
 <link rel="stylesheet" href="/list-progress.css">
+<link rel="stylesheet" href="/tile-actions.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='lists')}"></header>
@@ -34,14 +35,17 @@
 
         <div th:text="#{list.empty}" th:if="${#lists.isEmpty(list.items)}" class="empty-state"></div>
 
-        <div class="list-grid">
-            <a th:each="item, iterStat : ${list.items}" th:if="${listProgress == null or listProgress.shows(item.id.value)}"
-               th:href="${item.mediaType == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
+        <!--/* Fork: each card is wrapped so the Seen / Watchlist quick actions sit beside the link; `is-ticking` is tick-off mode (list-tick.js). */-->
+        <div class="list-grid" th:classappend="${listProgress != null and listProgress.tick} ? 'is-ticking' : ''">
+            <div th:each="item, iterStat : ${list.items}" th:if="${listProgress == null or listProgress.shows(item.id.value)}"
+                 th:with="entry=${listProgress?.entry(item.id.value)}"
+                 class="list-item" th:classappend="${entry?.actions?.seen} ? 'is-seen' : ''" th:id="${'list-item-' + item.id.value}">
+            <a th:href="${item.mediaType == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
                class="list-card" th:data-item-id="${item.id.value}">
                 <div class="poster-frame">
                     <span class="type-tag" th:if="${item.mediaType == 'movie'}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
                     <span class="type-tag" th:unless="${item.mediaType == 'movie'}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
-                    <th:block th:replace="~{fragments/list-progress :: badges(${listProgress?.entry(item.id.value)})}"></th:block>
+                    <th:block th:replace="~{fragments/list-progress :: badges(${entry})}"></th:block>
                     <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w342' + ${item.posterPath}}" th:srcset="|https://image.tmdb.org/t/p/w342${item.posterPath} 1x, https://image.tmdb.org/t/p/w500${item.posterPath} 2x|" th:alt="'Poster of ' + ${item.title}">
                     <div th:unless="${item.posterPath != null}" class="poster-fallback" th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</div>
                 </div>
@@ -59,6 +63,8 @@
                     </form>
                 </div>
             </a>
+            <div th:replace="~{fragments/tile-actions :: actions(${entry?.actions}, ${item.title})}"></div>
+            </div>
         </div>
     </div>
 
@@ -69,5 +75,7 @@
     </th:block>
 </div>
     <script src="/confirm.js" defer></script>
+    <script src="/tile-actions.js" defer></script>
+    <script src="/list-tick.js" defer></script>
 </body>
 </html>

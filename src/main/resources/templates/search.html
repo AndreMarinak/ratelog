@@ -31,12 +31,15 @@
         </p>
 
         <!--/* Fork: results are the home rows' poster tiles (home.css) in a grid (search-results.css). search.js builds the same markup for later pages. */-->
-        <th:block th:if="${results != null}"><link rel="stylesheet" href="/home.css"><link rel="stylesheet" href="/search-results.css"></th:block>
+        <th:block th:if="${results != null}"><link rel="stylesheet" href="/home.css"><link rel="stylesheet" href="/search-results.css"><link rel="stylesheet" href="/tile-actions.css"></th:block>
         <div th:if="${results != null}" id="results" class="search-grid">
             <div th:text="#{search.empty}" th:if="${#lists.isEmpty(results)}" class="empty-state"></div>
 
-            <a th:each="item : ${results}"
-               th:href="${item.type == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
+            <!--/* Fork: each tile is wrapped so the Seen / Watchlist quick actions (resultActions, SearchTileActionsInterceptor) sit beside the link. */-->
+            <div th:each="item : ${results}" class="home-tile-wrap search-tile-wrap"
+                 th:with="actions=${resultActions != null} ? ${resultActions[item.type + '-' + item.tmdbId]} : null"
+                 th:attr="data-key=${item.type + '-' + item.tmdbId}">
+            <a th:href="${item.type == 'movie'} ? @{/movie/{id}(id=${item.tmdbId})} : @{/tv/{id}(id=${item.tmdbId})}"
                class="home-tile search-tile">
                 <div class="home-poster">
                     <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w342' + ${item.posterPath}}"
@@ -45,10 +48,13 @@
                     <div th:unless="${item.posterPath != null}" class="poster-fallback" th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</div>
                     <span class="home-type" th:if="${item.type == 'movie'}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
                     <span class="home-type" th:unless="${item.type == 'movie'}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
+                    <span th:replace="~{fragments/tile-actions :: upcoming(${actions})}"></span>
                 </div>
                 <span class="home-tile-title" th:text="${item.title}" th:title="${item.title}">Title</span>
                 <span class="home-tile-meta" th:text="${item.year != null} ? ${item.year} : #{movies.year.unknown}">Year</span>
             </a>
+            <div th:replace="~{fragments/tile-actions :: actions(${actions}, ${item.title})}"></div>
+            </div>
         </div>
 
         <div th:if="${hasMore}" id="scroll-sentinel" class="scroll-sentinel"
@@ -66,5 +72,6 @@
     </section>
 </div>
 <script th:if="${hasMore}" th:src="@{/search.js}"></script>
+<script th:if="${results != null}" src="/tile-actions.js" defer></script>
 </body>
 </html>

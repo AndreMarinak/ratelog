@@ -48,7 +48,7 @@ class HomeDashboardViewTest {
         assertNull(upNext.statusIcon)
         assertTrue(upNext.showTypeTag)
         val popular = dashboard.rows[1].tiles.single()
-        assertEquals("eye", popular.statusIcon)
+        assertEquals("circle-play", popular.statusIcon)
         assertEquals("status.watching", popular.statusKey)
         assertFalse(popular.showTypeTag)
     }
@@ -74,7 +74,7 @@ class HomeDashboardViewTest {
         assertTrue(tiles.getValue(2).inWatchlist)
         assertNull(tiles.getValue(2).statusIcon)
         assertFalse(tiles.getValue(3).canToggleWatchlist)
-        assertEquals("circle-check", tiles.getValue(3).statusIcon)
+        assertEquals("eye", tiles.getValue(3).statusIcon)
         assertFalse(tiles.getValue(4).canToggleWatchlist)
         assertEquals("tv", tiles.getValue(4).type)
     }
@@ -149,5 +149,35 @@ class HomeDashboardViewTest {
         val personal = view(HomeRow(HomeRowKind.UP_NEXT, titles = listOf(title(1))), discover = DiscoverState.UNAVAILABLE)
         assertFalse(personal.showWelcome)
         assertTrue(personal.tmdbUnavailable)
+    }
+
+    @Test
+    fun `tiles carry the Seen and Watchlist quick actions and the Upcoming badge`() {
+        val tiles = view(
+            HomeRow(HomeRowKind.TRENDING_MOVIES, titles = listOf(
+                title(1003596, releaseDate = LocalDate.of(2026, 12, 18)),
+                title(2, status = WatchStatus.WATCHED, releaseDate = LocalDate.of(2026, 11, 20)),
+            )),
+            HomeRow(HomeRowKind.RECENTLY_RATED, titles = listOf(title(3, score = 8.5, releaseDate = LocalDate.of(1999, 3, 31)))),
+            HomeRow(HomeRowKind.UP_NEXT, titles = listOf(title(4, MediaType.tvshow, status = WatchStatus.WANT_TO_WATCH, releaseDate = LocalDate.of(2026, 11, 23)))),
+        ).rows.flatMap { it.tiles }.associateBy { it.tmdbId }
+
+        val doomsday = tiles.getValue(1003596).actions!!
+        assertTrue(doomsday.upcoming)
+        assertEquals("Dec 18", doomsday.upcomingDate)
+        assertFalse(doomsday.canToggleSeen, "no eye on an upcoming title")
+        assertTrue(doomsday.canToggleWatchlist)
+
+        val watched = tiles.getValue(2).actions!!
+        assertTrue(watched.seen)
+        assertFalse(watched.canToggleWatchlist)
+        assertFalse(watched.upcoming)
+
+        assertTrue(tiles.getValue(3).actions!!.seenLocked, "rated")
+
+        val tomorrow = tiles.getValue(4).actions!!
+        assertEquals("tv", tomorrow.type)
+        assertTrue(tomorrow.upcoming, "first air date tomorrow")
+        assertTrue(tomorrow.onWatchlist)
     }
 }
