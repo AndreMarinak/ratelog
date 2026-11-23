@@ -39,6 +39,33 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **List filters are plain links** (`/list/{id}?show=unseen` / `?show=seen`, unknown values = All) so they work without JS and can be shared. Ranks are places in the whole list (by position, then id), computed before filtering, so a filtered view never renumbers and removed titles leave no gaps.
 - **"Add the N unseen to my watchlist" never touches an existing status.** N counts unseen titles with **no status** (so the button disappears once there's nothing left to add, and Watching/Dropped titles aren't "added"). The write is a single `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, so even a status set a moment earlier wins; rated titles without a status are skipped. Earlier ranks get later timestamps, so the watchlist (newest first) lists them in the list's order. Asks first (`data-confirm`), flashes the count, and returns to the same tab.
 
+## When the page reloads (audit 2026-11-23)
+
+Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
+**navigation and changes to the whole result set load a page** (they get their own URL, and Back works).
+Everything in place is progressive enhancement: without JS, or on any error, the plain form post / link still works.
+Generic hooks live in `static/inplace.js` (`data-inplace="<regions to refresh>"` on a form, `data-append` on a
+"Load more" link); a few pages have their own handler.
+
+| Action | Before | Now |
+|---|---|---|
+| Home poster bookmark | reload + scroll restore | in place (`home.js`), all copies of the title flip, toast |
+| Discover row / grid bookmark | in place | in place (`discover.js`, `browse.js`) |
+| Discover "Load more", lazy rows | in place | in place |
+| Search results infinite scroll | in place | in place (`search.js`) |
+| List page All / Not seen / Seen tabs | reload | in place with URL + Back (`list-filter.js`) |
+| List page remove item (after confirm) | reload | in place: progress, tabs and grid refresh (`#listRegion`) |
+| Add to list (modal), create list + add | **navigated to the list page** | stays on the title, modal closes, toast "Added to X" |
+| Lists tab "Load more" | reload | appends in place |
+| Profile follow / unfollow user | reload | in place |
+| Title page Follow, watch status, Seen/Watchlist | reload | being moved to `data-inplace` in the Seen/Watchlist batch |
+| Watchlist page quick actions, list tick-off | — | built in place in the Seen/Watchlist batch |
+| Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save |
+| Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
+| Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
+| Ratings Movies / TV switch and filter form | page load | **page load kept**: different page / explicit Search |
+| Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
+
 ## Deployment (Railway)
 
 - **Dockerfile build, `/api/health` healthcheck, `PORT=8080` pinned** to match the domain's target port; `server.forward-headers-strategy=framework` so redirects use https behind the proxy.

@@ -21,6 +21,10 @@
         <a class="nav-link" href="/community" th:text="#{nav.community}" th:classappend="${active == 'community'} ? 'active' : ''">Community</a>
     </nav>
 
+    <!-- Fork: in-place saves for small actions (inplace.js / inplace.css), see docs/design-decisions.md. -->
+    <link rel="stylesheet" href="/inplace.css">
+    <script src="/inplace.js" defer></script>
+
     <!-- Fork: header search on every page (GET / ?q=, the existing results page). "/" focuses it (nav.js). -->
     <form class="nav-search" th:if="${signedIn}" action="/" method="get" role="search">
         <label for="navSearchInput" class="visually-hidden" th:text="#{search.btn}">Search</label>

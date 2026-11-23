@@ -44,12 +44,12 @@
     <section class="lists-section" id="more-lists" aria-labelledby="other-lists-title">
         <h2 id="other-lists-title" th:text="#{lists.others}">More public lists</h2>
         <div th:if="${#lists.isEmpty(otherLists)}" class="empty-state" th:text="#{lists.others.empty}">No other public lists yet.</div>
-        <div th:unless="${#lists.isEmpty(otherLists)}" class="lists-grid">
+        <div th:unless="${#lists.isEmpty(otherLists)}" class="lists-grid" id="otherListsGrid">
             <th:block th:each="card : ${otherLists}">
                 <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
             </th:block>
         </div>
-        <a th:if="${moreHref != null}" th:href="${moreHref}" class="link flex gap centered lists-more">
+        <a th:if="${moreHref != null}" th:href="${moreHref}" class="link flex gap centered lists-more" data-append="#otherListsGrid">
             <i data-lucide="chevrons-down" aria-hidden="true"></i>
             <span th:text="#{lists.load.more}">Load more</span>
         </a>

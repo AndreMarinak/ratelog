@@ -9,6 +9,7 @@
 
 <!--/* Above the title: the bulk-add flash (it has a count, so it can't use the page's `success` key) and the back link. */-->
 <th:block th:fragment="top(back)">
+    <script src="/list-filter.js" defer></script>
     <div th:if="${listWatchlistAdded != null}" class="feedback success" role="status"
          th:text="#{list.progress.added(${listWatchlistAdded})}">Added 12 titles to your watchlist.</div>
     <a th:if="${back != null}" class="list-back" th:href="${back.href}">
