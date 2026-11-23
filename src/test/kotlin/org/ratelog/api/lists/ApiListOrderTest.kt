@@ -88,6 +88,12 @@ class ApiListOrderTest {
         return f.reload(list)!! to movies
     }
 
+    /** A public official list, the kind every account sees (official lists can be hidden since 2026-11-23). */
+    private fun publishAsOfficial(list: CustomList) {
+        f.p.lists.save(f.reload(list)!!.copy(isPublic = true))
+        f.markOfficial(list)
+    }
+
     private fun titles(list: CustomList) = controller.list(andre, list.id!!.value).items.map { it.title }
     private fun ref(movie: Movie) = TitleRefInput(tmdbId = movie.tmdbId.value, type = "movie")
     private fun input(movie: Movie, position: Int? = null) = ItemInput(tmdbId = movie.tmdbId.value, type = "movie", position = position)
@@ -112,7 +118,7 @@ class ApiListOrderTest {
     @Test
     fun `numbered is the owner's, like name and visibility`() {
         val (list, _) = list("A", owner = admin)
-        f.markOfficial(list)
+        publishAsOfficial(list)
 
         val e = error { controller.update(andre, list.id!!.value, UpdateListRequest(numbered = false)) }
         assertEquals(HttpStatus.FORBIDDEN, e.status)
@@ -237,7 +243,7 @@ class ApiListOrderTest {
     @Test
     fun `an official list is readable by anyone but only its owner reorders it`() {
         val (list, movies) = list("A", "B", owner = admin)
-        f.markOfficial(list)
+        publishAsOfficial(list)
         val id = list.id!!.value
 
         assertEquals(listOf(1, 2), controller.list(andre, id).items.map { it.position }, "readable, with positions")
