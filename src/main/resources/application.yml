@@ -16,15 +16,40 @@ spring:
     baseline-on-migrate: true
     # Fork migrations are numbered V1000+; allow upstream's lower-numbered ones to apply later.
     out-of-order: true
+  servlet:
+    multipart:
+      # Fork: the only upload is the Letterboxd import (LetterboxdImportLimits: 2 MB, 10,000 rated rows).
+      max-file-size: 2MB
+      max-request-size: 2MB
 
 server:
   port: ${PORT:8080}
-  # Behind Railway's TLS proxy: honor X-Forwarded-* so redirects use https.
+  # Behind Railway's TLS proxy: honor X-Forwarded-* so the app knows it is on https.
+  # Fork: security/ProxyHeadersConfig trusts only the headers Railway's edge sets and makes redirects relative.
   forward-headers-strategy: framework
   servlet:
     context-path: /
+    session:
+      cookie:
+        # Fork: browsers accept Secure cookies on http://localhost; set SESSION_COOKIE_SECURE=false only to sign in
+        # over plain http from another host (e.g. a phone on the LAN).
+        secure: ${SESSION_COOKIE_SECURE:true}
+        same-site: lax
 
 ratelog:
+  security:
+    # Fork: header holding the client IP for login throttling (Railway's edge sets X-Real-IP); else the socket address.
+    client-ip-header: ${RATELOG_CLIENT_IP_HEADER:X-Real-IP}
+    # Fork: true sends the CSP as Content-Security-Policy-Report-Only (browsers log violations instead of blocking).
+    csp-report-only: ${RATELOG_CSP_REPORT_ONLY:false}
+  # Fork: general request limit per account / API token / anonymous IP (token buckets, in memory; security/RateLimitFilter).
+  # A bucket holds per-minute + burst requests and refills at per-minute. Static files and /api/health are exempt.
+  rate-limit:
+    enabled: ${RATELOG_RATE_LIMIT_ENABLED:true}
+    reads-per-minute: ${RATELOG_RATE_LIMIT_READS_PER_MINUTE:600}
+    read-burst: ${RATELOG_RATE_LIMIT_READ_BURST:100}
+    writes-per-minute: ${RATELOG_RATE_LIMIT_WRITES_PER_MINUTE:60}
+    write-burst: ${RATELOG_RATE_LIMIT_WRITE_BURST:30}
   features:
     # Fork: tags are hidden in the web UI for now (code, /tags pages and the API stay). RATELOG_FEATURES_TAGS=true shows them.
     tags: false

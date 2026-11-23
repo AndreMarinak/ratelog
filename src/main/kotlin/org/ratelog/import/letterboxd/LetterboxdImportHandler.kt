@@ -17,7 +17,6 @@ import org.ratelog.tvshow.rating.TvRating
 import org.ratelog.tvshow.rating.TvRatingRepository
 import org.ratelog.user.User
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.concurrent.Executors
 
@@ -32,7 +31,25 @@ data class ImportLetterboxdResult(
     val skippedDuplicates: Int,
     val notFound: List<String>,
     val errors: List<String>,
+    /** Fork: rows left when the import's time budget ran out (upload the file again to continue). */
+    val notProcessed: Int = 0,
 )
+
+/**
+ * Fork: how an import may use TMDB. [beforeTmdbCall] blocks to keep imports within their own request rate;
+ * once [isExpired], rows not started yet are skipped.
+ */
+interface ImportBudget {
+    fun beforeTmdbCall()
+    fun isExpired(): Boolean
+
+    companion object {
+        val UNLIMITED: ImportBudget = object : ImportBudget {
+            override fun beforeTmdbCall() {}
+            override fun isExpired(): Boolean = false
+        }
+    }
+}
 
 @Component
 class LetterboxdImportHandler(
@@ -45,21 +62,33 @@ class LetterboxdImportHandler(
     private val tvDescriptionRepository: TvDescriptionRepository,
     private val tvRatingRepository: TvRatingRepository,
 ) {
-    private val concurrencyLimit = 10
+    // Fork: fewer lookup threads (was 10); the shared ImportBudget rate is what bounds TMDB use.
+    private val concurrencyLimit = LetterboxdImportLimits.WORKERS_PER_IMPORT
 
-    @Transactional
+    // Fork: no method-wide @Transactional. Each save commits on its own (the worker threads never joined the request's
+    // transaction anyway), so an import no longer holds a DB connection for its whole run.
     fun handle(command: ImportLetterboxdCommand): Either<LetterboxdImportError, ImportLetterboxdResult> = either {
-        val entries = csvParser.parse(command.csvContent.inputStream())
-            .mapLeft { LetterboxdImportError.ParseError }
-            .bind()
+        val entries = parse(command.csvContent).bind()
+        importEntries(entries, command.userId)
+    }
 
+    fun parse(csvContent: ByteArray): Either<LetterboxdImportError, List<LetterboxdEntry>> =
+        csvParser.parse(csvContent.inputStream()).mapLeft { error ->
+            when (error) {
+                LetterboxdParseError.TooManyRows -> LetterboxdImportError.TooManyRows
+                else -> LetterboxdImportError.ParseError
+            }
+        }
+
+    fun importEntries(entries: List<LetterboxdEntry>, userId: User.Id, budget: ImportBudget = ImportBudget.UNLIMITED): ImportLetterboxdResult {
         val results = Executors.newFixedThreadPool(concurrencyLimit).use { executor ->
             val futures = entries.map { entry ->
                 executor.submit<ProcessResult> {
                     try {
-                        processEntry(entry, command.userId)
+                        if (budget.isExpired()) ProcessResult.NotProcessed else processEntry(entry, userId, budget)
                     } catch (e: Exception) {
-                        ProcessResult.Error(e.message ?: "Unknown error")
+                        // Fork: class name only; TMDB exception messages can contain the request URL.
+                        ProcessResult.Error(e.javaClass.simpleName)
                     }
                 }
             }
@@ -69,6 +98,7 @@ class LetterboxdImportHandler(
         var importedMovies = 0
         var importedTvShows = 0
         var skippedDuplicates = 0
+        var notProcessed = 0
         val notFound = mutableListOf<String>()
         val errors = mutableListOf<String>()
 
@@ -79,19 +109,21 @@ class LetterboxdImportHandler(
                 is ProcessResult.SkippedDuplicate -> skippedDuplicates++
                 is ProcessResult.NotFound -> notFound.add(entry.name)
                 is ProcessResult.Error -> errors.add("${entry.name}: ${result.message}")
+                is ProcessResult.NotProcessed -> notProcessed++
             }
         }
 
-        ImportLetterboxdResult(
+        return ImportLetterboxdResult(
             importedMovies = importedMovies,
             importedTvShows = importedTvShows,
             skippedDuplicates = skippedDuplicates,
             notFound = notFound,
             errors = errors,
+            notProcessed = notProcessed,
         )
     }
 
-    private fun processEntry(entry: LetterboxdEntry, userId: User.Id): ProcessResult {
+    private fun processEntry(entry: LetterboxdEntry, userId: User.Id, budget: ImportBudget): ProcessResult {
         val ratingValue = entry.rating * 2.0
         if (ratingValue < 1.0 || ratingValue > 10.0) {
             return ProcessResult.Error("Rating out of range after conversion")
@@ -99,6 +131,7 @@ class LetterboxdImportHandler(
 
         val score = Score(ratingValue)
 
+        budget.beforeTmdbCall()
         val searchResult = tmdbClient.searchMovies(entry.name, org.ratelog.Lang.en)
         if (searchResult.isRight()) {
             val movies = searchResult.getOrNull()?.first ?: emptyList()
@@ -115,10 +148,12 @@ class LetterboxdImportHandler(
                     return processMovie(existingMovie, score, userId)
                 }
 
+                budget.beforeTmdbCall()
                 val movieDetails = tmdbClient.movieDetails(tmdbId)
                 if (movieDetails.isRight()) {
                     val savedMovie = movieRepository.save(movieDetails.getOrNull()!!)
 
+                    budget.beforeTmdbCall()
                     tmdbClient.movieTranslations(savedMovie.tmdbId, savedMovie.originalTitle).fold(
                         { },
                         { movieDescriptionRepository.saveAll(it) }
@@ -129,6 +164,7 @@ class LetterboxdImportHandler(
             }
         }
 
+        budget.beforeTmdbCall()
         val tvSearchResult = tmdbClient.searchTvShows(entry.name, org.ratelog.Lang.en)
         if (tvSearchResult.isRight()) {
             val tvShows = tvSearchResult.getOrNull()?.first ?: emptyList()
@@ -145,10 +181,12 @@ class LetterboxdImportHandler(
                     return processTvShow(existingTvShow, score, userId)
                 }
 
+                budget.beforeTmdbCall()
                 val tvShowDetails = tmdbClient.tvShowDetails(tmdbId)
                 if (tvShowDetails.isRight()) {
                     val savedTvShow = tvShowRepository.save(tvShowDetails.getOrNull()!!)
 
+                    budget.beforeTmdbCall()
                     tmdbClient.tvTranslations(savedTvShow.tmdbId, savedTvShow.originalName).fold(
                         { },
                         { tvDescriptionRepository.saveAll(it) }
@@ -205,8 +243,12 @@ sealed interface ProcessResult {
     data object SkippedDuplicate : ProcessResult
     data object NotFound : ProcessResult
     data class Error(val message: String) : ProcessResult
+    data object NotProcessed : ProcessResult
 }
 
 sealed interface LetterboxdImportError {
     data object ParseError : LetterboxdImportError
+    data object TooManyRows : LetterboxdImportError
+    data object AlreadyRunning : LetterboxdImportError
+    data object Busy : LetterboxdImportError
 }

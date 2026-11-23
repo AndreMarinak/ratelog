@@ -106,6 +106,14 @@
                 const type = response.headers.get('content-type') || '';
                 if (!type.includes('application/json')) throw new Error('not json');
                 const state = await response.json();
+                if (response.status === 429) {
+                    // Fork (rate limit): say so instead of re-posting (that would be refused too), then show the saved order.
+                    failed = true;
+                    setStatus(editor.dataset.errorText || '');
+                    toast(state.message);
+                    setTimeout(() => window.location.reload(), 3000);
+                    return;
+                }
                 if (!state.ok) throw new Error(state.message || 'not saved');
                 pending -= 1;
                 toast(state.message);

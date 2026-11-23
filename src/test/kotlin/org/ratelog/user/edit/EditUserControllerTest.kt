@@ -109,7 +109,7 @@ class EditUserControllerTest {
     }
 
     @Test
-    fun `given a weak new password then it is updated`() {
+    fun `given a new password shorter than 8 characters then it is refused and the old one is kept`() {
         // Given
         val user = userRepository.save(UserFactory.aUser(username = "normal"))
         authenticate(user)
@@ -120,12 +120,27 @@ class EditUserControllerTest {
 
         // Then
         assertEquals("redirect:/profile/${user.id!!.value}", view)
-        assertNull(redirectAttributes.getFlashAttributes()["error"])
-        assertEquals("encoded_abc", userRepository.findById(user.id!!)!!.passwordHash)
+        assertEquals("security.password.too.short", redirectAttributes.getFlashAttributes()["error"])
+        assertEquals("encoded_password", userRepository.findById(user.id!!)!!.passwordHash)
     }
 
     @Test
-    fun `given a superadmin editing their profile without current password then password is updated and no error is flashed`() {
+    fun `given a short current password then the account can still change to a long new one`() {
+        // Given: an account created before the length rule, with a 3-character password
+        val user = userRepository.save(UserFactory.aUser(username = "normal", passwordHash = "encoded_abc"))
+        authenticate(user)
+        val redirectAttributes = RedirectAttributesModelMap()
+
+        // When
+        controller.editProfile(user, "normal", user.email.value, "abc", "long-enough-now", redirectAttributes)
+
+        // Then
+        assertNull(redirectAttributes.getFlashAttributes()["error"])
+        assertEquals("encoded_long-enough-now", userRepository.findById(user.id!!)!!.passwordHash)
+    }
+
+    @Test
+    fun `given a superadmin editing their profile without current password then missing current password is flashed`() {
         // Given
         val superadmin = userRepository.save(UserFactory.aUser(username = "root", role = Role.SUPERADMIN))
         authenticate(superadmin)
@@ -133,6 +148,22 @@ class EditUserControllerTest {
 
         // When
         val view = controller.editProfile(superadmin, "root", superadmin.email.value, null, "NewPass1!", redirectAttributes)
+
+        // Then
+        assertEquals("redirect:/profile/${superadmin.id!!.value}", view)
+        assertEquals("edit.error.missing.current.password", redirectAttributes.getFlashAttributes()["error"])
+        assertEquals("encoded_password", userRepository.findById(superadmin.id!!)!!.passwordHash)
+    }
+
+    @Test
+    fun `given a superadmin editing their profile with the current password then password is updated and no error is flashed`() {
+        // Given
+        val superadmin = userRepository.save(UserFactory.aUser(username = "root", role = Role.SUPERADMIN))
+        authenticate(superadmin)
+        val redirectAttributes = RedirectAttributesModelMap()
+
+        // When
+        val view = controller.editProfile(superadmin, "root", superadmin.email.value, "password", "NewPass1!", redirectAttributes)
 
         // Then
         assertEquals("redirect:/profile/${superadmin.id!!.value}", view)
@@ -150,7 +181,7 @@ class EditUserControllerTest {
         val redirectAttributes = RedirectAttributesModelMap()
 
         // When
-        controller.editProfile(superadmin, "root", superadmin.email.value, null, "NewPass1!", redirectAttributes)
+        controller.editProfile(superadmin, "root", superadmin.email.value, "password", "NewPass1!", redirectAttributes)
 
         // Then
         val principal = SecurityContextHolder.getContext().authentication.principal as AppUserDetails

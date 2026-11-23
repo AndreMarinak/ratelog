@@ -10,7 +10,9 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 @Component
-class LetterboxdCsvParser {
+class LetterboxdCsvParser(
+    private val maxRows: Int = LetterboxdImportLimits.MAX_ROWS,
+) {
 
     private val csvMapper = CsvMapper()
 
@@ -32,6 +34,8 @@ class LetterboxdCsvParser {
         }
 
         ensure(entries.isNotEmpty()) { LetterboxdParseError.NoValidEntries }
+        // Fork: every row costs TMDB lookups, so one file is capped (LetterboxdImportLimits).
+        ensure(entries.size <= maxRows) { LetterboxdParseError.TooManyRows }
 
         entries
     }
@@ -48,4 +52,5 @@ class LetterboxdCsvParser {
 sealed interface LetterboxdParseError {
     data object InvalidFormat : LetterboxdParseError
     data object NoValidEntries : LetterboxdParseError
+    data object TooManyRows : LetterboxdParseError
 }

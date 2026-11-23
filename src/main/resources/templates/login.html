@@ -6,7 +6,8 @@
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='login')}"></header>
 
-    <div th:if="${param.error}"  class="feedback error" th:text="#{auth.login.error}"></div>
+    <div th:if="${param.error != null and param.error[0] != 'locked'}" class="feedback error" th:text="#{auth.login.error}"></div>
+    <div th:if="${param.error != null and param.error[0] == 'locked'}" class="feedback error" th:text="#{security.login.locked}"></div>
     <div th:if="${param.logout}" class="feedback success" th:text="#{auth.logout.success}"></div>
 
     <section class="card centered">

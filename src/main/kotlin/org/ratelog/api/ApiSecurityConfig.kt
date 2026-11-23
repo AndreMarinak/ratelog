@@ -5,8 +5,13 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.ratelog.apitoken.ApiTokenRepository
 import org.ratelog.apitoken.ApiTokens
+import org.ratelog.security.ClientIpResolver
+import org.ratelog.security.RateLimitFilter
+import org.ratelog.security.RequestRateLimiter
 import org.ratelog.user.AppUserDetails
 import org.ratelog.user.UserRepository
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -17,6 +22,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.filter.OncePerRequestFilter
 
@@ -29,10 +35,18 @@ import org.springframework.web.filter.OncePerRequestFilter
 class ApiSecurityConfig(
     private val apiTokenRepository: ApiTokenRepository,
     private val userRepository: UserRepository,
+    private val rateLimiter: RequestRateLimiter,
+    private val messageSource: MessageSource,
+    @Value("\${ratelog.rate-limit.enabled:true}") private val rateLimitEnabled: Boolean,
+    @Value("\${ratelog.security.client-ip-header:X-Real-IP}") private val clientIpHeader: String,
 ) {
     @Bean
     @Order(1)
     fun apiSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        // Fork: per-token "too many requests" limit (see security/RateLimitFilter).
+        if (rateLimitEnabled) {
+            http.addFilterAfter(RateLimitFilter(rateLimiter, ClientIpResolver(clientIpHeader), messageSource), AnonymousAuthenticationFilter::class.java)
+        }
         http
             .securityMatcher("/api/v1/**")
             .csrf { it.disable() }
@@ -82,6 +96,7 @@ class ApiTokenAuthenticationFilter(
                 )
                 SecurityContextHolder.getContext().authentication =
                     UsernamePasswordAuthenticationToken(principal, null, principal.authorities)
+                request.setAttribute(RateLimitFilter.API_TOKEN_ID_ATTRIBUTE, token.id!!.value)
                 touchIfStale(token.id!!, token.lastUsedAtEpochMs)
             }
         }

@@ -5,11 +5,11 @@ import org.ratelog.MediaType
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.user.User
 import org.ratelog.watchlist.WatchStatus
+import org.ratelog.watchlist.seen.BackPath
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
-import java.net.URI
 
 @Controller
 class SetWatchStatusController(
@@ -53,11 +53,7 @@ class SetWatchStatusController(
         return back
     }
 
-    /** Back to the page the form was on; only its path is kept so the redirect never leaves the app. */
-    private fun backPath(request: HttpServletRequest): String {
-        val referer = request.getHeader("Referer") ?: return "/watchlist"
-        val uri = runCatching { URI(referer) }.getOrNull() ?: return "/watchlist"
-        val path = uri.rawPath?.takeIf { it.startsWith("/") } ?: return "/watchlist"
-        return path + (uri.rawQuery?.let { "?$it" } ?: "")
-    }
+    /** Back to the page the form was on; only a same-site path is kept so the redirect never leaves the app. */
+    private fun backPath(request: HttpServletRequest): String =
+        BackPath.resolve(null, request.getHeader("Referer"), "/watchlist")
 }

@@ -139,6 +139,12 @@
                 body: new URLSearchParams(new FormData(form)),
                 credentials: 'same-origin',
             });
+            // Fork: rate limited (429): a toast instead of re-posting the form.
+            if (response.status === 429) {
+                const limited = parse(await response.text()).querySelector('.feedback.error');
+                showToast(limited ? limited.textContent.trim() : 'Too many requests');
+                return;
+            }
             const landed = new URL(response.url, window.location.href);
             if (!response.ok || landed.pathname === '/login') throw new Error('not saved');
             // The endpoint redirects back here with a flash message; read it from the page it rendered.

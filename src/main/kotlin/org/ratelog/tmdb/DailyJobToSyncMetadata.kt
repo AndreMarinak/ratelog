@@ -1,6 +1,7 @@
 package org.ratelog.tmdb
 
 import org.ratelog.movie.Movie
+import org.ratelog.security.LogSafe
 import org.ratelog.movie.MovieDescriptionRepository
 import org.ratelog.movie.MovieRepository
 import org.ratelog.tvshow.TvShow
@@ -34,7 +35,8 @@ class DailyJobToSyncMetadata(
             }
             logger.info("DailyJobToSyncMetadata completed successfully")
         } catch (e: Exception) {
-            logger.error("DailyJobToSyncMetadata failed", e)
+            // Fork: class name only; TMDB request URLs carry api_key and I/O errors echo the URL.
+            logger.error("DailyJobToSyncMetadata failed: {}", e.javaClass.simpleName)
         }
     }
 
@@ -62,19 +64,19 @@ class DailyJobToSyncMetadata(
         try {
             tmdbClient.tvShowDetails(show.tmdbId)
                 .fold(
-                    { err -> logger.error("Failed to sync TV show: $err") },
+                    { err -> logger.error("Failed to sync TV show {}: {}", show.tmdbId.value, err.javaClass.simpleName) },
                     { it.copy(id = show.id).let(tvShowRepository::save) }
                 )
 
             if (!tvDescriptionRepository.existsAnyByTmdbId(show.tmdbId)) {
                 tmdbClient.tvTranslations(show.tmdbId, show.originalName)
                     .fold(
-                        { err -> logger.error("Failed to sync TV translations: $err") },
+                        { err -> logger.error("Failed to sync TV translations {}: {}", show.tmdbId.value, err.javaClass.simpleName) },
                         { tvDescriptionRepository.saveAll(it) }
                     )
             }
         } catch (e: Exception) {
-            logger.error("Error syncing TV show", e)
+            logger.error("Error syncing TV show {}: {}{}", show.tmdbId.value, e.javaClass.simpleName, LogSafe.statusSuffix(e))
         }
     }
 
@@ -82,19 +84,19 @@ class DailyJobToSyncMetadata(
         try {
             tmdbClient.movieDetails(movie.tmdbId)
                 .fold(
-                    { err -> logger.error("Failed to sync movie: $err") },
+                    { err -> logger.error("Failed to sync movie {}: {}", movie.tmdbId.value, err.javaClass.simpleName) },
                     { it.copy(id = movie.id).let(movieRepository::save) }
                 )
 
             if (!movieDescriptionRepository.existsAnyByTmdbId(movie.tmdbId)) {
                 tmdbClient.movieTranslations(movie.tmdbId, movie.originalTitle)
                     .fold(
-                        { err -> logger.error("Failed to sync movie translations: $err") },
+                        { err -> logger.error("Failed to sync movie translations {}: {}", movie.tmdbId.value, err.javaClass.simpleName) },
                         { movieDescriptionRepository.saveAll(it) }
                     )
             }
         } catch (e: Exception) {
-            logger.error("Error syncing movie", e)
+            logger.error("Error syncing movie {}: {}{}", movie.tmdbId.value, e.javaClass.simpleName, LogSafe.statusSuffix(e))
         }
     }
 }

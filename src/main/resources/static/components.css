@@ -735,6 +735,13 @@ form.inline {
   color: #e89a72;
   border: 1px solid rgba(230, 120, 60, 0.4);
 }
+
+/* Fork: managers can add accounts (2026-11-23). */
+.pill.manager {
+  background: rgba(110, 170, 120, 0.16);
+  color: #9fcfa7;
+  border: 1px solid rgba(110, 170, 120, 0.35);
+}
 /* ===== Fork: title page labels (layout lives in title-page.css) ===== */
 .title-section-label {
   display: block;

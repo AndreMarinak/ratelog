@@ -66,6 +66,12 @@
       const body = new URLSearchParams(new FormData(form));
       if (submitter && submitter.name) body.append(submitter.name, submitter.value);
       const response = await fetch(form.action, { method: 'POST', body, credentials: 'same-origin' });
+      // Fork: rate limited (429): say so in a toast; posting the form again would only be refused too.
+      if (response.status === 429) {
+        const limited = parse(await response.text()).querySelector('.feedback.error');
+        showToast(limited ? limited.textContent.trim() : 'Too many requests', true);
+        return;
+      }
       const landed = new URL(response.url, window.location.href);
       if (!response.ok || landed.pathname === '/login') throw new Error('not saved');
       posted = true;

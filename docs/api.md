@@ -27,7 +27,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
-| GET | `/api/v1/me` | | `{id, username, role}` |
+| GET | `/api/v1/me` | | `{id, username, role}`; `role` is `USER`, `MANAGER`, `ADMIN` or `SUPERADMIN` |
 | GET | `/api/v1/search` | `q`, optional `type`, `year` | `{results: [Candidate]}` (raw TMDB search) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
 | GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url, numbered}]` |
@@ -101,7 +101,7 @@ Admin-curated lists that **every account** sees (Lists tab, Discover, `/lists/of
   ```
   `GET /api/v1/lists` still returns only your own lists (each with `isOfficial`).
 - **Marking:** `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}` or `false`, or `"isOfficial": true` on `POST /api/v1/lists`.
-  **Admin tokens only** (role ADMIN or SUPERADMIN, see `GET /api/v1/me`), and on **any** list, including other people's
+  **Admin tokens only** (role ADMIN or SUPERADMIN, see `GET /api/v1/me`; MANAGER is not an admin role), and on **any** list, including other people's
   private ones. Anyone else changing it gets `403 forbidden` and nothing changes; sending the value it already has is fine
   for any token (so a `GET` response can be sent back as is). The web page has the same switch under the list title, for admins.
 - **Hidden official lists (since 2026-11-23):** `isOfficial` and `isPublic` are independent. Marking or un-marking **never
@@ -362,8 +362,13 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `forbidden` (403: changing `isOfficial`
 without an admin token, or changing someone else's public official list), `not_found` (404, also for other users' lists, except public official ones, and tags),
 `invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `not_in_list` (400; `official_list_public` was removed 2026-11-23),
-`tag_exists` (409), `too_many_items` (413),
+`tag_exists` (409), `too_many_items` (413), `rate_limited` (429),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
+
+**Rate limit:** each token may send 600 reads (GET) and 60 writes (POST, PUT, PATCH, DELETE) a minute, plus a burst of 100
+reads and 30 writes (the server's defaults, `RATELOG_RATE_LIMIT_*`). Over it, the answer is `429 rate_limited` with a
+`Retry-After` header in seconds: wait that long and send the request again. Batching items (up to 100 per request) keeps a
+big list import far below the limit.
 
 ## Example
 
