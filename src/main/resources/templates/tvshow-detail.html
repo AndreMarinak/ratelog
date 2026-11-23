@@ -53,6 +53,8 @@
         </div>
         <div th:replace="~{fragments/tags :: titleTags('tvshow', ${show?.id}, ${show?.tmdbId})}"></div>
 
+        <div th:replace="~{fragments/title-info :: titleInfo(${titleInfo})}"></div>
+
         <div class="separator"></div>
 
         <div th:if="${show != null && !#lists.isEmpty(show.seasons)}">

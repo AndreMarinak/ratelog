@@ -18,8 +18,9 @@ In the Railway project:
 | `POSTGRES_USER` | `${{Postgres.PGUSER}}` |
 | `POSTGRES_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
 | `ADMIN_PASSWORD` | a password of 12+ characters; replaces the seeded `admin`/`admin` login on first start |
-| `TMDB_API_KEY` | TMDB v3 "API Key" (only read on first start; later changes go in Admin > Configuration) |
+| `TMDB_API_KEY` | TMDB v3 "API Key" (32 characters). When set, it overrides the value in Admin > Configuration on every start |
 | `PORT` | `8080` (pin it so it matches the domain's target port) |
+| `MDBLIST_API_KEY` | optional: [MDBList](https://mdblist.com/preferences/) API key for IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores on title pages (free tier: 1,000 requests/day; scores are cached). Without it the scores are hidden. |
 | `JAVA_TOOL_OPTIONS` | optional: `-XX:MaxRAMPercentage=75` |
 
 ## 3. Domain
