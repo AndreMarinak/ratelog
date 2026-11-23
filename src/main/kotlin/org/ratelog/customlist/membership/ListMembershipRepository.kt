@@ -10,8 +10,8 @@ data class TitleInList(
     val listId: CustomList.Id,
     val name: String,
     val itemId: CustomListItem.Id,
-    /** 1-based place in the whole list (position, then id): the rank the list page shows. */
-    val rank: Int,
+    /** 1-based place in the whole list (position, then id): the rank the list page shows. Null on a plain list. */
+    val rank: Int?,
 )
 
 /** Which of a user's lists contain a title. Used by the add-to-list sheet, its toggle and the title API. */

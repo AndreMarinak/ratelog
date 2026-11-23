@@ -50,8 +50,8 @@ data class TitleDetailDto(
     val inLists: List<TitleListDto> = emptyList(),
 )
 
-/** One of the caller's lists that has the title; `rank` is its place in the list (1 = first), as the list page shows it. */
-data class TitleListDto(val id: Long, val name: String, val rank: Int, val url: String)
+/** One of the caller's lists that has the title; `rank` is its place in the list (1 = first), as the list page shows it, or null on a plain list. */
+data class TitleListDto(val id: Long, val name: String, val rank: Int?, val url: String)
 
 data class ExternalScoresDto(
     val imdbRating: Double?,

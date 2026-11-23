@@ -62,6 +62,8 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Official cards show no owner**: the badge takes the owner / visibility slot, so the list reads as the site's (Letterboxd shows
   its official lists the same way), with the viewer's "9/25 seen". For the same reason the list page's back link reads "← Lists"
   on an official list instead of "← admin's profile" (`OfficialListBackLinkInterceptor`, set after the list advices ran).
+- **The add-to-list sheet shows a title's rank only on numbered lists** (2026-11-23, after list order merged): on a plain list
+  the row has the tick but no "#3", the remove question uses the no-rank wording, and the API's `inLists[].rank` is `null`.
 - **Order: most recently active first** (created, or a title added), the rule every other list section uses. Empty official lists
   are shown, unlike empty public lists, because an admin picked them.
 - **Discover: the Official lists row comes right after "Popular now"**, not at the end. At 1440x900 it is fully above the fold;

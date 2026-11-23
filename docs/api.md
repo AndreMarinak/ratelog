@@ -256,7 +256,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 - `userRating` is `null` when you haven't rated the title. For shows, `score` is the average of your season ratings and
   `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`.
 - `inLists` names **your own** lists that contain the title, newest list first (`[]` when none); `rank` is its place in
-  the list (1 = first, counted in list order like the list page, so unlike `position` it has no gaps). Added in this fork.
+  the list (1 = first, counted in list order like the list page, the same number as `position` in list responses), or `null` on a
+  plain (unnumbered) list. Added in this fork.
 - Extras are cached (TMDB data weekly; scores daily for titles out under 30 days, weekly under a year, monthly after),
   so values can lag the source a little. Errors: `invalid_type`, `invalid_parameter`, `not_found`, `tmdb_not_configured`, `tmdb_error`.
 
