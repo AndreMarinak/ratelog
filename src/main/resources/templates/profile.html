@@ -104,7 +104,7 @@
         </div>
     </div>
 
-    <footer th:if="${isLoggedUser}" class="bmc-footer">
+    <footer th:if="${isLoggedUser}" class="profile-footer">
         <div class="flex gap-lg">
             <form th:if="${isLoggedUser}" th:action="@{/lang}" method="post">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -142,7 +142,8 @@
             </form>
         </div>
 
-        <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="golmenero" data-color="#d97757" data-emoji="" data-font="Bree" data-text="Buy me a coffee" data-outline-color="#FFFFFF" data-font-color="#FFFFFF" data-coffee-color="#FFDD00"></script>
+        <a class="link secondary source-link" href="https://github.com/AndreMarinak/ratelog" target="_blank" rel="noopener"
+           th:text="#{footer.source}">Source code (AGPL-3.0)</a>
     </footer>
 
     <div th:replace="~{fragments/edit-user-modal :: editUserModal('/edit-profile', false)}"></div>

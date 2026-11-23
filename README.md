@@ -3,20 +3,13 @@
 </p>
 
 <p align="center">
-  <!-- REPLACE: Update badges with your actual repository URLs -->
-  <a href="https://github.com/golmenero/ratelog">
-  <img alt="License" src="https://img.shields.io/github/license/golmenero/ratelog.svg"/>
-  </a>
-  <a href="https://github.com/golmenero/ratelog/releases">
-  <img alt="Current Release" src="https://img.shields.io/github/release/golmenero/ratelog.svg"/>
-  </a>
-  <a href="https://github.com/golmenero/ratelog/actions/workflows/ci.yml">
-  <img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/golmenero/ratelog/ci.yml.svg"/>
-  </a>
-  <a href="https://www.buymeacoffee.com/golmenero">
-  <img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buymeacoffee&logoColor=black"/>
+  <a href="https://github.com/AndreMarinak/ratelog/blob/master/LICENSE">
+  <img alt="License" src="https://img.shields.io/github/license/AndreMarinak/ratelog.svg"/>
   </a>
 </p>
+
+> **Personal fork** of [golmenero/ratelog](https://github.com/golmenero/ratelog) (AGPL-3.0), with a JSON API for importing lists,
+> watchlist/statuses, custom tags and more. See [ROADMAP.md](ROADMAP.md), [docs/api.md](docs/api.md) and [docs/deploy-railway.md](docs/deploy-railway.md).
 
 ---
 
@@ -30,13 +23,13 @@ No premium tiers, no hidden features — just a straightforward tool to track an
 Check out the <a href="#installation-guide">installation guide</a>.<br/>
 
 <strong>Something not working right?</strong><br/>
-Open an <a href="https://github.com/golmenero/ratelog/issues">Issue</a> on GitHub.<br/>
+Open an <a href="https://github.com/AndreMarinak/ratelog/issues">Issue</a> on GitHub.<br/>
 
 <strong>Want to contribute?</strong><br/>
 Check out the contributing guide (coming soon).<br/>
 
 <strong>New idea or improvement?</strong><br/>
-Open a <a href="https://github.com/golmenero/ratelog/discussions">Discussion</a> on GitHub.<br/>
+Open an <a href="https://github.com/AndreMarinak/ratelog/issues">Issue</a> on GitHub.<br/>
 ---
 
 ## Features
@@ -107,7 +100,7 @@ Open a <a href="https://github.com/golmenero/ratelog/discussions">Discussion</a>
 
 #### Step 1: Clone the repository
 ```bash
-git clone https://github.com/golmenero/ratelog.git
+git clone https://github.com/AndreMarinak/ratelog.git
 cd ratelog
 ```
 

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClientException
+import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.servlet.ModelAndView
 
 /**
@@ -22,7 +23,9 @@ class TmdbErrorAdvice {
     @ExceptionHandler(RestClientException::class)
     fun handle(e: RestClientException): ModelAndView {
         val badKey = e is HttpClientErrorException.Unauthorized
-        logger.warn("TMDB request failed (${if (badKey) "401 - API key rejected" else e.javaClass.simpleName}): ${e.message}")
+        // Never log e.message: TMDB requests carry api_key in the URL, and I/O errors echo the URL.
+        val status = (e as? RestClientResponseException)?.statusCode?.value()
+        logger.warn("TMDB request failed: {} status={}{}", e.javaClass.simpleName, status ?: "n/a", if (badKey) " (API key rejected)" else "")
         return ModelAndView("tmdb-error", HttpStatus.BAD_GATEWAY).apply {
             addObject("badKey", badKey)
         }

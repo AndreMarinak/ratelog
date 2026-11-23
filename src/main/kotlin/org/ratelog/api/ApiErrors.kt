@@ -10,6 +10,8 @@ import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.client.RestClientException
+import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 data class ApiErrorBody(val error: String, val message: String)
@@ -38,6 +40,18 @@ class ApiExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     fun handleMethod(e: HttpRequestMethodNotSupportedException) =
         ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ApiErrorBody("method_not_allowed", e.message ?: "Method not allowed"))
+
+    /** TMDB failures. Never log the message: TMDB URLs carry api_key and I/O errors echo the URL. */
+    @ExceptionHandler(RestClientException::class)
+    fun handleTmdb(e: RestClientException): ResponseEntity<ApiErrorBody> {
+        val status = (e as? RestClientResponseException)?.statusCode?.value()
+        logger.warn("Upstream HTTP call failed: {} status={}", e.javaClass.simpleName, status ?: "n/a")
+        return if (status == 401) {
+            ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiErrorBody("tmdb_not_configured", "TMDB rejected the API key (Admin > Configuration)"))
+        } else {
+            ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ApiErrorBody("tmdb_error", "TMDB lookup failed"))
+        }
+    }
 
     @ExceptionHandler(Exception::class)
     fun handleGeneric(e: Exception): ResponseEntity<ApiErrorBody> {

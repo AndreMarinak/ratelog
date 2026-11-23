@@ -331,17 +331,18 @@
   50% { opacity: 0.4; transform: scale(0.96); }
 }
 
-.bmc-footer {
+.profile-footer {
   margin-top: 200px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
 
-  .bmc-btn {
-    min-width: 200px;
-    height: 40px;
-    font-size: 1.2rem;
+  .source-link {
+    font-size: 0.85rem;
   }
 }
 
