@@ -359,11 +359,13 @@ button.title-overview-toggle {
   }
 }
 
-/* ----- Trailer thumbnail (the player opens in a modal, see title-info.css) ----- */
+/* ----- Trailer thumbnail (the player opens in a modal, see title-info.css) -----
+   Fills the middle column on desktop (a 300px thumbnail left half the column empty, user feedback 2026-11-23);
+   capped so it doesn't get huge on tablets, where the column is wider. */
 
 .title-trailer.trailer-frame {
   width: 100%;
-  max-width: 300px;
+  max-width: 720px;
 
   /* A solid pill, so the label stays readable over thumbnails that carry their own text. */
   .trailer-label {

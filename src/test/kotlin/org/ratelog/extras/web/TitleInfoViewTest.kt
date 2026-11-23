@@ -51,6 +51,7 @@ class TitleInfoViewTest {
         assertEquals("https://letterboxd.com/tmdb/146/", view.letterboxdUrl)
         assertEquals("https://www.youtube-nocookie.com/embed/abcDEF_1234?autoplay=1&rel=0", view.trailerEmbedUrl)
         assertEquals("https://i.ytimg.com/vi/abcDEF_1234/hqdefault.jpg", view.trailerThumbnailUrl)
+        assertEquals("https://i.ytimg.com/vi/abcDEF_1234/maxresdefault.jpg", view.trailerThumbnailHdUrl)
         assertNull(TitleInfoView(info(type = MediaType.tvshow)).letterboxdUrl)
         assertNull(TitleInfoView(info(title = null)).rtSearchUrl)
     }

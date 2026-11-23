@@ -17,6 +17,8 @@ class TitleInfoView(val info: TitleInfo) {
     val trailerKey: String? get() = info.trailerYoutubeKey
     val trailerEmbedUrl: String? get() = trailerKey?.let { "https://www.youtube-nocookie.com/embed/$it?autoplay=1&rel=0" }
     val trailerThumbnailUrl: String? get() = trailerKey?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+    /** 1280x720, but YouTube doesn't make it for every video (it serves a 120x90 placeholder): title-page.js swaps it in only when it's real. */
+    val trailerThumbnailHdUrl: String? get() = trailerKey?.let { "https://i.ytimg.com/vi/$it/maxresdefault.jpg" }
     val trailerWatchUrl: String? get() = info.trailerUrl
 
     val imdbUrl: String? get() = info.imdbUrl
