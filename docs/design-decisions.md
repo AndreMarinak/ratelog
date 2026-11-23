@@ -279,7 +279,7 @@ The user asked for a hardening pass on 2026-11-23. The rules now:
   `..._WRITES_PER_MINUTE`, `..._WRITE_BURST`). Static files and `/api/health` are exempt; sign-in posts are handled by the
   throttle above before this filter. Over the limit: `429` with `Retry-After`; the API answers its usual JSON error
   (`rate_limited`), the in-place scripts get `{ok: false, message}` (or the page's error message) and show it as a toast
-  instead of re-posting, plain form posts get a short page. Sized so heavy normal use never trips it: ticking off a
+  instead of re-posting (the list reorder editor then reloads to show the saved order), plain form posts get a short page. Sized so heavy normal use never trips it: ticking off a
   250-title list at 1.5 taps a second, Discover's lazy rows, the add-to-list sheet and Claude's batched list imports.
 - **Letterboxd import limits** (`import/letterboxd/LetterboxdImportLimits`): at most **2 MB and 10,000 rated rows** per
   file (a ratings.csv row is about 60 bytes, so 10,000 rows is about 600 KB; a bigger export can be split, and
