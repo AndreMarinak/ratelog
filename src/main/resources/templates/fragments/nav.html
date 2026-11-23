@@ -24,6 +24,8 @@
     <!-- Fork: in-place saves for small actions (inplace.js / inplace.css), see docs/design-decisions.md. -->
     <link rel="stylesheet" href="/inplace.css">
     <script src="/inplace.js" defer></script>
+    <!-- Fork: back links on title pages (back-nav.js remembers the page you came from), see docs/design-decisions.md. -->
+    <th:block th:replace="~{fragments/back-nav :: page(${backNavPage})}"></th:block>
 
     <!-- Fork: header search on every page (GET / ?q=, the existing results page). "/" focuses it (nav.js). -->
     <form class="nav-search" th:if="${signedIn}" action="/" method="get" role="search">

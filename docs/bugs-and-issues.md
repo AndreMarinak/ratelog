@@ -4,6 +4,15 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Going back to Discover's grid or search results only shows the first page again** (found building the back links,
+  2026-11-23): every page is sent with `Cache-Control: no-store` (Spring Security's default), so Chrome keeps no page in its
+  back/forward cache and Back (or the title page's back link) reloads the page. Pages added by "Load more" / infinite scroll are
+  gone; the scroll position is put back as far as the reloaded page reaches (search's infinite scroll then loads more as you're at
+  the end). Discover's landing rows are unaffected (their placeholders have the final height). Ideas: put the page number in the
+  URL as pages load (`replaceState`), or allow the back/forward cache for HTML pages.
+- **Without JS, the phone title page's "Play trailer" pill overlaps a "Watch the trailer on YouTube" link** (seen in the
+  back-link no-JS check at 360px, 2026-11-23): the no-JS fallback link of the trailer is drawn over the pill. Cosmetic and
+  only without JS; pre-existing (`fragments/title-info.html` / `title-info.css`).
 - **Series headings mix languages for non-English metadata:** "Part of the {name}" is an English UI string, while the collection name
   comes from TMDB in the metadata language, so a Spanish metadata setting reads "Part of the Toy Story - Colección". The UI strings
   are English-only anyway; fix together with real translations (e.g. `recs.series.title` per language).
@@ -69,6 +78,17 @@ Problems found while building and running the fork: what happened, the cause, an
   It now logs the method, path and a redacted stack trace (2026-11-23).
 
 - **Two search boxes on Home** (user, 2026-11-23): the header search and the Browse bar's "Find a title" both searched titles. The bar's field is gone; the header search is on every page.
+- **"← Best Disney Movies" opened the list at the top** (found in the back-link browser check, 2026-11-23): the label and
+  URL were right, but the list page never named itself, so `back-nav.js` didn't treat it as a page to come back to and the
+  title kept the server's link (from the Referer), a plain link that loads the list fresh. Cause: `BackNavInterceptor` read the
+  model's `list` as upstream's `CustomList`, while the list controller puts a `ListDetail` there (the unit test had used the
+  wrong type too). It now reads `ListDetail`, and the test uses what the controller really adds. While checking, `back-nav.js`
+  also learned to put the scroll position (and a row's sideways scroll, which no browser restores) back on Back / Forward to
+  the page a title was opened from, unless the browser already did or you have scrolled yourself.
+- **The back link first pushed the phone title down 28px instead of 16px** (same check): the header's bottom margin and the
+  link's negative margin collapse into one, so the first margins left a bigger gap than planned. Margins now account for the
+  collapse (`back-nav.css`); the title moves 16px on phones and desktop.
+
 - **No way to delete a rating from the rating editor** (user, 2026-11-23: "im not able to delete a rating when i go to edit"): the
   panel's "Edit rating" opens the rate modal, which only had Quick / Detailed / Save; the delete was a 28px trash icon at the bottom
   of the "Your rating" card. Both rate modals (movie, TV season) now show "Delete rating" under Save in edit mode; it closes the

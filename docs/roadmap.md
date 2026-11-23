@@ -81,6 +81,10 @@ accounts and roles `V1130–1139`.
   Secure / SameSite cookies, trusted proxy headers only, CSP and other browser headers; masked TMDB key in the admin page;
   same-site-only redirects; no secrets in logs; non-root container; patched Tomcat, pgjdbc, Jackson, Logback, Thymeleaf,
   Hibernate Validator. Details in [design-decisions.md](design-decisions.md#security-hardening-2026-11-23).
+- [x] **22. Back links on title pages** (requested 2026-11-23): movie and TV pages show "← Discover" / "← Search results" /
+  "← Best Disney Movies" / "← Watchlist"... above the title, back to the page you opened it from with its URL and scroll as you
+  left them. Title-to-title taps keep the first page as the target (no growing trail), plus one step to the title right before
+  ("← Discover › Toy Story 3"). Opened directly: "← Home". Works without JS (from the Referer). No migration, no API change.
 
 ## Fixes and housekeeping done
 

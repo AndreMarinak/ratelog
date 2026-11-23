@@ -1,0 +1,126 @@
+/* Fork: the back link above a title ("← Discover", "← Discover › Toy Story 2"). Markup in
+   templates/fragments/back-nav.html, behaviour in back-nav.js. Looks like the list page's back link (list-progress.css);
+   one line that never wraps (each part shortens with "…"), 44px tall to tap, tucked into the gap under the header so
+   the phone action row stays above the fold. */
+
+.back-nav {
+  position: relative; /* above the title it overlaps a little, so the whole 44px stays tappable */
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.back-nav-link {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 4px 0 0;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    color: var(--accent);
+  }
+
+  &:hover svg {
+    transform: translateX(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -4px;
+    border-radius: 6px;
+  }
+}
+
+.back-nav-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The one extra step back: the title you opened this one from. */
+.back-nav-step {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+
+  &[hidden] {
+    display: none;
+  }
+
+  > svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: var(--text-soft);
+    opacity: 0.6;
+  }
+
+  .back-nav-link {
+    padding-left: 2px;
+  }
+}
+
+/* Both parts share the line: the origin keeps at least about half of it. */
+.back-nav.has-step > .back-nav-link {
+  flex-shrink: 0;
+  max-width: 55%;
+}
+
+/* Opened from another title: only back-nav.js knows the origin, so the server's guess stays invisible (its space kept)
+   until the script fills the link in, or for a moment if the script never runs. */
+@media (scripting: enabled) {
+  .back-nav[data-pending] {
+    visibility: hidden;
+    animation: back-nav-reveal 0s linear 1.2s forwards;
+  }
+}
+
+/* Without JS Lucide draws no icons: keep the arrow as text. */
+@media (scripting: none) {
+  .back-nav-link > i[data-lucide]::before {
+    content: "\2190";
+    font-style: normal;
+  }
+}
+
+@keyframes back-nav-reveal {
+  to {
+    visibility: visible;
+  }
+}
+
+/* The link's row takes the gap under the header (32px, 20px at 900px and below; its margin collapses with the link's), and
+   the title starts a few pixels inside the link's 44px box, below its text: the title moves down 16px. */
+.back-nav {
+  margin: -24px 0 -4px;
+}
+
+.back-nav + .title-layout {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .back-nav {
+    margin: -18px 0 -10px;
+  }
+}
