@@ -198,9 +198,12 @@ class ListOrderTemplatesTest {
     }
 
     @Test
-    fun `the create modal starts numbered`() {
+    fun `the create modal starts plain`() {
         val html = render("fragments/create-list-modal", "createListModal", mapOf("_csrf" to csrf), web = true)
-        assertTrue(Regex("""name="numbered" value="true" checked""").containsMatchIn(html))
+        // New lists start plain: the box is there, unticked, with the marker so an unticked submit saves "plain".
+        assertTrue(html.contains("""name="numbered" value="true">"""), "unticked by default")
+        assertFalse(Regex("""name="numbered" value="true" checked""").containsMatchIn(html), "not ticked by default")
+        assertTrue(html.contains("""name="_numbered""""), "marker sent")
         assertTrue(html.contains("""name="_numbered" value="1""""))
         assertFalse(html.contains("??"))
     }

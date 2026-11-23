@@ -6,6 +6,8 @@ import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.customlist.create.CreateListCommand
 import org.ratelog.customlist.create.CreateListError
 import org.ratelog.customlist.create.CreateListHandler
+import org.ratelog.customlist.order.numbered.ListNumberedForm
+import org.ratelog.customlist.order.numbered.NumberedField
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
 import org.springframework.transaction.annotation.Transactional
@@ -21,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 class CreateListWithItemController(
     private val createListHandler: CreateListHandler,
     private val addToListHandler: AddToListHandler,
+    private val numberedForm: ListNumberedForm, // fork: quick lists start plain (no ranks)
 ) {
     @PostMapping("/list/new-with-item")
     @Transactional
@@ -46,6 +49,8 @@ class CreateListWithItemController(
             { it }
         )
         addToListHandler.handle(AddToListCommand(list.id!!, user.id, mediaId, mediaType))
+        // A list started from a title page is a plain collection (no ranks) until the owner ticks "Numbered list".
+        numberedForm.save(list.id, user.id, numbered = null, marker = NumberedField.MARKER)
         redirectAttributes.addFlashAttribute("success", "list.add.new.created")
         return "redirect:/list/${list.id.value}"
     }

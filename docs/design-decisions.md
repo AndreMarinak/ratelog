@@ -149,9 +149,12 @@ series maybe those as well but also other ones?" Code: `org.ratelog.recommendati
   `is-plain-list` class on `#listRegion`), but it still has an order, which the API still returns and the owner can still edit.
   Stored in its own table `custom_list_options(list_id PK -> custom_lists ON DELETE CASCADE, numbered)` (`V1121`), not a column on
   upstream's `custom_lists`; **no row = numbered**, so the migration touches no data. The checkbox is in the create and edit list
-  modals (default on). The add-to-list sheet's "New list" form doesn't get it (another agent is reworking that sheet); lists made
-  there are numbered. The forms send a `_numbered` marker so an unchecked box (which sends nothing) reads as "plain", while a form
-  without the field changes nothing.
+  modals. The forms send a `_numbered` marker so an unchecked box (which sends nothing) reads as "plain", while a form without
+  the field changes nothing. *(Default for new lists changed the same day, below.)*
+- **New lists made in the app start plain; imports stay numbered** (user, 2026-11-23: "I didn't want all lists to have to be
+  ordered w numbers, should be optional"). The create-list modal's "Numbered list" box starts unticked, and a list made from the
+  add-to-list sheet's "New list" is saved plain. The API keeps `numbered: true` as its default, since Claude's imports are rankings
+  and watch orders. Existing lists keep their setting (no row = numbered); the owner switches any list in Edit list.
 - **Reorder mode is a mode of the list page** (`/list/{id}?reorder=1`, the "Edit order" button, owner only, lists of 2+ titles),
   like tick-off mode's `?mark=1`: it gets its own URL and a fixed bottom bar with "Done". It swaps the poster grid for the **whole
   list in list order as thin rows**, per the user's follow-up the same day (*"make sure is able to be edited to drag thin titles up

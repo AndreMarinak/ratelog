@@ -21,7 +21,8 @@
                     <span th:text="#{list.public}">Public</span>
                 </label>
             </div>
-            <th:block th:replace="~{fragments/list-order :: numberedField(true)}"></th:block>
+            <!--/* New lists start plain (user, 2026-11-23: numbers should be optional); tick it for a ranked list. */-->
+            <th:block th:replace="~{fragments/list-order :: numberedField(false)}"></th:block>
             <button type="submit" class="primary w-100" th:text="#{list.create.button}">Create</button>
         </form>
     </div>
