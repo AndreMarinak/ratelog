@@ -8,9 +8,10 @@ import org.ratelog.user.User
  * This is separate from following a title, which only drives premiere tracking.
  */
 enum class WatchStatus(val apiName: String, val icon: String) {
+    // Fork: the eye means "Seen" (the Letterboxd-style toggle), so Watching uses a play icon.
     WANT_TO_WATCH("want_to_watch", "bookmark"),
-    WATCHING("watching", "eye"),
-    WATCHED("watched", "circle-check"),
+    WATCHING("watching", "circle-play"),
+    WATCHED("watched", "eye"),
     DROPPED("dropped", "circle-x");
 
     /** messages.properties key of the label. */

@@ -16,6 +16,7 @@ import org.ratelog.watchlist.MediaStatusRepository
 import org.ratelog.watchlist.WatchStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 
 data class GetWatchlist(
     val userId: User.Id,
@@ -37,6 +38,8 @@ data class WatchlistItem(
     /** The user's own score, if they rated it. */
     val score: Double?,
     val updatedAtEpochMs: Long,
+    /** Release date (a show's first air date), for the Upcoming badge. */
+    val releaseDate: LocalDate? = null,
 )
 
 data class Watchlist(
@@ -81,6 +84,7 @@ class GetWatchlistHandler(
                 status = status.status,
                 score = ratingRepository.findByMovieIdAndUserId(movie.id!!, status.userId)?.score?.value,
                 updatedAtEpochMs = status.updatedAtEpochMs,
+                releaseDate = movie.releaseDate,
             )
         }
 
@@ -97,6 +101,7 @@ class GetWatchlistHandler(
                 status = status.status,
                 score = tvRatingRepository.findByTvShowIdAndUserId(show.id!!, status.userId)?.score?.value,
                 updatedAtEpochMs = status.updatedAtEpochMs,
+                releaseDate = show.firstAirDate,
             )
         }
     }

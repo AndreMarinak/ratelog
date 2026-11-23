@@ -5,6 +5,7 @@ import org.ratelog.customlist.browse.ListCardView
 import org.ratelog.customlist.browse.toCard
 import org.ratelog.home.HomeTitle
 import org.ratelog.watchlist.WatchStatus
+import org.ratelog.watchlist.seen.TileActionsView
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -50,6 +51,8 @@ data class HomeTileView(
     /** Shows the one-click watchlist bookmark: the title has no status or is Want to watch. */
     val canToggleWatchlist: Boolean,
     val inWatchlist: Boolean,
+    /** Fork: the Seen / Watchlist quick actions and the Upcoming badge (fragments/tile-actions.html). */
+    val actions: TileActionsView? = null,
 )
 
 fun HomeDashboard.toView(locale: Locale, today: LocalDate = LocalDate.now()) = HomeDashboardView(
@@ -111,6 +114,7 @@ private fun HomeTitle.toTile(kind: HomeRowKind, locale: Locale, today: LocalDate
     // POST /watchlist/toggle leaves Watching / Watched / Dropped alone, so those tiles get no button.
     canToggleWatchlist = status == null || status == WatchStatus.WANT_TO_WATCH,
     inWatchlist = status == WatchStatus.WANT_TO_WATCH,
+    actions = TileActionsView.of(tmdbId, mediaType, status, rated = score != null, releaseDate = releaseDate, today = today, locale = locale),
 )
 
 /** "Dec 5" (in the UI language), with the year when it isn't this year. */

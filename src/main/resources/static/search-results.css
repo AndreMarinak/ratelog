@@ -14,17 +14,8 @@
   }
 }
 
+/* The hover lift and poster brightening come from the .home-tile-wrap around each tile (home.css). */
 .search-tile {
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-
-  &:hover .home-poster img {
-    filter: brightness(1.05) saturate(1.05);
-  }
-
   .home-tile-title {
     display: -webkit-box;
     -webkit-line-clamp: 2;

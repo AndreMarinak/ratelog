@@ -17,11 +17,15 @@
     </a>
 </th:block>
 
-<!--/* Under the title: "You've seen 9 of 25", the bar, the All / Not seen / Seen tabs and the bulk watchlist button. */-->
+<!--/* Under the title: "You've seen 9 of 25", the bar, the All / Not seen / Seen tabs and the bulk watchlist button.
+       Fork: "Mark what you've seen" (tick-off mode, ?mark=1) and the data list-tick.js needs to update the counts in place. */-->
 <th:block th:fragment="summary(progress, listName)">
-<section th:if="${progress != null and progress.total > 0}" class="list-progress" th:aria-label="#{list.progress.aria}">
+<section th:if="${progress != null and progress.total > 0}" class="list-progress" th:aria-label="#{list.progress.aria}"
+         data-list-progress
+         th:data-seen="${progress.seen}" th:data-total="${progress.total}"
+         th:data-text="#{list.progress.seen('{seen}', '{total}')}">
     <div class="list-progress-line">
-        <span class="list-progress-text" th:text="#{list.progress.seen(${progress.seen}, ${progress.total})}">You've seen 9 of 25</span>
+        <span class="list-progress-text" data-progress-text th:text="#{list.progress.seen(${progress.seen}, ${progress.total})}">You've seen 9 of 25</span>
         <div class="list-progress-bar" role="progressbar" aria-valuemin="0"
              th:aria-valuemax="${progress.total}" th:aria-valuenow="${progress.seen}"
              th:aria-label="#{list.progress.seen(${progress.seen}, ${progress.total})}">
@@ -35,9 +39,14 @@
                th:classappend="${tab.active} ? 'active' : ''"
                th:aria-current="${tab.active} ? 'page' : null">
                 <span th:text="#{${tab.labelKey}}">All</span>
-                <span class="status-count" th:text="${tab.count}">25</span>
+                <span class="status-count" th:data-tab-count="${tab.labelKey}" th:text="${tab.count}">25</span>
             </a>
         </nav>
+
+        <a th:unless="${progress.tick}" class="btn secondary list-tick-start" th:href="${progress.tickHref}">
+            <i data-lucide="list-checks" aria-hidden="true"></i>
+            <span th:text="#{list.tick.start}">Mark what you've seen</span>
+        </a>
 
         <form th:if="${progress.addableCount > 0}" class="list-progress-add" method="post"
               th:action="${progress.addHref}"
@@ -52,17 +61,31 @@
     </div>
 
     <div th:if="${progress.emptyKey != null}" class="empty-state" th:text="#{${progress.emptyKey}}">Nothing here.</div>
+
+    <!--/* Tick-off mode: a bar fixed to the bottom of the screen (above the phone tab bar) with the count and Done. */-->
+    <div th:if="${progress.tick}" class="list-tick-bar" role="region" th:aria-label="#{list.tick.aria}">
+        <i data-lucide="list-checks" aria-hidden="true"></i>
+        <span class="list-tick-text">
+            <span class="list-tick-hint" th:text="#{list.tick.hint}">Tap the posters you've seen.</span>
+            <span class="list-tick-count" data-progress-text aria-live="polite"
+                  th:text="#{list.progress.seen(${progress.seen}, ${progress.total})}">You've seen 9 of 25</span>
+        </span>
+        <a class="btn primary list-tick-done" th:href="${progress.doneHref}" th:text="#{list.tick.done}">Done</a>
+    </div>
 </section>
 </th:block>
 
-<!--/* On each poster: rank (bottom left), the viewer's status (top right) and score (bottom right). */-->
+<!--/* On each poster: rank (bottom left), the viewer's status (top right) and score (bottom right).
+       Fork: with quick actions (entry.actions) the status shows there instead (bookmark / Watching / Dropped, then Seen),
+       and an upcoming title gets the Upcoming badge. */-->
 <th:block th:fragment="badges(entry)">
 <th:block th:if="${entry != null}">
     <span class="list-rank" th:title="#{list.progress.rank(${entry.rank})}" th:text="${entry.rank}">1</span>
-    <span th:if="${entry.statusIcon != null}" class="home-status list-status" th:classappend="${entry.statusClass}"
+    <span th:if="${entry.statusIcon != null and entry.actions == null}" class="home-status list-status" th:classappend="${entry.statusClass}"
           th:title="#{${entry.statusKey}}" th:aria-label="#{${entry.statusKey}}" role="img">
         <i th:data-lucide="${entry.statusIcon}" aria-hidden="true"></i>
     </span>
+    <span th:replace="~{fragments/tile-actions :: upcoming(${entry.actions})}"></span>
     <span th:if="${entry.scoreLabel != null}" class="home-score" th:title="#{list.progress.your.score}"
           th:text="${entry.scoreLabel}">8.5</span>
 </th:block>

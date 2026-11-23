@@ -69,7 +69,7 @@ class ListProgressViewTest {
         val view = progress.toView(ListFilter.ALL)
 
         val watched = view.entry(101)!!
-        assertEquals("circle-check", watched.statusIcon)
+        assertEquals("eye", watched.statusIcon)
         assertEquals("status.watched", watched.statusKey)
         assertEquals("is-watched", watched.statusClass)
         assertNull(watched.scoreLabel)

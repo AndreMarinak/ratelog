@@ -22,6 +22,7 @@ class ListProgressMarker
 
 /*
  * "Rated" matches Browse's hide-rated filter: a movie_ratings row for movies, at least one season_ratings row for TV.
+ * "Seen" (SeenState): a movie rated or Watched; a show Watched, or rated with no status at all.
  * The status and score are scalar subqueries, so a title is one row even if a rating row were duplicated.
  */
 @SpringRepository
@@ -55,7 +56,7 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
     )
     fun findTvMarks(userId: Long, mediaIds: List<Long>): List<ViewerMarkRow>
 
-    /** Seen titles per list (rated, or status WATCHED). Lists with none are left out. */
+    /** Seen titles per list (Watched; a rated movie; a rated show with no status). Lists with none are left out. */
     @Query(
         """
         SELECT i.list_id AS list_id, COUNT(*) AS seen
@@ -68,7 +69,9 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
              OR (i.media_type = 'movie'
                  AND EXISTS (SELECT 1 FROM movie_ratings r WHERE r.user_id = :userId AND r.movie_id = i.media_id))
              OR (i.media_type = 'tvshow'
-                 AND EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = :userId AND sr.tv_show_id = i.media_id))
+                 AND EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = :userId AND sr.tv_show_id = i.media_id)
+                 AND NOT EXISTS (SELECT 1 FROM media_statuses s
+                                  WHERE s.user_id = :userId AND s.media_type = 'tvshow' AND s.media_id = i.media_id))
           )
         GROUP BY i.list_id
         """

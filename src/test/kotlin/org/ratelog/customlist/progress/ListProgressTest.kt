@@ -14,19 +14,33 @@ import org.ratelog.watchlist.WatchStatus
 class ListProgressTest {
 
     @Test
-    fun `seen means rated or Watched`() {
-        assertTrue(ViewerMark(WatchStatus.WATCHED, null, rated = false).seen)
-        assertTrue(ViewerMark(null, 8.0, rated = true).seen)
-        assertTrue(ViewerMark(WatchStatus.DROPPED, 4.0, rated = true).seen, "a rating counts even when Dropped")
-        assertTrue(ViewerMark(WatchStatus.WATCHING, 7.0, rated = true).seen)
+    fun `a movie is seen when rated or Watched`() {
+        val movie = MediaType.movie
+        assertTrue(ViewerMark(WatchStatus.WATCHED, null, rated = false).seen(movie))
+        assertTrue(ViewerMark(null, 8.0, rated = true).seen(movie))
+        assertTrue(ViewerMark(WatchStatus.DROPPED, 4.0, rated = true).seen(movie), "a rating counts even when Dropped")
+        assertTrue(ViewerMark(WatchStatus.WATCHING, 7.0, rated = true).seen(movie))
+    }
+
+    @Test
+    fun `a show is seen when Watched, or rated with no status, and its status wins over rated seasons`() {
+        val tv = MediaType.tvshow
+        assertTrue(ViewerMark(WatchStatus.WATCHED, null, rated = false).seen(tv))
+        assertTrue(ViewerMark(WatchStatus.WATCHED, 8.0, rated = true).seen(tv))
+        assertTrue(ViewerMark(null, 8.0, rated = true).seen(tv), "rated before statuses existed")
+        assertFalse(ViewerMark(WatchStatus.WATCHING, 7.0, rated = true).seen(tv), "one rated season of five: still watching")
+        assertFalse(ViewerMark(WatchStatus.DROPPED, 4.0, rated = true).seen(tv), "dropped")
+        assertFalse(ViewerMark(WatchStatus.WANT_TO_WATCH, 9.0, rated = true).seen(tv), "back on the watchlist")
     }
 
     @Test
     fun `Watching, Want to watch, Dropped and nothing are not seen`() {
-        assertFalse(ViewerMark(WatchStatus.WATCHING, null, rated = false).seen)
-        assertFalse(ViewerMark(WatchStatus.WANT_TO_WATCH, null, rated = false).seen)
-        assertFalse(ViewerMark(WatchStatus.DROPPED, null, rated = false).seen)
-        assertFalse(ViewerMark.NONE.seen)
+        MediaType.entries.forEach { type ->
+            assertFalse(ViewerMark(WatchStatus.WATCHING, null, rated = false).seen(type))
+            assertFalse(ViewerMark(WatchStatus.WANT_TO_WATCH, null, rated = false).seen(type))
+            assertFalse(ViewerMark(WatchStatus.DROPPED, null, rated = false).seen(type))
+            assertFalse(ViewerMark.NONE.seen(type))
+        }
     }
 
     @Test

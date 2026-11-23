@@ -11,7 +11,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 
 /*
- * "Rating a title marks it Watched" is hooked in at the rating repositories instead of in each upstream
+ * "Rating a title marks it Watched" (a show: Watching, until every aired season is rated) is hooked in at the
+ * rating repositories instead of in each upstream
  * rating handler: these decorators run [MarkWatchedOnRatingHandler] right after every successful rating save,
  * inside the same transaction. That covers adding and editing ratings, the Letterboxd import and any future
  * rating path without editing upstream code. Deleting a rating never touches the status.
@@ -36,7 +37,8 @@ class AutoWatchedTvRatingRepository(
         val seasonsBefore = delegate.findByTvShowIdAndUserId(rating.tvShowId, rating.userId)?.seasonRatings?.size ?: 0
         delegate.save(rating)
         if (rating.seasonRatings.isNotEmpty() && rating.seasonRatings.size >= seasonsBefore) {
-            markWatched.handle(MarkWatchedOnRating(rating.userId, MediaType.tvshow, rating.tvShowId.value))
+            val ratedSeasons = rating.seasonRatings.map { it.seasonNumber.value }.toSet()
+            markWatched.handle(MarkWatchedOnRating(rating.userId, MediaType.tvshow, rating.tvShowId.value, ratedSeasons))
         }
     }
 }

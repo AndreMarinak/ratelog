@@ -2,6 +2,7 @@ package org.ratelog.home
 
 import org.ratelog.Lang
 import org.ratelog.MediaType
+import org.ratelog.toLocalDate
 import org.ratelog.user.User
 import org.ratelog.watchlist.WatchStatus
 import org.springframework.stereotype.Repository
@@ -38,5 +39,6 @@ class HomeRepositoryImpl(
         posterPath = posterPath,
         status = status?.let(WatchStatus::valueOf),
         score = score,
+        releaseDate = releaseDate?.take(10)?.let { runCatching { it.toLocalDate() }.getOrNull() },
     )
 }

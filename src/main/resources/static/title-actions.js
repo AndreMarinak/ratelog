@@ -1,0 +1,120 @@
+// Fork: title page actions (templates/fragments/title-actions.html). Seen, Watchlist and a show's Watching / Dropped
+// save in the background (header `X-Requested-With: fetch`, JSON answer) and every toggle is updated from the server's
+// state, so the page never reloads. After Seen on a movie with no rating, a small "Rate it?" offers a quick score
+// (optional; Skip closes it). Without JS these are plain POST forms that come back to the page, with no prompt.
+(() => {
+    if (!window.fetch || !window.URLSearchParams) return;
+    const panel = document.querySelector('.title-panel');
+    if (!panel) return;
+
+    const toast = (text) => { if (window.ratelogToast) window.ratelogToast(text); };
+    const nudge = panel.querySelector('[data-rate-nudge]');
+
+    function setIcon(button, name) {
+        const old = button.querySelector('svg, i');
+        const icon = document.createElement('i');
+        icon.setAttribute('data-lucide', name);
+        icon.setAttribute('aria-hidden', 'true');
+        if (old) old.replaceWith(icon); else button.prepend(icon);
+    }
+
+    function setLabel(button, on) {
+        const label = button.querySelector('.title-toggle-label');
+        if (label) label.textContent = on ? button.dataset.labelOn : button.dataset.labelOff;
+    }
+
+    /** Brings every toggle on the page in line with the state the server answered. */
+    function apply(state) {
+        const seen = panel.querySelector('[data-title-seen]');
+        if (seen) {
+            seen.classList.toggle('is-on', state.seen);
+            seen.classList.toggle('is-locked', state.seenLocked);
+            seen.setAttribute('aria-pressed', state.seen ? 'true' : 'false');
+            seen.title = state.seenLocked ? seen.dataset.titleLocked : (state.seen ? seen.dataset.titleOn : seen.dataset.titleOff);
+            setLabel(seen, state.seen);
+            const note = seen.querySelector('.title-toggle-note');
+            if (note) note.hidden = !state.seenLocked;
+        }
+
+        const watch = panel.querySelector('[data-title-watchlist]');
+        if (watch) {
+            const form = watch.closest('form');
+            watch.classList.toggle('is-on', state.onWatchlist);
+            watch.setAttribute('aria-pressed', state.onWatchlist ? 'true' : 'false');
+            watch.title = state.onWatchlist ? watch.dataset.titleOn : watch.dataset.titleOff;
+            setLabel(watch, state.onWatchlist);
+            setIcon(watch, state.onWatchlist ? 'bookmark-check' : 'bookmark');
+            form.querySelector('input[name="status"]').value = state.onWatchlist ? '' : 'want_to_watch';
+            // An unrated Watched title would stop counting as seen: ask first (confirm.js reads data-confirm).
+            if (state.status === 'watched' && !state.seenLocked) form.dataset.confirm = form.dataset.confirmSeen;
+            else delete form.dataset.confirm;
+        }
+
+        panel.querySelectorAll('[data-progress-value]').forEach((button) => {
+            const value = button.dataset.progressValue;
+            const on = state.status === value;
+            button.classList.toggle('is-on', on);
+            button.classList.toggle('is-dropped', on && value === 'dropped');
+            button.setAttribute('aria-pressed', on ? 'true' : 'false');
+            button.value = on ? '' : value;
+        });
+
+        const extra = panel.querySelector('[data-extra-status]');
+        if (extra && state.status !== 'watching' && state.status !== 'dropped') extra.remove();
+
+        if (nudge && !state.seen) nudge.hidden = true;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function showNudge() {
+        if (!nudge) return;
+        nudge.hidden = false;
+        const first = nudge.querySelector('.title-nudge-score');
+        if (first) first.focus({ preventScroll: true });
+    }
+
+    panel.addEventListener('click', (event) => {
+        if (event.target.closest('[data-nudge-skip]') && nudge) nudge.hidden = true;
+    });
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target.closest && event.target.closest('form[data-title-act]');
+        // confirm.js (capture phase) may have cancelled it already.
+        if (!form || event.defaultPrevented) return;
+        event.preventDefault();
+
+        const submitter = event.submitter && event.submitter.form === form ? event.submitter : null;
+        const body = new URLSearchParams(new FormData(form));
+        if (submitter && submitter.name) body.set(submitter.name, submitter.value);
+        const busy = submitter || form.querySelector('button');
+        if (busy.getAttribute('aria-busy') === 'true') return;
+        busy.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'fetch', Accept: 'application/json' },
+            });
+            const type = response.headers.get('content-type') || '';
+            if (!type.includes('application/json') || response.status >= 500) throw new Error('not json');
+            const state = await response.json();
+            if (!response.ok && !state.message) throw new Error('failed');
+            if (state.ok) apply(state);
+            toast(state.message);
+            if (form.dataset.titleAct === 'seen' && state.ok && state.seenDelta === 1 && !state.seenLocked) showNudge();
+        } catch (error) {
+            // Post it the normal way, keeping which button was pressed.
+            if (submitter && submitter.name) {
+                const field = document.createElement('input');
+                field.type = 'hidden';
+                field.name = submitter.name;
+                field.value = submitter.value;
+                form.appendChild(field);
+            }
+            form.submit();
+        } finally {
+            busy.removeAttribute('aria-busy');
+        }
+    });
+})();

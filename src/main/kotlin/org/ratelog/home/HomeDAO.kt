@@ -14,6 +14,8 @@ data class HomeTitleRow(
     val status: String?,
     val score: Double?,
     @Column("sort_key") val sortKey: Long?,
+    /** Fork: release date (a show's first air date), for the Upcoming badge. */
+    @Column("release_date") val releaseDate: String? = null,
 )
 
 data class TitleMarkRow(
@@ -41,6 +43,7 @@ interface HomeDAO : Repository<HomeMarker, Long> {
                        (SELECT d.title FROM movie_descriptions d WHERE d.tmdb_id = m.tmdb_id AND d.lang = 'en' LIMIT 1),
                        m.original_title) AS title,
                    m.release_year AS release_year,
+                   m.release_date AS release_date,
                    m.poster_path AS poster_path,
                    ms.status AS status,
                    (SELECT r.score FROM movie_ratings r WHERE r.movie_id = m.id AND r.user_id = ms.user_id LIMIT 1) AS score,
@@ -58,6 +61,7 @@ interface HomeDAO : Repository<HomeMarker, Long> {
                        (SELECT d.name FROM tv_descriptions d WHERE d.tmdb_id = t.tmdb_id AND d.lang = 'en' LIMIT 1),
                        t.original_name) AS title,
                    t.first_air_year AS release_year,
+                   t.first_air_date AS release_date,
                    t.poster_path AS poster_path,
                    ms.status AS status,
                    (SELECT r.score FROM tv_ratings r WHERE r.tv_show_id = t.id AND r.user_id = ms.user_id LIMIT 1) AS score,
@@ -82,6 +86,7 @@ interface HomeDAO : Repository<HomeMarker, Long> {
                        (SELECT d.title FROM movie_descriptions d WHERE d.tmdb_id = m.tmdb_id AND d.lang = 'en' LIMIT 1),
                        m.original_title) AS title,
                    m.release_year AS release_year,
+                   m.release_date AS release_date,
                    m.poster_path AS poster_path,
                    (SELECT s.status FROM media_statuses s
                      WHERE s.user_id = r.user_id AND s.media_type = 'movie' AND s.media_id = m.id) AS status,
@@ -100,6 +105,7 @@ interface HomeDAO : Repository<HomeMarker, Long> {
                        (SELECT d.name FROM tv_descriptions d WHERE d.tmdb_id = t.tmdb_id AND d.lang = 'en' LIMIT 1),
                        t.original_name) AS title,
                    t.first_air_year AS release_year,
+                   t.first_air_date AS release_date,
                    t.poster_path AS poster_path,
                    (SELECT s.status FROM media_statuses s
                      WHERE s.user_id = r.user_id AND s.media_type = 'tvshow' AND s.media_id = t.id) AS status,

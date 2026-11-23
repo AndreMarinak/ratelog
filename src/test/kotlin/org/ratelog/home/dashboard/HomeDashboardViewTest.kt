@@ -48,7 +48,7 @@ class HomeDashboardViewTest {
         assertNull(upNext.statusIcon)
         assertTrue(upNext.showTypeTag)
         val popular = dashboard.rows[1].tiles.single()
-        assertEquals("eye", popular.statusIcon)
+        assertEquals("circle-play", popular.statusIcon)
         assertEquals("status.watching", popular.statusKey)
         assertFalse(popular.showTypeTag)
     }
@@ -74,7 +74,7 @@ class HomeDashboardViewTest {
         assertTrue(tiles.getValue(2).inWatchlist)
         assertNull(tiles.getValue(2).statusIcon)
         assertFalse(tiles.getValue(3).canToggleWatchlist)
-        assertEquals("circle-check", tiles.getValue(3).statusIcon)
+        assertEquals("eye", tiles.getValue(3).statusIcon)
         assertFalse(tiles.getValue(4).canToggleWatchlist)
         assertEquals("tv", tiles.getValue(4).type)
     }
