@@ -134,7 +134,7 @@ class RelatedRowViews(
             current = tile.current,
             seen = tile.seen,
             userScore = tile.mark?.score?.let { String.format(Locale.ROOT, "%.1f", it) },
-            actions = TileActionsView.of(t.tmdbId, t.type, tile.mark?.status, tile.mark?.rated == true, t.releaseDate, today, locale),
+            actions = TileActionsView.of(t.tmdbId, t.type, tile.mark?.status, tile.mark?.rated == true, t.releaseDate, today, locale, score = tile.mark?.score),
         )
     }
 

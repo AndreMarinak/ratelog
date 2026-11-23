@@ -107,6 +107,7 @@ class RelatedRowViewsTest {
         assertEquals("8.3", tile.userScore)
         assertTrue(tile.actions.seen)
         assertTrue(tile.actions.seenLocked, "rated movies are locked seen")
+        assertEquals(8.25, tile.actions.score, "the poster ★ shows your score (tile rating)")
 
         val tv = row.tiles[1]
         assertEquals("tv:60059", tv.key)

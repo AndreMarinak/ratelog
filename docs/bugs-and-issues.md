@@ -7,10 +7,6 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Series headings mix languages for non-English metadata:** "Part of the {name}" is an English UI string, while the collection name
   comes from TMDB in the metadata language, so a Spanish metadata setting reads "Part of the Toy Story - Colección". The UI strings
   are English-only anyway; fix together with real translations (e.g. `recs.series.title` per language).
-- **Poster tiles built elsewhere need the score to show the chip** (2026-11-23, tile rating): `TileActionsView.of(...)` takes
-  `score` (and optionally `detailed`) since the tile rating work. A tile built without it (e.g. a new row added on another branch
-  at the same time, like "More like this" on title pages) shows an empty ★ on a rated title until it passes `score = mark?.score`;
-  rating it from that tile still works and the server never flattens a detailed rating. Check new tile sources for it.
 - **The old score badges are still in the tile markup, hidden by CSS** (`.home-score`, `.browse-user-score`, the list badge,
   hidden with `:has(.tile-rate)`), so tick-off mode and rated upcoming titles keep showing a score. Harmless; drop them from the
   templates once nothing needs them.
@@ -52,6 +48,9 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Series / "More like this" tiles showed an empty ★ on rated titles** (found merging tile rating with the title-page rows,
+  2026-11-23): `TileActionsView.of(...)` needs `score` since tile rating; `RelatedRowViews` now passes it (test added). Rule for
+  any new tile source: pass `score` (and `detailed` when known).
 - **Two search boxes on Home** (user, 2026-11-23): the header search and the Browse bar's "Find a title" both searched titles. The bar's field is gone; the header search is on every page.
 - **No way to delete a rating from the rating editor** (user, 2026-11-23: "im not able to delete a rating when i go to edit"): the
   panel's "Edit rating" opens the rate modal, which only had Quick / Detailed / Save; the delete was a 28px trash icon at the bottom
