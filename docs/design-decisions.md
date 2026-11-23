@@ -384,6 +384,91 @@ recommendations but". Code: `org.ratelog.backnav`, `fragments/back-nav.html`, `s
   title it overlaps by a few pixels), so the title moves down 16px. The action row stays above the fold at 390x844 and 360x740
   (checked on Toy Story 3, Breaking Bad and titles opened from rows).
 
+### Suggested for this list (2026-11-23)
+
+The user asked: "also on suggestions maybe under personal lists have some suggestions popup that you can add/scroll through below
+it?", and when asked what kind, chose recommended movies and shows, like Spotify's "Recommended songs" under a playlist. Roadmap
+item 20. Code: `org.ratelog.customlist.suggest`, `fragments/list-suggest.html`, `static/list-suggest.js` / `.css`; API
+`GET /api/v1/lists/{id}/suggestions`.
+
+- **A home-style row under your own list**: "Suggested for this list", a line saying what it's based on ("Based on the 10 titles
+  in this list", or "Based on 10 of the 25 titles in this list"), then 20 poster tiles that scroll sideways (arrows with a mouse,
+  swipe on phones), each with a "+ Add" button under the poster, the usual Seen / Watchlist quick actions and a small "Not
+  interested" x. "More suggestions" (just "More" on phones) sits where the home rows have "See all". It is below the grid, the
+  Spotify placement: the list comes first, suggestions are for when you reach its end.
+- **Only on your own lists, and not in Edit order or tick-off mode.** Nobody else can add to the list, so the row would be a dead
+  end on other people's lists and on official lists you don't own (the admin sees none on another user's official list). Edit
+  order and tick-off are modes with their own job and a fixed bottom bar. The fragment and the add endpoint check ownership again,
+  so a crafted request gets nothing (`403` for adding).
+- **Empty lists get no row.** There is nothing to base suggestions on, and trending titles would ignore the list's theme (a new
+  "Best heist films" would get whatever is popular this week); the home page and Discover already have those rows. The row
+  appears once the list has one title.
+- **How titles are chosen** (`SuggestionScoring`; measured on a 10-film Pixar list, three Harry Potter films, a comedy list of 7
+  films and 2 shows, 5 prestige dramas and a single film, with TMDB data of 2026-11-23):
+  - *Seeds:* up to 10 list titles, so one list costs at most 10 recommendation calls. Lists of 10 or fewer use every title;
+    bigger ones split the 10 between movies and shows by their share (at least one each) and, within a type, take 3 of 10 from
+    the newest additions (where the list is going; a title you just added counts at once) and the rest spread evenly over the
+    list from #1 (what it is about). Half from the newest was tried first: lists are often imported in one go in rank order, so
+    their "newest" titles are just the bottom ranks. The 25-film "Best of the 2000s" test list (last five: Lost in Translation
+    and four Pixar films) had five animated films the Pixar titles recommend in its top 10 (Inside Out 2, The Croods: A New
+    Age, Spies in Disguise, Elio, The Wild Robot); with 3 of 10 one is left, and Gladiator II, Kill Bill: Vol. 2, Batman and
+    The Boondock Saints come in. The cost: series are only found through sampled titles, so The Two Towers (that list has The
+    Fellowship of the Ring and The Return of the King, neither sampled now) is missed (see bugs-and-issues).
+  - *Score:* every seed whose TMDB recommendations have a title at place p (0-based) gives it 1 / (1 + p/8), so titles several
+    list titles recommend come first and TMDB's first pick counts about three times its twentieth. A plain 1 - p/40 left Better
+    Call Saul at #12 for the dramas; the steeper curve has it at #6. The sum is multiplied by a quality factor: popularity (log of
+    the vote count, full at 10,000) times the TMDB average (full from 7, never under 0.6). Without it the Pixar list's top 12 had
+    The Twits (133 votes), Gabby's Dollhouse: The Movie and Winnie the Pooh: Springtime with Roo, and the comedy list had Archie
+    Bunker's Place (25 votes) at #2; with it Big Hero 6, Incredibles 2 and Finding Dory move into the top 10.
+  - *Filter:* titles in the list, posterless ones and released ones with fewer than **50** TMDB votes are out (the title pages
+    use 10; here the long tails of several seeds add up, and 25-50 vote sitcoms were the junk that got through). Upcoming titles
+    have no votes yet and stay.
+  - *Series:* a TMDB collection with **two or more** titles in the list is a franchise list ("Harry Potter in Order"): its missing
+    entries come first, in release order (by score alone they came in vote order: Goblet of Fire, Deathly Hallows 1 and 2,
+    Half-Blood Prince, Order of the Phoenix). With **one** title of the series in the list, its other entries get +1 (about one
+    more seed's first pick) instead of a pinned place: TMDB's Finding Nemo recommendations don't include Finding Dory at all, yet
+    it belongs on a Pixar list, while a comedy list with The Hangover shouldn't open with Part II and III. Collections are read for
+    the seeds' series, the most shared first, at most 4 calls (cached a week).
+  - *Media mix:* movies and shows are ranked separately and interleaved by the list's own share. Ranked together, 7 of the comedy
+    list's top 12 were shows (its two sitcoms recommend the same neighbours); interleaved, it gets about one show in every four or
+    five tiles. A movie-only list gets only movies, since a seed's recommendations are its own type.
+  - *Not done: a diversity re-rank* (each seed's weight decaying as its picks are used, so one cluster of similar list titles
+    can't fill the batch). It helped the Pixar list (Big Hero 6, Incredibles 2, Finding Dory up) but pulled CSI: NY and The
+    Lincoln Lawyer into the dramas' top 10 and pushed Better Call Saul down, so the plain score stays.
+- **Seen titles stay in, in their place** (unlike "More like this", which hides them): lists are usually favourites or "best of"
+  canons built from titles you've seen, so hiding seen ones would hide the best fits (Toy Story 2 for a Pixar favourites list),
+  and putting unseen ones first would assume the list is a watchlist. Every tile shows the Seen eye and your score instead.
+- **"+ Add" saves in place and the tile stays, as "Added"** (check icon, green button, green ring on the poster), rather than
+  leaving the row: nothing moves under your finger while you scroll sideways (the add-to-list sheet keeps its order for the same
+  reason). The list region above (`#listRegion`, the region the in-place Remove already swaps) is fetched again, so the title
+  appears at the end with its rank, the progress and tab counts include it, and its poster flashes; the page scroll is corrected
+  so the row stays where it was on screen. Toast: "Added "Up" to Pixar favorites as #11." (plain lists: no rank). It goes through
+  `SetListMembershipHandler`, so it is appended exactly like "Add to list", and a title Ratelog hasn't stored yet is imported the
+  way opening its page does. The owner check comes before any TMDB call. Without JS (or if the fetch fails) it is a plain POST
+  that comes back to the list with "Added to the list.".
+- **"More suggestions" sends what the row has shown** (`skip=m862.t1396...`, the last 200, compact so it fits in a URL) instead
+  of a page number: the pool can change between batches (an added title changes the seeds and the exclusions), and a page number
+  would then repeat or skip titles. The server stays stateless. When nothing new is left the row says "That's all the suggestions
+  for now" with "Start over", which forgets what was shown and hidden.
+- **"Not interested" lasts for the session** (`sessionStorage`, per list, try/catch: without storage it only lasts until the
+  page reloads): the tile fades out and its key goes into `skip`. Cheap, and no table; a permanent "never suggest" can come later.
+- **A suggestion's Seen eye doesn't count in the list's progress.** list-tick.js updates "You've seen 9 of 25" from every
+  `tile:changed` event on the page, so the row stops that event unless the tile has been added (then it is a list title).
+- **Lazy and capped, so the list page is no slower.** The page renders a skeleton (Discover's); `list-suggest.js` fetches
+  `/list/{id}/suggestions` when it is within 600px of the viewport. TMDB: up to 10 recommendation calls and 4 collection calls per
+  pool, at most 4 at a time (own small pool, like Discover's rows), all through `TmdbRecommendationsClient`'s cache (a day; a week
+  for collections), so lists sharing titles share calls. The scored pool is cached for 6 hours per list and language
+  (`ratelog.list-suggestions.cache-hours`, `parallel`) under a signature of the list (SHA-256 of item ids, TMDB ids and
+  positions): any add, remove or move builds it again, with no invalidation hooks in other code. A pool built while a TMDB call
+  failed isn't kept. Each request then costs two list queries and one marks query per media type. A failure removes the row.
+  Measured on the dev machine (2026-11-23, busy with other builds: the list page itself took 1.8-2.5 s): the row's first
+  request after a restart 3.6 s, a list nobody had opened since 0.8-1.2 s, a cached pool about 0.5 s, the pool rebuilt
+  after an add 0.9 s. "+ Add" of a title Ratelog hadn't stored took 3.2 s (the TMDB import); in the browser the tile, the
+  grid and the toast updated without a reload at 1440, 390 and 360px.
+- **API:** `GET /api/v1/lists/{id}/suggestions` (`limit`, `skip`) returns the same order with `reason` (`series` /
+  `recommended`) and `recommendedBy`, so Claude can use it when extending a list. Owner only: `404` for other people's lists,
+  `403` for an official list you don't own.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -411,6 +496,8 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | List reorder mode: drag, "move to #", top / up / down / bottom | — | in place (`list-order.js`): the row moves at once, the server's order wins, toast; no JS = form post back to the row |
 | List page Sort menu | — | **page load**: a new arrangement of the whole list with its own URL (like Discover's sort); the tabs keep it |
 | List "Edit order" / "Done" | — | **page load**: a mode with its own URL, like tick-off |
+| List page "Suggested for this list": + Add | — | in place (`list-suggest.js`, JSON answer): the tile turns "Added", the list region refreshes with the new title at the end and its rank, the poster flashes, toast; no JS = form post back to the list |
+| List page "Suggested for this list": More suggestions, Start over, Not interested | — | in place: the row is fetched again (or the tile fades out); the list itself isn't touched |
 | Lists tab "Load more" | reload | appends in place |
 | Profile follow / unfollow user | reload | in place |
 | Title page Seen, Watchlist, Watching / Dropped | reload | in place (`title-actions.js`, JSON answer): every toggle updates from the server's state |

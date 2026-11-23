@@ -13,6 +13,22 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Without JS, the phone title page's "Play trailer" pill overlaps a "Watch the trailer on YouTube" link** (seen in the
   back-link no-JS check at 360px, 2026-11-23): the no-JS fallback link of the trailer is drawn over the pill. Cosmetic and
   only without JS; pre-existing (`fragments/title-info.html` / `title-info.css`).
+- **"Not interested" on a suggestion only lasts for the browser session** (`sessionStorage`), so a dismissed title can come back
+  the next day. Chosen as the cheap version (2026-11-23); a lasting "never suggest this for this list" needs a small table.
+- **List suggestions only find a series through the sampled titles** (lists of more than 10 use 10 of them): the 25-film "Best
+  of the 2000s" test list has The Fellowship of the Ring and The Return of the King but no The Two Towers, and when neither is
+  sampled the series isn't read, so The Two Towers isn't pinned first. Ratelog doesn't store a movie's TMDB collection; keeping
+  it at import (a column or a small table) would let every list title count without extra TMDB calls.
+- **"+ Add" on a suggestion reloads the whole list region from the server** (the same view, fetched again, `#listRegion`
+  swapped), so on a very long list each add re-renders every item (upstream's list handler reads titles one by one). Fine at
+  the sizes in use (25-100 titles); a per-item fragment would be cheaper for lists of several hundred.
+- **The first suggestions request after a restart is slow** (3.6 s and once 9 s on the busy dev machine on 2026-11-23, against
+  0.8-1.2 s for a list nobody had opened since): the JVM's first TMDB calls pay for TLS setup and class loading. The row is lazy and shows
+  a skeleton meanwhile, so the page itself isn't held up.
+- **TMDB's recommendations are noisy for some titles** (Inception's include Paycheck, Push and The Dark Tower; The Office's
+  include 25-vote sitcoms), so one-title lists can get odd suggestions. The vote floor (50) and the quality factor keep most of
+  it out; nothing else to fix on our side without another data source.
+
 - **Series headings mix languages for non-English metadata:** "Part of the {name}" is an English UI string, while the collection name
   comes from TMDB in the metadata language, so a Spanish metadata setting reads "Part of the Toy Story - Colección". The UI strings
   are English-only anyway; fix together with real translations (e.g. `recs.series.title` per language).
@@ -88,6 +104,11 @@ Problems found while building and running the fork: what happened, the cause, an
 - **The back link first pushed the phone title down 28px instead of 16px** (same check): the header's bottom margin and the
   link's negative margin collapse into one, so the first margins left a bigger gap than planned. Margins now account for the
   collapse (`back-nav.css`); the title moves 16px on phones and desktop.
+- **A Seen toggle on any poster outside the list changed the list's "You've seen 9 of 25"** (found 2026-11-23 while building list
+  suggestions): `list-tick.js` updates the progress from every `tile:changed` event on the page, and until now every poster on a
+  list page was a list title. The suggestions row's posters aren't, so `list-suggest.js` stops their event (capture phase on
+  `document`) unless the tile has just been added to the list. Checked in the browser: toggling a suggestion's eye leaves
+  "You've seen 1 of 10" alone.
 
 - **No way to delete a rating from the rating editor** (user, 2026-11-23: "im not able to delete a rating when i go to edit"): the
   panel's "Edit rating" opens the rate modal, which only had Quick / Detailed / Save; the delete was a 28px trash icon at the bottom

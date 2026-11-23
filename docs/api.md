@@ -40,6 +40,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | PATCH | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | `{position}` | list detail (see [List order](#list-order)) |
 | PUT | `/api/v1/lists/{id}/order` | `{items: [{tmdbId, type}]}` | list detail (see [List order](#list-order)) |
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
+| GET | `/api/v1/lists/{id}/suggestions` | optional `limit`, `skip` | titles that fit your list, best first (see [List suggestions](#list-suggestions)). Your own lists only |
 
 **Item**: `{"tmdbId": 949, "type": "movie"}` or `{"title": "Heat", "year": 1995, "type": "movie"}`. Unknown extra fields are ignored.
 Optional `"tags": ["heist", "comfort watch"]` adds those tags to the title (see [Tags](#tags)), whether it was just added or already in the list.
@@ -166,6 +167,50 @@ curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: appli
 
 # A plain (unnumbered) collection.
 curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"numbered": false}' "$RATELOG_URL/api/v1/lists/12"
+```
+
+### List suggestions
+
+`GET /api/v1/lists/{id}/suggestions`: what "Suggested for this list" shows under your own list on the web page. Titles come from
+the TMDB recommendations of up to 10 of the list's titles (all of them for lists of 10 or fewer; otherwise half the newest
+additions and half spread over the list), scored by how many of them recommend a title and how high, times TMDB popularity and
+rating. Missing entries of a movie series that two or more of the list's titles belong to come first, in release order. Titles
+already in the list, posterless ones and released ones with fewer than 50 TMDB votes are left out. Movies and shows follow the
+list's own mix. Seen titles are kept (`seen: true`). Added in this fork.
+
+| Param | Values | Effect |
+|---|---|---|
+| `limit` | 1-50, default 20 | how many to return |
+| `skip` | keys separated by commas: `movie:862,tv:1396` (or the web page's `m862.t1396`) | leave these out, to get the next ones; at most the last 300 count |
+
+```json
+{
+  "listId": 12, "listSize": 25, "basedOn": 10, "remaining": 87,
+  "suggestions": [
+    {"tmdbId": 121, "type": "movie", "title": "The Lord of the Rings: The Two Towers", "year": 2002,
+     "releaseDate": "2002-12-18", "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/121",
+     "tmdbVoteAverage": 8.4, "upcoming": false, "seen": false, "status": null, "userScore": null,
+     "reason": "series", "recommendedBy": 2},
+    {"tmdbId": 680, "type": "movie", "title": "Pulp Fiction", "year": 1994, "releaseDate": "1994-09-10",
+     "posterUrl": "...", "url": "/movie/680", "tmdbVoteAverage": 8.5, "upcoming": false, "seen": true,
+     "status": "watched", "userScore": 9.0, "reason": "recommended", "recommendedBy": 4}
+  ]
+}
+```
+
+- `reason` is `series` (an entry of a series the list has titles of) or `recommended`; `recommendedBy` counts the sampled list
+  titles that recommend it. `remaining` is how many more there are after these (not in the list, not skipped).
+- `seen`, `status` and `userScore` are yours (the poster eye's rule). Titles are in your metadata language. An empty list has no
+  suggestions (`[]`).
+- Adding one is the normal `POST /api/v1/lists/{id}/items` with `{"items": [{"tmdbId": 121, "type": "movie"}]}`.
+- Nothing is saved. TMDB answers are cached (recommendations a day, collections a week) and the scored list for 6 hours, until
+  the list changes.
+- Errors: `invalid_parameter` (400: `limit`), `not_found` (404: no such list, or someone else's), `forbidden` (403: an official
+  list you don't own), `tmdb_not_configured` (503), `tmdb_error` (502).
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/12/suggestions?limit=10"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/12/suggestions?skip=movie:121,movie:680"
 ```
 
 ## Tags

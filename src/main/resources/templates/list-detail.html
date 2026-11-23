@@ -70,6 +70,7 @@
         </div>
         <th:block th:replace="~{fragments/list-order :: editor(${listOrder}, ${list.items})}"></th:block>
     </div>
+    <th:block th:replace="~{fragments/list-suggest :: placeholder(${list}, ${isOwner}, ${listProgress}, ${listOrder})}"></th:block>
 
     <!--/* Fork: th:replace runs before th:if, so the condition must sit on a wrapper (else a missing list 500s). */-->
     <th:block th:if="${isOwner}">
