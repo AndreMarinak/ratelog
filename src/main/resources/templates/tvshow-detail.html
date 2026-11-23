@@ -15,6 +15,7 @@
 
         <h1 th:if="${show == null}" th:text="#{tvshow.detail.not.found}">TV show not found</h1>
 
+        <nav th:replace="~{fragments/back-nav :: link(${backNav})}"></nav>
         <!--/* Fork layout (static/title-page.css): poster + where to watch | title, overview, scores, trailer | action panel; seasons full width below. */-->
         <div th:if="${show != null}" class="title-layout">
             <div class="title-col title-col-poster">

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: back links on title pages (static/back-nav.js, back-nav.css; docs/design-decisions.md "Back links on title pages").
+  Model from org.ratelog.backnav.web.BackNavInterceptor.
+
+  every page (fragments/nav.html):  <th:block th:replace="~{fragments/back-nav :: page(${backNavPage})}"></th:block>
+  title pages, above the layout:    <nav th:replace="~{fragments/back-nav :: link(${backNav})}"></nav>
+*/-->
+
+<!--/* The script, and what this page is called when a title page links back to it (no name: not a page to go back to). */-->
+<th:block th:fragment="page(label)">
+    <script src="/back-nav.js" defer data-back-nav-page th:data-label="${label == null} ? null : (${label.arg != null} ? #{${label.key}(${label.arg})} : #{${label.key}})"></script>
+</th:block>
+
+<!--/* "← Discover", or "← Discover › Toy Story 2" when this title was opened from another one (back-nav.js adds that step).
+       Without JS it is a plain link to the server's guess (the Referer's page, else Home). */-->
+<th:block th:fragment="link(back)">
+    <th:block th:if="${back != null}"
+              th:with="label=${back.label.arg != null} ? #{${back.label.key}(${back.label.arg})} : #{${back.label.key}}">
+        <link rel="stylesheet" href="/back-nav.css">
+        <nav class="back-nav" th:aria-label="#{backnav.aria}" data-back-nav
+             th:data-title="${back.titleName}" th:data-pending="${back.pending} ? 'true' : null"
+             th:data-to="#{backnav.to('{0}')}">
+            <a class="back-nav-link" th:href="${back.href}" th:aria-label="#{backnav.to(${label})}" data-back-origin>
+                <i data-lucide="arrow-left" aria-hidden="true"></i>
+                <span class="back-nav-text" data-back-text th:text="${label}">Home</span>
+            </a>
+            <span class="back-nav-step" data-back-step hidden>
+                <i data-lucide="chevron-right" aria-hidden="true"></i>
+                <a class="back-nav-link back-nav-prev" data-back-prev>
+                    <span class="back-nav-text" data-back-text></span>
+                </a>
+            </span>
+        </nav>
+    </th:block>
+</th:block>
+</body>
+</html>

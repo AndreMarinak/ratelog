@@ -15,6 +15,7 @@
 
         <h1 th:if="${movie == null}" th:text="#{movie.detail.not.found}">Movie not found</h1>
 
+        <nav th:replace="~{fragments/back-nav :: link(${backNav})}"></nav>
         <!--/* Fork layout (static/title-page.css): poster + where to watch | title, overview, scores, trailer, your rating | action panel. */-->
         <div th:if="${movie != null}" class="title-layout">
             <div class="title-col title-col-poster">

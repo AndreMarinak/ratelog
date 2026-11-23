@@ -139,6 +139,53 @@ series maybe those as well but also other ones?" Code: `org.ratelog.recommendati
 - **API:** `GET /api/v1/titles/{type}/{tmdbId}/recommendations` returns both rows with your marks. Like `/api/v1/browse`, seen titles
   are only hidden with `hideSeen=true`, so Claude can see what you've seen (`seen: true`) when building lists.
 
+### Back links on title pages (2026-11-23)
+
+The user asked: "also should be more back buttons I feel like I click a movie and then cant go back to like the discover page I
+was just on or something? Obviously this shouldn't go to infinity especially if we eventually get when u click on a movie it shows
+recommendations but". Code: `org.ratelog.backnav`, `fragments/back-nav.html`, `static/back-nav.js` / `.css`.
+
+- **Movie and TV pages get a back link above the title**, in the list page's style: "← Discover", "← Search results", "← Best
+  Disney Movies", "← Watchlist", "← Ratings", "← Lists", "← Official lists", "← marisol's profile", "← Your profile", "← Community",
+  "← Home". It returns to that page **as you left it**: the same URL (Discover filters, the search, a list's tab even when it was
+  switched in place) and the same scroll position, plus the row you had scrolled sideways if you opened the title from a row.
+- **It goes back to the origin, not one step.** The origin is the last page in this browser tab that isn't a title. A title opened
+  from another title (series row, "More like this", cast later) keeps that title's origin, so after Discover → Toy Story 2 → Toy
+  Story 3 → Monsters, Inc. the link still says "← Discover" and goes there in one tap. No trail grows.
+- **Plus one step: the title you came from**, as a second part of the same line: "← Discover › Toy Story 3". Only the one title
+  right before, never more (Toy Story 2 is not listed above). The browser's Back does the same step, but the installed app
+  (`display: standalone`) has no Back button, and after a few "More like this" taps "the one I was just looking at" is the natural
+  next question. The chevron reads as the path you took (Discover, then Toy Story 3, then here); both parts shorten with "…" so the
+  line never wraps. The step only shows after a title-to-title tap; a title opened from a page shows the origin alone.
+- **Tracked per tab in `sessionStorage`** (`back-nav.js`, loaded on every page from `fragments/nav.html`), with each history entry's
+  own origin in `history.state`, so Back / Forward / reload show the right link for that entry (Discover → Toy Story 2 → Lists → a
+  title, then Back twice: Toy Story 2 still says "← Discover"). Named pages are the ones people open titles from (the server names
+  each page on the script tag); settings, admin and error pages are not origins, and a title opened from one of them gets the default.
+  Storage access is wrapped in try/catch: without it the server's link stays.
+- **How it goes back:** when the origin is the previous entry in this tab's history (you opened the title straight from it),
+  `history.back()`, so the browser restores the page itself, all of it (loaded "Load more" pages, rows) when it kept it in its
+  back/forward cache. Otherwise (after title-to-title taps, a rating save that reloaded the page) the link opens the origin's URL and
+  the script scrolls it back to where you were, retrying for ~2 s while rows and posters load and stopping as soon as you scroll
+  yourself. History then grows by one entry, like any link. Not `history.go(-n)`: counting entries breaks on in-page entries
+  (`#seasons`), and overshooting would leave the app. A safety net opens the URL if `history.back()` doesn't leave the page.
+- **The server renders the link first, from the Referer**, so it's right before JS runs, in a new tab (cmd-click from Discover:
+  sessionStorage isn't shared with the new tab) and without JS: a page of this app (same host, path + query only, `BackPath`)
+  that has a name gives "← Discover" etc. with its exact URL; a list is named only when the viewer can open it, so a crafted Referer
+  can't reveal a private list's name. Anything else (opened directly, another site, a settings page) gives the default.
+- **Default when opened directly: "← Home".** Home is the app's start page (logo, `start_url`, the leftmost tab), and a title
+  opened directly usually comes from outside (a shared link, a bookmark, the app reopened). Discover was the other candidate, but
+  "back" to a page you never visited reads oddly; Home is where an app's deep link returns.
+- **Opened from another title, the server can't know the origin**, so it marks the link pending: invisible (its space kept, so
+  nothing moves) until the script fills it in, or after 1.2 s if the script never runs (CSS `@media (scripting: enabled)`, so
+  without JS it is visible at once). This avoids a flash of "← Home" turning into "← Discover".
+- **No back links on the tab pages** (Home, Ratings, Discover, Watchlist, Lists): the top / bottom nav covers them. The list page
+  and `/lists/official` keep their "← Lists" / "← {owner}'s profile" links (a fixed "up" link, see UI below). Other users'
+  profiles were considered (Community sits in the phone menu) but left out: they're reached from Community or a list's owner link,
+  and a second level of origins would make the rule harder to predict. There are no season or person pages yet.
+- **Phones:** the link is 44px tall to tap, one line, and tucked into the gap under the header (negative margins, layered above the
+  title it overlaps by a few pixels), so the title moves down 16px. The action row stays above the fold at 390x844 and 360x740
+  (checked on Toy Story 3, Breaking Bad and titles opened from rows).
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -175,6 +222,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
 | Ratings Movies / TV switch and filter form | page load | **page load kept**: different page / explicit Search |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
+| Title page back link ("← Discover", "› Toy Story 3") | — | **navigation**: `history.back()` when that page is the previous entry, else a page load of its URL with the scroll put back (`back-nav.js`) |
 
 ## Deployment (Railway)
 
@@ -201,7 +249,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 - **One-click bookmark on posters** only toggles Want to watch; titles already Watching/Watched/Dropped show no bookmark so a click can't silently downgrade them.
 - **Tags are hidden in the web UI for now** (user request, 2026-11-23): `ratelog.features.tags` / env `RATELOG_FEATURES_TAGS` (default false) is exposed to templates as `tagsEnabled` by `system/FeatureFlagsAdvice.kt`; it hides the nav link, the title-page tags section, the Top-page tag filter and the profile button. Code, `/tags` pages, the API and list-import tags keep working.
 - **List posters carry three badges** in the home tiles' style (`home.css` `.home-status` / `.home-score`): rank bottom-left, your status top-right (Want to watch included, since list pages have no bookmark button; Dropped is muted), your score bottom-right. Status badges line up with the type tag.
-- **Back link above list titles** (requested 2026-11-23): "← Lists" on your own lists, "← {owner}'s profile" on someone else's. A plain link, not `history.back()`, so it works when the list was opened directly.
+- **Back link above list titles** (requested 2026-11-23): "← Lists" on your own lists, "← {owner}'s profile" on someone else's. A plain link, not `history.back()`, so it works when the list was opened directly. *(Title pages work differently: they go back to the page you came from, see "Back links on title pages" under Features.)*
 - **`/lists` cards show "9/25 seen"** in place of "25 titles" (your progress, also on other people's lists). The home "Your lists" row keeps the title count.
 - **Browse renamed Discover** (user request, 2026-11-23). `/discover` is the canonical URL; `/browse?...` answers `301` to `/discover?...` with the query string unchanged, so old bookmarks keep working. `/api/v1/browse` is unchanged and `/api/v1/discover` is an alias of it. Code names (package `browse`, `BrowseFilters`, `BrowseHandler`) and the bar's "Browse by" label stay: the label reads as an action, as on Letterboxd.
 - **Discover's landing is category rows; any filter is the grid.** With nothing chosen but Movies/TV (and the seen setting), Discover shows home-style rows: Popular now, then genres (movies: Horror, Comedy, Action, Animation, Drama, Science Fiction, Thriller, Romance, Crime, Fantasy, Mystery, Family, Documentary; TV uses TMDB's TV genres: Drama, Comedy, Crime, Sci-Fi & Fantasy, Action & Adventure, Mystery, Animation, Documentary, Reality, Family, Kids, War & Politics, Western; News/Talk/Soap are left out because their posters are hosts and logos). Any filter, sort or page opens the poster grid. A row is exactly page 1 of its "More" grid, so both share the TMDB cache. Rows reuse home.css; the landing has no Sort menu (rows have fixed orderings).

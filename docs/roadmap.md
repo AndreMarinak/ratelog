@@ -56,6 +56,10 @@ lists (official lists and later list features) `V1120–1129`.
   and shows get "More like this" (TMDB recommendations, seen titles hidden). Loaded lazily under the page, TMDB cached (a day; a week
   for collections), quick actions in place. API: `GET /api/v1/titles/{type}/{tmdbId}/recommendations`
   ([docs/api.md](api.md#recommendations)). No migration.
+- [x] **19. Back links on title pages** (requested 2026-11-23): movie and TV pages show "← Discover" / "← Search results" /
+  "← Best Disney Movies" / "← Watchlist"... above the title, back to the page you opened it from with its URL and scroll as you
+  left them. Title-to-title taps keep the first page as the target (no growing trail), plus one step to the title right before
+  ("← Discover › Toy Story 3"). Opened directly: "← Home". Works without JS (from the Referer). No migration, no API change.
 
 ## Fixes and housekeeping done
 
