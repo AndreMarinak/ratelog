@@ -3,7 +3,7 @@ package org.ratelog.browse
 import org.ratelog.MediaType
 import java.time.LocalDate
 
-/** Raw query parameters of `/browse` and `GET /api/v1/browse` (bound by name, all optional). */
+/** Raw query parameters of `/discover` and `GET /api/v1/browse` (bound by name, all optional). */
 data class BrowseParams(
     val type: String? = null,
     val decade: String? = null,
@@ -17,6 +17,7 @@ data class BrowseParams(
     val sort: String? = null,
     val hideRated: String? = null,
     val hideWatchlist: String? = null,
+    val hideSeen: String? = null,
     val page: String? = null,
 )
 
@@ -39,7 +40,11 @@ object BrowseParamParser {
     private val LANGUAGE = Regex("^[a-z]{2}$")
     private val DECADE = Regex("^(\\d{3}0)s?$")
 
-    fun parse(params: BrowseParams, today: LocalDate): ParsedBrowse {
+    /**
+     * @param hideSeenByDefault what a missing `hideSeen` means: true on the Discover page (seen titles are
+     *   hidden unless `hideSeen=0`), false for the API, which kept its original behavior.
+     */
+    fun parse(params: BrowseParams, today: LocalDate, hideSeenByDefault: Boolean = true): ParsedBrowse {
         val invalid = mutableListOf<InvalidBrowseParam>()
         val dropped = mutableListOf<String>()
         fun bad(name: String, value: String, reason: String): Nothing? {
@@ -123,6 +128,7 @@ object BrowseParamParser {
 
         val hideRated = params.hideRated.clean()?.let { raw -> parseFlag(raw) ?: bad("hideRated", raw, "hideRated must be true or false") } ?: false
         val hideWatchlist = params.hideWatchlist.clean()?.let { raw -> parseFlag(raw) ?: bad("hideWatchlist", raw, "hideWatchlist must be true or false") } ?: false
+        val hideSeen = params.hideSeen.clean()?.let { raw -> parseFlag(raw) ?: bad("hideSeen", raw, "hideSeen must be true or false") } ?: hideSeenByDefault
 
         val page = params.page.clean()?.let { raw ->
             raw.toIntOrNull()?.takeIf { it in 1..MAX_PAGE } ?: bad("page", raw, "page must be between 1 and $MAX_PAGE")
@@ -142,6 +148,7 @@ object BrowseParamParser {
                 sort = sort,
                 hideRated = hideRated,
                 hideWatchlist = hideWatchlist,
+                hideSeen = hideSeen,
             ),
             page = page,
             invalid = invalid,

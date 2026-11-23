@@ -1,15 +1,28 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
-<head th:replace="~{fragments/head :: head(#{browse.title})}"></head>
+<head th:replace="~{fragments/head :: head(#{discover.title})}"></head>
 <body>
 <link rel="stylesheet" href="/browse.css">
+<link rel="stylesheet" href="/home.css">
+<link rel="stylesheet" href="/discover.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='browse')}"></header>
 
-    <div class="browse-head">
-        <h1 th:text="#{browse.title}">Browse</h1>
-        <p class="browse-subtitle" th:text="#{browse.subtitle}">Explore TMDB by year, rating, genre, service and more.</p>
+    <div class="discover-head">
+        <div class="discover-heading">
+            <h1 th:text="#{discover.title}">Discover</h1>
+            <p class="browse-subtitle" th:text="#{discover.subtitle}">Popular picks by genre. Pick a filter to dig deeper.</p>
+        </div>
+        <!--/* A plain link to the same view with the setting flipped; discover.js lets Space toggle it like a switch. */-->
+        <a class="seen-toggle" th:href="${seenToggle.href}" role="switch" data-seen-toggle
+           th:aria-checked="${seenToggle.on}" th:classappend="${seenToggle.on} ? 'is-on' : ''">
+            <span class="seen-toggle-track" aria-hidden="true"><span class="seen-toggle-thumb"></span></span>
+            <span class="seen-toggle-text">
+                <span class="seen-toggle-label" th:text="#{discover.hide.seen}">Hide titles I've seen</span>
+                <span class="seen-toggle-hint" th:text="#{discover.hide.seen.hint}">Rated or marked Watched</span>
+            </span>
+        </a>
     </div>
 
     <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
@@ -17,7 +30,18 @@
 
     <div th:replace="~{fragments/browse-bar :: browseBar(browseBar=${browseBar})}"></div>
 
-    <!-- `partial=1` renders only this section; browse.js appends its tiles and swaps in its "Load more". -->
+    <!--/* Landing: category rows (fragments/discover-rows.html); pending ones are fetched by discover.js. */-->
+    <th:block th:if="${landing}">
+        <div th:if="${errorKey != null}" class="browse-message" role="alert">
+            <i data-lucide="triangle-alert" aria-hidden="true"></i>
+            <span th:text="#{${errorKey}}">Couldn't reach TMDB right now.</span>
+            <a class="btn secondary" th:href="${retryHref}" th:text="#{browse.retry}">Try again</a>
+        </div>
+        <div th:replace="~{fragments/discover-rows :: rows(rows=${rows})}"></div>
+    </th:block>
+
+    <!--/* Any filter: the poster grid. `partial=1` renders only this section; browse.js appends its tiles and swaps in its "Load more". */-->
+    <th:block th:unless="${landing}">
     <section th:fragment="results" class="browse-results" id="browseResults" th:aria-label="#{browse.results.aria}">
         <p class="browse-note" th:if="${ignoredNote}">
             <i data-lucide="info" aria-hidden="true"></i>
@@ -36,7 +60,9 @@
             <li th:each="tile : ${tiles}" class="browse-tile" th:attr="data-key=${tile.key}">
                 <a th:href="${tile.href}" class="browse-tile-link">
                     <div class="browse-poster">
-                        <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}" th:alt="${tile.title}" loading="lazy">
+                        <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
+                             th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
+                             sizes="(max-width: 600px) 31vw, 200px" th:alt="${tile.title}" loading="lazy" decoding="async">
                         <div th:unless="${tile.posterUrl != null}" class="poster-fallback" aria-hidden="true" th:text="${tile.initial}">?</div>
                         <span th:if="${tile.statusIcon != null}" class="browse-status" th:title="${tile.statusLabel}">
                             <i th:data-lucide="${tile.statusIcon}" aria-hidden="true"></i>
@@ -85,8 +111,10 @@
             </a>
         </div>
     </section>
+    </th:block>
     <div class="browse-toast" id="browseToast" role="status" aria-live="polite"></div>
 </div>
 <script src="/browse.js" defer></script>
+<script src="/discover.js" defer></script>
 </body>
 </html>

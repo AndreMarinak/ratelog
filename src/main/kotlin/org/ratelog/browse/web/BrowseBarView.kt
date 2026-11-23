@@ -2,7 +2,7 @@ package org.ratelog.browse.web
 
 /**
  * Everything `templates/fragments/browse-bar.html` renders, with labels already resolved.
- * Every option is a plain link to `/browse?...`, so the bar works without JavaScript.
+ * Every option is a plain link to `/discover?...`, so the bar works without JavaScript.
  */
 data class BrowseBarView(
     /** `movie` or `tv`. */
@@ -49,7 +49,7 @@ data class BarChip(
     val removeLabel: String,
 )
 
-/** One poster on the browse grid. */
+/** One poster on the Discover grid or in a Discover row. */
 data class BrowseTileView(
     /** Stable id for de-duplicating appended pages, e.g. `movie-603`. */
     val key: String,
@@ -72,4 +72,9 @@ data class BrowseTileView(
     /** Badge for the other statuses (Watching, Watched, Dropped); "Want to watch" is shown by the bookmark. */
     val statusIcon: String?,
     val statusLabel: String?,
-)
+    /** `w500` for 2x screens (`srcset`). */
+    val posterUrl2x: String? = null,
+) {
+    /** Rows show the one-click bookmark only when it can't downgrade a status (none yet, or Want to watch). */
+    val canToggleWatchlist: Boolean get() = status == null || onWatchlist
+}

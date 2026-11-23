@@ -59,7 +59,7 @@ class BrowseBarViewsTest {
         assertTrue(bar.menus.none { it.active })
         assertTrue(bar.chips.isEmpty())
         assertEquals(listOf("Movies" to true, "TV" to false), bar.typeLinks.map { it.label to it.active })
-        assertEquals("/browse?type=tv", bar.typeLinks[1].href)
+        assertEquals("/discover?type=tv", bar.typeLinks[1].href)
         assertEquals("Popularity", bar.sortMenu!!.value)
     }
 
@@ -74,7 +74,7 @@ class BrowseBarViewsTest {
         assertEquals("2020s", year.value)
         assertEquals("Years in the 2020s", year.sections[1].heading)
         assertEquals((2020..today.year + 1).map { it.toString() }, year.sections[1].links.map { it.label })
-        assertEquals("/browse?type=movie&decade=2020s&year=2024", year.sections[1].links[4].href)
+        assertEquals("/discover?type=movie&decade=2020s&year=2024", year.sections[1].links[4].href)
 
         // TV has no Upcoming; "earlier" opens older decades.
         val tvEarlier = build(BrowseFilters(type = MediaType.tvshow, decade = BrowseDecade.Earlier)).menu("year")
@@ -92,7 +92,7 @@ class BrowseBarViewsTest {
         assertTrue(bar.menu("year").sections[1].links.first { it.label == "2014" }.active)
         val chip = bar.chips.single()
         assertEquals("2014", chip.label)
-        assertEquals("/browse?type=movie&decade=2010s", chip.removeHref)
+        assertEquals("/discover?type=movie&decade=2010s", chip.removeHref)
         assertEquals("Remove 2014", chip.removeLabel)
     }
 
@@ -111,7 +111,7 @@ class BrowseBarViewsTest {
         )
         assertTrue(bar.chips[3].removeHref.contains("genre=").not())
         assertTrue(bar.chips[3].removeHref.contains("provider=3"))
-        assertEquals("/browse?type=movie", bar.clearHref)
+        assertEquals("/discover?type=movie", bar.clearHref)
         assertEquals("4", bar.menu("more").value)
         assertEquals("Popular now", bar.sortMenu!!.value)
     }
@@ -120,7 +120,7 @@ class BrowseBarViewsTest {
     fun `given TV with a movie only genre then the type switch drops it`() {
         val bar = build(BrowseFilters(genre = Genre.HORROR, runtime = BrowseRuntime.LONG))
 
-        assertEquals("/browse?type=tv", bar.typeLinks[1].href)
+        assertEquals("/discover?type=tv", bar.typeLinks[1].href)
         assertEquals(16, build(BrowseFilters(type = MediaType.tvshow)).menu("genre").links().size - 1)
         assertFalse(build(BrowseFilters(type = MediaType.tvshow)).menu("more").sections.any { it.heading == "Runtime" })
     }
@@ -176,15 +176,36 @@ class BrowseBarViewsTest {
 
         assertEquals("toggles", toggles.layout)
         assertEquals(listOf(true, false), toggles.links.map { it.active })
-        assertEquals("/browse?type=movie&popular=week", toggles.links[0].href)
-        assertEquals("/browse?type=movie&popular=week&hideRated=1&hideWatchlist=1", toggles.links[1].href)
+        assertEquals("/discover?type=movie&popular=week", toggles.links[0].href)
+        assertEquals("/discover?type=movie&popular=week&hideRated=1&hideWatchlist=1", toggles.links[1].href)
 
         val sort = bar.sortMenu!!
         assertEquals("This week", sort.value)
         assertTrue(sort.links().none { it.active })
-        assertEquals("/browse?type=movie&sort=title&hideRated=1", sort.links().first { it.label == "Title A-Z" }.href)
-        assertEquals("/browse?type=movie&hideRated=1", sort.links().first { it.label == "Popularity" }.href)
+        assertEquals("/discover?type=movie&sort=title&hideRated=1", sort.links().first { it.label == "Title A-Z" }.href)
+        assertEquals("/discover?type=movie&hideRated=1", sort.links().first { it.label == "Popularity" }.href)
         assertTrue(build(BrowseFilters(sort = BrowseSort.RATING)).menu("rating").links().last().active)
+    }
+
+    @Test
+    fun `given seen titles are shown then every link, the chips and Clear all keep hideSeen=0`() {
+        val bar = build(BrowseFilters(genre = Genre.HORROR, decade = BrowseDecade.Of(1980), hideSeen = false))
+
+        val links = bar.typeLinks + bar.menus.flatMap { m -> m.sections.flatMap { it.links } } + bar.sortMenu!!.links()
+        assertTrue(links.all { it.href.contains("hideSeen=0") }, links.filterNot { it.href.contains("hideSeen=0") }.toString())
+        assertTrue(bar.chips.all { it.removeHref.endsWith("&hideSeen=0") })
+        assertEquals("/discover?type=movie&hideSeen=0", bar.clearHref)
+        assertEquals("/discover?type=movie", build(BrowseFilters(genre = Genre.HORROR, decade = BrowseDecade.Of(1980))).clearHref)
+        assertTrue(bar.chips.none { it.label.contains("seen", ignoreCase = true) }, "the switch shows it, not a chip")
+    }
+
+    @Test
+    fun `given seen titles are hidden then the More menu only offers hide rated to switch it off`() {
+        val library = { f: BrowseFilters -> build(f).menu("more").sections.last().links.map { it.label } }
+
+        assertEquals(listOf("Hide my watchlist"), library(BrowseFilters()))
+        assertEquals(listOf("Hide titles I've rated", "Hide my watchlist"), library(BrowseFilters(hideSeen = false)))
+        assertEquals(listOf("Hide titles I've rated", "Hide my watchlist"), library(BrowseFilters(hideRated = true)))
     }
 
     @Test
@@ -206,6 +227,8 @@ class BrowseBarViewsTest {
             assertEquals("/movie/603", it.href)
             assertEquals("movie", it.type)
             assertEquals("https://image.tmdb.org/t/p/w342/m.jpg", it.posterUrl)
+            assertEquals("https://image.tmdb.org/t/p/w500/m.jpg", it.posterUrl2x)
+            assertFalse(it.canToggleWatchlist, "Watched: the bookmark would only toggle Want to watch")
             assertEquals("8.2", it.tmdbScore)
             assertEquals("8.5", it.userScore)
             assertEquals("circle-check", it.statusIcon)
@@ -220,9 +243,11 @@ class BrowseBarViewsTest {
             assertNull(it.posterUrl)
             assertNull(it.tmdbScore)
             assertTrue(it.onWatchlist)
+            assertTrue(it.canToggleWatchlist)
             assertNull(it.statusIcon, "Want to watch is shown by the bookmark, not a badge")
         }
         tiles[2].let {
+            assertTrue(it.canToggleWatchlist)
             assertNull(it.status)
             assertNull(it.userScore)
             assertFalse(it.onWatchlist)

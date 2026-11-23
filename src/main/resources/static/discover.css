@@ -1,0 +1,193 @@
+/* Fork: the Discover page (templates/discover.html): heading, "Hide titles I've seen" switch, and the landing's
+   category rows (fragments/discover-rows.html). Rows and tiles reuse home.css; the grid and toast use browse.css. */
+
+.discover-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 6px;
+}
+
+.discover-heading {
+  min-width: 0;
+
+  h1 {
+    margin-bottom: 2px;
+  }
+}
+
+/* The switch is a link (works without JS); role="switch" + aria-checked describe it. */
+.seen-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 6px 16px 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-soft);
+  box-shadow: var(--shadow-soft);
+  font-family: var(--font);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &.is-on {
+    color: var(--text);
+  }
+}
+
+.seen-toggle-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.seen-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--text-soft);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.seen-toggle.is-on .seen-toggle-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.seen-toggle.is-on .seen-toggle-thumb {
+  background: #fff;
+  transform: translateX(16px);
+}
+
+.seen-toggle-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.seen-toggle-label {
+  font-size: 1.02rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.seen-toggle-hint {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+/* Rows */
+
+.discover-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-bottom: 24px;
+}
+
+.discover-tile-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pending rows: poster-shaped placeholders until discover.js swaps the row in. */
+.discover-row.is-pending .home-row-arrows {
+  display: none;
+}
+
+.discover-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.discover-skeleton-poster,
+.discover-skeleton-line {
+  border-radius: 8px;
+  background: linear-gradient(100deg, #231e1b 30%, #2e2723 50%, #231e1b 70%) 0 0 / 300% 100%;
+  animation: discover-shimmer 1.4s ease-in-out infinite;
+}
+
+.discover-skeleton-poster {
+  aspect-ratio: 2 / 3;
+}
+
+.discover-skeleton-line {
+  width: 70%;
+  height: 12px;
+  border-radius: 999px;
+}
+
+@keyframes discover-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-skeleton-poster,
+  .discover-skeleton-line {
+    animation: none;
+  }
+
+  .seen-toggle-track,
+  .seen-toggle-thumb {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .discover-rows {
+    gap: 28px;
+  }
+}
+
+@media (max-width: 600px) {
+  .discover-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .seen-toggle {
+    min-height: 40px;
+    padding: 4px 14px 4px 6px;
+  }
+
+  .seen-toggle-label {
+    font-size: 0.98rem;
+  }
+
+  .discover-tile-meta .browse-tmdb {
+    font-size: 0.8rem;
+  }
+}

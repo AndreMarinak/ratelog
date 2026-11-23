@@ -86,8 +86,8 @@ class BrowseHandlerTest {
         val other = library.movies.save(MovieFactory.aMovie(tmdbId = 4, originalTitle = "Other"))
         library.ratings.save(RatingFactory.aQuickRating(movieId = other.id!!, userId = UserFactory.aUser(id = 99).id!!, score = 3.0))
 
-        // When
-        val result = handler.handle(query()).ok()
+        // When: seen titles shown, so the rated + Watched one is there with its mark.
+        val result = handler.handle(query(BrowseFilters(hideSeen = false))).ok()
 
         // Then
         assertEquals(20, result.tiles.size)
@@ -115,18 +115,67 @@ class BrowseHandlerTest {
     }
 
     @Test
+    fun `given seen titles are hidden (the default) then drops rated and Watched ones and keeps the rest`() {
+        serve(totalPages = 1)
+        rateMovie(1, 8.0)                                // rated, no status
+        setStatus(2, WatchStatus.WATCHED)                // Watched, never rated
+        setStatus(3, WatchStatus.WATCHING)
+        setStatus(4, WatchStatus.DROPPED)
+        setStatus(5, WatchStatus.WANT_TO_WATCH)
+        rateMovie(6, 7.0); setStatus(6, WatchStatus.WATCHING) // rated while still watching: seen
+
+        val result = handler.handle(query()).ok()
+
+        val ids = result.tiles.map { it.title.tmdbId }
+        assertEquals(listOf(3, 4, 5) + (7..20).toList(), ids)
+        assertEquals(WatchStatus.WANT_TO_WATCH, result.tiles.first { it.title.tmdbId == 5 }.mark?.status)
+        assertTrue(BrowseFilters().hideSeen)
+    }
+
+    @Test
+    fun `given seen titles thin a page then tops up from the next TMDB page`() {
+        serve(totalPages = 10)
+        (1..10).forEach { rateMovie(it, 6.0) }
+        (11..15).forEach { setStatus(it, WatchStatus.WATCHED) }
+
+        val result = handler.handle(query()).ok()
+
+        assertEquals((16..40).toList(), result.tiles.map { it.title.tmdbId })
+        assertEquals(listOf("1", "2"), requests.map { it.params["page"] })
+        assertEquals(3, result.nextPage)
+    }
+
+    @Test
+    fun `given TV then a rated season or Watched hides the show from seen`() {
+        serve(totalPages = 1) { listOf(title(1399, MediaType.tvshow), title(1400, MediaType.tvshow), title(1401, MediaType.tvshow)) }
+        val rated = library.shows.save(TvShowFactory.aTvShow(tmdbId = 1399, originalName = "Game of Thrones"))
+        library.tvRatings.save(
+            TvRatingFactory.aTvRating(
+                tvShowId = rated.id!!, userId = user.id!!,
+                seasonRatings = listOf(TvRatingFactory.aQuickSeasonRating(tvShowId = rated.id!!, seasonNumber = 1, userId = user.id!!, score = 9.0)),
+            )
+        )
+        val watched = library.shows.save(TvShowFactory.aTvShow(tmdbId = 1400, originalName = "Severance"))
+        library.statuses.save(MediaStatus(user.id!!, MediaType.tvshow, watched.id!!.value, WatchStatus.WATCHED, 1L))
+
+        val ids = handler.handle(query(BrowseFilters(type = MediaType.tvshow))).ok().tiles.map { it.title.tmdbId }
+
+        assertEquals(listOf(1401), ids)
+    }
+
+    @Test
     fun `given hide watchlist then drops only Want to watch`() {
         serve(totalPages = 1)
         setStatus(1, WatchStatus.WANT_TO_WATCH)
         setStatus(2, WatchStatus.WATCHING)
         rateMovie(3, 9.0)
 
-        val ids = handler.handle(query(BrowseFilters(hideWatchlist = true))).ok().tiles.map { it.title.tmdbId }
+        val ids = handler.handle(query(BrowseFilters(hideWatchlist = true, hideSeen = false))).ok().tiles.map { it.title.tmdbId }
 
         assertTrue(1 !in ids)
         assertTrue(2 in ids)
         assertTrue(3 in ids)
-        assertNull(handler.handle(query(BrowseFilters(hideWatchlist = true))).ok().nextPage)
+        assertNull(handler.handle(query(BrowseFilters(hideWatchlist = true, hideSeen = false))).ok().nextPage)
     }
 
     @Test
@@ -243,7 +292,7 @@ class BrowseHandlerTest {
         val result = handler.handle(query(BrowseFilters(type = MediaType.tvshow, hideRated = true))).ok()
 
         assertTrue(result.tiles.none { it.title.tmdbId == 1399 })
-        val all = handler.handle(query(BrowseFilters(type = MediaType.tvshow))).ok()
+        val all = handler.handle(query(BrowseFilters(type = MediaType.tvshow, hideSeen = false))).ok()
         assertEquals(LibraryMark(9.0, true, WatchStatus.WATCHING), all.tiles.first { it.title.tmdbId == 1399 }.mark)
         assertTrue(requests.all { it.path == "/discover/tv" })
     }

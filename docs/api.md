@@ -212,10 +212,14 @@ the request itself never fails because of TMDB.
 
 ```bash
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/home"
-## Browse
+```
 
-`GET /api/v1/browse` lists TMDB titles by filters, like the `/browse` page (and with the same parameters, so a
-`/browse?...` link's query string works here too). Every parameter is optional; any invalid value is a `400`.
+## Browse / Discover
+
+`GET /api/v1/browse` (or its alias `GET /api/v1/discover`, same parameters and response) lists TMDB titles by filters,
+like the web page's poster grid at `/discover` (formerly `/browse`, which now redirects there). The parameters are the
+page's, so a `/discover?...` link's query string works here too, with one difference: **the page hides titles you've
+seen by default, the API only with `hideSeen=true`**. Every parameter is optional; any invalid value is a `400`.
 
 | Param | Values | Notes |
 |---|---|---|
@@ -230,13 +234,15 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/home"
 | `popular` | `week` (TMDB trending this week), `now` (by popularity), `alltime` (most voted) | overrides `sort` |
 | `sort` | `popularity` (default), `rating` (needs 300 votes for movies / 200 for TV), `newest` (up to today), `oldest`, `title` | |
 | `hideRated`, `hideWatchlist` | `true` / `false` (`1`/`0`) | leave out titles you rated / that are on your Want to watch list |
+| `hideSeen` | `true` / `false` (`1`/`0`); API default `false` | leave out titles you've seen: rated (any season, for TV) or marked Watched. The `/discover` page defaults to `true` and writes `hideSeen=0` when showing them |
 | `page` | `1`-`500` | |
 
 ```json
 {
   "type": "movie",
   "filters": {"decade": "1990s", "year": null, "minRating": 7.0, "genre": "science-fiction", "genreId": 878, "provider": null,
-              "language": null, "runtime": null, "popular": null, "sort": "rating", "hideRated": false, "hideWatchlist": false},
+              "language": null, "runtime": null, "popular": null, "sort": "rating", "hideRated": false, "hideWatchlist": false,
+              "hideSeen": false},
   "page": 1, "nextPage": 2, "totalPages": 37, "totalResults": 731,
   "ignored": [],
   "results": [{"tmdbId": 603, "type": "movie", "title": "The Matrix", "year": 1999, "posterUrl": "https://image.tmdb.org/t/p/w342/...",
@@ -244,8 +250,9 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/home"
 }
 ```
 
-- Ask for `nextPage` to continue; it is `null` at the end. With `hideRated` / `hideWatchlist` (or `popular=week` plus filters)
-  a response can include titles from up to 3 TMDB pages, so `nextPage` may skip numbers. Results are about 20 per page, fewer when hidden.
+- Ask for `nextPage` to continue; it is `null` at the end. When `hideSeen` / `hideRated` / `hideWatchlist` (or `popular=week` plus filters)
+  hide titles and fewer than 12 are left, the next TMDB pages top the response up (up to 3 pages), so `nextPage` may skip numbers.
+  Results are about 20 per page, fewer when hidden.
 - `popular=week` reads TMDB's trending list: `genre`, `language`, `decade`/`year` and `minRating` are checked on its results, but
   `provider` and `runtime` can't be, and come back in `ignored` (so does a `sort` or `decade` overridden by another parameter).
 - `userScore` / `status` are your own rating and watch status (null if none). Titles are titled in your metadata language.
@@ -253,6 +260,8 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/home"
 
 ```bash
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/browse?type=movie&decade=1980s&genre=horror&minRating=7&hideRated=true"
+# Same endpoint under the new name, leaving out everything you've already seen:
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?type=tv&genre=crime&hideSeen=true"
 ```
 
 ## Errors

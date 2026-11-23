@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: the Discover landing's category rows. Looks come from home.css (rows, tiles, bookmark) plus discover.css.
+  `rows` / `row` are org.ratelog.browse.web.DiscoverRowView. A pending row (`data-src`) shows a skeleton until
+  discover.js swaps in /discover/row's `lazyRow`; without JS its heading and "More" link still work.
+
+  rows:     <div th:replace="~{fragments/discover-rows :: rows(rows=${rows})}"></div>
+  one row:  <section th:replace="~{fragments/discover-rows :: row(row=${row})}"></section>
+*/-->
+<div th:fragment="rows" class="discover-rows" id="discoverRows" th:aria-label="#{discover.rows.aria}" role="region">
+    <th:block th:each="row : ${rows}">
+        <section th:replace="~{fragments/discover-rows :: row(row=${row})}"></section>
+    </th:block>
+</div>
+
+<!--/* /discover/row: the row, or nothing when it failed or had no titles (discover.js then removes the placeholder). */-->
+<th:block th:fragment="lazyRow">
+    <th:block th:if="${row != null}">
+        <section th:replace="~{fragments/discover-rows :: row(row=${row})}"></section>
+    </th:block>
+</th:block>
+
+<section th:fragment="row" class="home-row discover-row" th:id="${row.id}"
+         th:classappend="${row.pending} ? 'is-pending' : ''"
+         th:data-src="${row.srcHref}" th:aria-busy="${row.pending} ? 'true' : null"
+         th:aria-labelledby="${row.id + '-title'}">
+    <div class="home-row-head">
+        <h2 th:id="${row.id + '-title'}" th:text="${row.title}">Horror</h2>
+        <a class="home-row-more" th:href="${row.moreHref}">
+            <span th:text="#{home.row.more}">More</span>
+            <i data-lucide="arrow-right" aria-hidden="true"></i>
+        </a>
+        <div class="home-row-arrows">
+            <button type="button" data-row-prev th:aria-label="#{home.row.scroll.back}" disabled>
+                <i data-lucide="chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" data-row-next th:aria-label="#{home.row.scroll.forward}">
+                <i data-lucide="chevron-right" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="home-row-track" tabindex="0" th:aria-label="${row.title}">
+        <div th:if="${row.pending}" th:each="i : ${#numbers.sequence(1, 8)}" class="discover-skeleton" aria-hidden="true">
+            <div class="discover-skeleton-poster"></div>
+            <span class="discover-skeleton-line"></span>
+        </div>
+
+        <div th:each="tile : ${row.tiles}" class="home-tile-wrap" th:attr="data-key=${tile.key}">
+            <a class="home-tile" th:href="${tile.href}">
+                <div class="home-poster">
+                    <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
+                         th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
+                         sizes="(max-width: 900px) 31vw, 152px" alt="" loading="lazy" decoding="async">
+                    <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
+                    <span th:if="${tile.statusIcon != null}" class="home-status"
+                          th:title="${tile.statusLabel}" th:aria-label="${tile.statusLabel}" role="img">
+                        <i th:data-lucide="${tile.statusIcon}" aria-hidden="true"></i>
+                    </span>
+                    <span th:if="${tile.userScore != null}" class="home-score" th:title="#{browse.your.score}"
+                          th:text="${tile.userScore}">8.5</span>
+                </div>
+                <span class="home-tile-title" th:text="${tile.title}">Title</span>
+                <span class="home-tile-meta discover-tile-meta">
+                    <span th:text="${tile.year != null} ? ${tile.year} : #{movies.year.unknown}">2019</span>
+                    <span th:if="${tile.tmdbScore != null}" class="browse-tmdb" th:title="#{browse.tmdb.score}">
+                        <i data-lucide="star" aria-hidden="true"></i><span th:text="${tile.tmdbScore}">7.8</span>
+                    </span>
+                </span>
+            </a>
+            <!--/* One-click "Want to watch" (POST /watchlist/toggle), beside the link. discover.js submits it in place. */-->
+            <form th:if="${tile.canToggleWatchlist}" class="home-quick" th:classappend="${tile.onWatchlist} ? 'is-on' : ''"
+                  action="/watchlist/toggle" method="post"
+                  th:attr="data-status=${tile.status},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove},data-title=${tile.title}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="tmdbId" th:value="${tile.tmdbId}" />
+                <input type="hidden" name="type" th:value="${tile.type}" />
+                <button type="submit"
+                        th:title="${tile.onWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}"
+                        th:aria-label="(${tile.onWatchlist} ? #{watchlist.quick.remove} : #{watchlist.quick.add}) + ': ' + ${tile.title}"
+                        th:aria-pressed="${tile.onWatchlist}">
+                    <i th:data-lucide="${tile.onWatchlist} ? 'bookmark-check' : 'bookmark'" aria-hidden="true"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+</body>
+</html>

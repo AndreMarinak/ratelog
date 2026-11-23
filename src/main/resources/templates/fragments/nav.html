@@ -14,7 +14,7 @@
 
     <nav class="nav-links" th:if="${signedIn}" th:aria-label="#{nav.menu.main}">
         <a class="nav-link" href="/ratings" th:text="#{nav.ratings}" th:classappend="${active == 'movies' or active == 'tvshows' or active == 'ratings'} ? 'active' : ''">Ratings</a>
-        <a class="nav-link" href="/browse" th:text="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">Browse</a>
+        <a class="nav-link" href="/discover" th:text="#{nav.discover}" th:classappend="${active == 'browse' or active == 'discover'} ? 'active' : ''">Discover</a>
         <a class="nav-link" href="/watchlist" th:text="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">Watchlist</a>
         <a class="nav-link" href="/lists" th:text="#{nav.lists}" th:classappend="${active == 'lists'} ? 'active' : ''">Lists</a>
         <a th:if="${tagsEnabled}" class="nav-link" href="/tags" th:text="#{nav.tags}" th:classappend="${active == 'tags'} ? 'active' : ''">Tags</a>
@@ -51,7 +51,7 @@
         </form>
     </div>
 
-    <!-- Mobile: opens the sheet below (Browse, Tags, Community, profile, admin, logout). -->
+    <!-- Mobile: opens the sheet below (Discover, Tags, Community, profile, admin, logout). -->
     <button class="nav-menu-btn" id="btnNavSettings" type="button" th:if="${signedIn}"
             th:classappend="${inMenu} ? 'active' : ''"
             th:aria-label="#{nav.menu}" aria-expanded="false" aria-controls="navSettingsSheet">
@@ -65,7 +65,7 @@
         <a class="bottom-nav-item" href="/ratings" th:aria-label="#{nav.ratings}" th:classappend="${active == 'movies' or active == 'tvshows' or active == 'ratings'} ? 'active' : ''">
             <i data-lucide="star" aria-hidden="true"></i>
         </a>
-        <a class="bottom-nav-item" href="/browse" th:aria-label="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">
+        <a class="bottom-nav-item" href="/discover" th:aria-label="#{nav.discover}" th:classappend="${active == 'browse' or active == 'discover'} ? 'active' : ''">
             <i data-lucide="compass" aria-hidden="true"></i>
         </a>
         <a class="bottom-nav-item" href="/watchlist" th:aria-label="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">

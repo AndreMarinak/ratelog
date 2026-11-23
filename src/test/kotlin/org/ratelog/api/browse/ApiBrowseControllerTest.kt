@@ -61,6 +61,28 @@ class ApiBrowseControllerTest {
     }
 
     @Test
+    fun `given no hideSeen then seen titles are kept as before, and hideSeen=true leaves them out`() {
+        serve()
+        val movie = library.movies.save(MovieFactory.aMovie(tmdbId = 603, originalTitle = "The Matrix"))
+        library.statuses.save(MediaStatus(user.id!!, MediaType.movie, movie.id!!.value, WatchStatus.WATCHED, 1L))
+
+        val unchanged = controller.browse(user, BrowseParams())
+        assertEquals(listOf(603, 604), unchanged.results.map { it.tmdbId })
+        assertEquals(false, unchanged.filters.hideSeen)
+
+        val hiding = controller.browse(user, BrowseParams(hideSeen = "true"))
+        assertEquals(true, hiding.filters.hideSeen)
+        assertTrue(hiding.results.none { it.tmdbId == 603 })
+        assertBadRequest("invalid_parameter", BrowseParams(hideSeen = "maybe"), "hideSeen")
+    }
+
+    @Test
+    fun `the endpoint answers at its old and new names`() {
+        val mapping = ApiBrowseController::class.java.getAnnotation(org.springframework.web.bind.annotation.RequestMapping::class.java)
+        assertEquals(listOf("/api/v1/browse", "/api/v1/discover"), mapping.value.toList())
+    }
+
+    @Test
     fun `given filters then returns titles, normalized filters and paging`() {
         // Given
         serve()

@@ -51,8 +51,9 @@ sealed interface BrowseError {
 
 /**
  * One page of browse results: a TMDB discover (or trending) page with the user's own score and status
- * looked up in bulk. When titles are hidden (rated / watchlist, or trending narrowed locally), the next TMDB
- * pages top the result up, up to [MAX_TMDB_PAGES] calls per request.
+ * looked up in bulk. When titles are hidden (seen / rated / watchlist, or trending narrowed locally) and fewer
+ * than [MIN_VISIBLE] are left, the next TMDB pages top the result up, up to [MAX_TMDB_PAGES] calls per request.
+ * A page that is simply short (nothing hidden) is not topped up.
  */
 @Service
 class BrowseHandler(
@@ -71,6 +72,7 @@ class BrowseHandler(
         var totalPages = query.page
         var totalResults = 0
         var nextPage: Int? = null
+        var hidden = 0
 
         while (true) {
             val request = BrowseQueryBuilder.build(filters, tmdbPage, query.lang, query.region, today)
@@ -86,18 +88,17 @@ class BrowseHandler(
             totalPages = page.totalPages
             totalResults = page.totalResults
 
-            val candidates = page.items
-                .filter { it.tmdbId !in collected }
-                .filter { !localFilter || BrowseQueryBuilder.matchesTrending(filters, it, today) }
+            val fresh = page.items.filter { it.tmdbId !in collected }
+            val candidates = fresh.filter { !localFilter || BrowseQueryBuilder.matchesTrending(filters, it, today) }
             val marks = library.findMarks(query.userId, filters.type, candidates.map { it.tmdbId })
-            candidates
-                .filter { isVisible(filters, marks[it.tmdbId]) }
-                .forEach { collected[it.tmdbId] = BrowseTile(it, marks[it.tmdbId]) }
+            val visible = candidates.filter { isVisible(filters, marks[it.tmdbId]) }
+            visible.forEach { collected[it.tmdbId] = BrowseTile(it, marks[it.tmdbId]) }
+            hidden += fresh.size - visible.size
 
             val more = tmdbPage < totalPages
             nextPage = if (more) tmdbPage + 1 else null
             val calls = tmdbPage - query.page + 1
-            if (!topUp || !more || collected.size >= MIN_VISIBLE || calls >= MAX_TMDB_PAGES) break
+            if (!topUp || hidden == 0 || !more || collected.size >= MIN_VISIBLE || calls >= MAX_TMDB_PAGES) break
             tmdbPage++
         }
 
@@ -113,6 +114,7 @@ class BrowseHandler(
 
     private fun isVisible(filters: BrowseFilters, mark: LibraryMark?): Boolean {
         if (mark == null) return true
+        if (filters.hideSeen && mark.seen) return false
         if (filters.hideRated && mark.rated) return false
         if (filters.hideWatchlist && mark.onWatchlist) return false
         return true
