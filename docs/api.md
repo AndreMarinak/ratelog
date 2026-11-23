@@ -30,10 +30,11 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | GET | `/api/v1/me` | | `{id, username, role}` |
 | GET | `/api/v1/search` | `q`, optional `type`, `year` | `{results: [Candidate]}` (raw TMDB search) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
-| GET | `/api/v1/lists` | | `[{id, name, isPublic, itemCount, url}]` |
-| POST | `/api/v1/lists` | `{name, isPublic?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
-| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)) |
-| PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?}` | list detail |
+| GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url}]` |
+| GET | `/api/v1/lists/official` | | every official list, with your progress (see [Official lists](#official-lists)) |
+| POST | `/api/v1/lists` | `{name, isPublic?, isOfficial?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
+| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, isOfficial, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)). Your lists and official lists |
+| PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?, isOfficial?}` | list detail |
 | DELETE | `/api/v1/lists/{id}` | | `204` |
 | POST | `/api/v1/lists/{id}/items` | `{items: [Item]}` | `AddItemsResult` |
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
@@ -62,7 +63,7 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 
 ```json
 {
-  "id": 1, "name": "Best Disney Movies - Top 50", "isPublic": true, "url": "/list/1",
+  "id": 1, "name": "Best Disney Movies - Top 50", "isPublic": true, "isOfficial": false, "url": "/list/1",
   "items": [
     {"position": 1, "tmdbId": 354912, "type": "movie", "title": "Coco", "year": 2017, "posterUrl": "...",
      "status": "watched", "score": 9.0, "seen": true},
@@ -80,6 +81,39 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 - To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
   `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
   The list page's "Add the N unseen to my watchlist" button applies the same filter and never changes an existing status.
+
+### Official lists
+
+Admin-curated lists that **every account** sees (Lists tab, Discover, `/lists/official`), each person tracking their own
+"seen X of Y". Added in this fork. Official lists are always public.
+
+- **Reading:** any token can `GET /api/v1/lists/{id}` an official list, whoever owns it; `items` and `progress` are the
+  token user's own marks. Other people's ordinary lists are still `404`, public or not.
+- **Listing:** `GET /api/v1/lists/official` returns all of them, most recently active first (created, or a title added):
+  ```json
+  [{"id": 12, "name": "AFI's 100 Years...100 Movies", "isPublic": true, "isOfficial": true, "itemCount": 100,
+    "url": "/list/12", "owner": "admin", "progress": {"seen": 37, "total": 100}}]
+  ```
+  `GET /api/v1/lists` still returns only your own lists (each with `isOfficial`).
+- **Marking:** `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}` or `false`, or `"isOfficial": true` on `POST /api/v1/lists`.
+  **Admin tokens only** (role ADMIN or SUPERADMIN, see `GET /api/v1/me`), and on **any** list, including other people's
+  private ones. Anyone else changing it gets `403 forbidden` and nothing changes; sending the value it already has is fine
+  for any token (so a `GET` response can be sent back as is). The web page has the same switch under the list title, for admins.
+- **Official implies public:** marking makes the list public. While it is official it can't be made private: `isPublic: false`
+  is `400 official_list_public` (send `{"isOfficial": false, "isPublic": false}` to do both; un-marking runs first), and the
+  web edit form keeps it public. Un-marking leaves it public; the owner can make it private again.
+- **Changing an official list** (name, visibility, items, delete) is still the owner's job: other tokens get `403 forbidden`
+  (not `404`, since everyone can read it). An admin can un-mark someone else's list but not rename it. Deleting an official
+  list removes it from the official lists too.
+
+```bash
+# Mark every list named in ids.txt official (admin token). Lists show newest activity first.
+while read -r id; do
+  curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+    -d '{"isOfficial": true}' "$RATELOG_URL/api/v1/lists/$id" > /dev/null
+done < ids.txt
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/official"
+```
 
 ## Tags
 
@@ -112,6 +146,8 @@ or pass `tags` on list items. Other users' tags are never visible: their ids com
 ```bash
 curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
   -d '{"tags":["comfort watch","date night"]}' "$RATELOG_URL/api/v1/titles/movie/116149/tags"
+```
+
 ## Ratings
 
 A rating is **quick** (one overall `score`) or **detailed** (the five categories; its score is their average).
@@ -266,8 +302,9 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?
 
 ## Errors
 
-Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `not_found` (404, also for other users' lists and tags),
-`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit` (400),
+Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `forbidden` (403: changing `isOfficial`
+without an admin token, or changing someone else's official list), `not_found` (404, also for other users' lists, except official ones, and tags),
+`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `official_list_public` (400),
 `tag_exists` (409), `too_many_items` (413),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
 

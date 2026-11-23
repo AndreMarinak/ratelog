@@ -23,6 +23,9 @@ class ListSummaryRepositoryImpl(
         return withCovers(listSummaryDAO.findPublicExcludingOwners(excluded, limit))
     }
 
+    override fun findOfficial(): List<ListSummary> =
+        withCovers(listSummaryDAO.findOfficial())
+
     private fun withCovers(rows: List<ListSummaryRow>): List<ListSummary> {
         if (rows.isEmpty()) return emptyList()
         val covers = listSummaryDAO.findCovers(rows.map { it.id }, ListSummary.COVER_SIZE)
@@ -37,6 +40,7 @@ class ListSummaryRepositoryImpl(
                 itemCount = row.itemCount.toInt(),
                 coverPosterPaths = covers[row.id].orEmpty(),
                 lastActivityEpochMs = row.lastActivity,
+                isOfficial = row.isOfficial,
             )
         }
     }

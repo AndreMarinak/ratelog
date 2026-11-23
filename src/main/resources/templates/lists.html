@@ -18,6 +18,8 @@
         </button>
     </div>
 
+    <th:block th:replace="~{fragments/official-lists :: listsSection(${officialLists})}"></th:block>
+
     <section class="lists-section" aria-labelledby="my-lists-title">
         <h2 id="my-lists-title" th:text="#{lists.mine}">My lists</h2>
         <div th:if="${#lists.isEmpty(myLists)}" class="empty-state" th:text="#{lists.mine.empty}">No lists yet.</div>

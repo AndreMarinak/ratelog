@@ -455,6 +455,13 @@
   }
 }
 
+/* Official lists (fork): the badge takes the owner / visibility slot. Here so it is styled wherever cards render. */
+.list-tile-official {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* /lists */
 
 .lists-head {

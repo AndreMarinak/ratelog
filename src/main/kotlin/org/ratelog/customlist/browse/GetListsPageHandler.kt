@@ -13,7 +13,9 @@ data class GetListsPage(
 )
 
 data class ListsPage(
-    /** The viewer's own lists, public and private. */
+    /** Admin-curated lists for everyone (fork), shown first. Never repeated under [followed] or [others]. */
+    val official: List<ListSummary>,
+    /** The viewer's own lists, public and private (their official ones included: it is the owner's view). */
     val mine: List<ListSummary>,
     /** Public lists of people the viewer follows. */
     val followed: List<ListSummary>,
@@ -24,7 +26,11 @@ data class ListsPage(
     val limit: Int,
 )
 
-/** The /lists page. Only the viewer's own lists can be private; everything else is filtered to public twice (query and here). */
+/**
+ * The /lists page: official lists, then the viewer's own, then public lists of people they follow, then everyone else's.
+ * Only the viewer's own lists can be private; everything else is filtered to public twice (query and here), and
+ * official lists are left out of "followed" and "others" the same way.
+ */
 @Service
 class GetListsPageHandler(
     private val listSummaryRepository: ListSummaryRepository,
@@ -32,6 +38,8 @@ class GetListsPageHandler(
 ) {
     fun handle(query: GetListsPage): ListsPage {
         val limit = query.limit.coerceIn(PAGE_SIZE, MAX_LIMIT)
+        val official = listSummaryRepository.findOfficial().filter { it.isOfficial && it.isPublic }
+        val officialIds = official.map { it.id }.toSet()
         val mine = listSummaryRepository.findByOwner(query.userId).filter { it.ownerId == query.userId }
 
         val followedIds = userRepository.findFollowingByUserId(query.userId)
@@ -39,13 +47,14 @@ class GetListsPageHandler(
             .filter { it != query.userId }
             .distinct()
         val followed = listSummaryRepository.findPublicByOwners(followedIds, FOLLOWED_LIMIT)
-            .filter { it.isPublic && it.ownerId in followedIds }
+            .filter { it.isPublic && it.ownerId in followedIds && !it.isOfficial && it.id !in officialIds }
 
         val excluded = (followedIds + query.userId).toSet()
         val othersPlusOne = listSummaryRepository.findPublicExcludingOwners(excluded, limit + 1)
-            .filter { it.isPublic && it.ownerId !in excluded }
+            .filter { it.isPublic && it.ownerId !in excluded && !it.isOfficial && it.id !in officialIds }
 
         return ListsPage(
+            official = official,
             mine = mine,
             followed = followed,
             others = othersPlusOne.take(limit),
