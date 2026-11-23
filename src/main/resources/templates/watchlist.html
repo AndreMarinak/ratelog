@@ -13,7 +13,7 @@
     <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
     <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
     <!--/* Fork: after a quick action, what happened and an Undo (so Remove needs no confirmation). */-->
-    <div th:if="${watchlistNotice != null}" class="feedback success watchlist-notice" role="status">
+    <div th:if="${watchlistNotice != null}" th:fragment="notice" class="feedback success watchlist-notice" role="status">
         <span th:text="#{${watchlistNotice.messageKey}(${watchlistNotice.title})}">Removed "Dune" from your watchlist.</span>
         <form th:if="${watchlistNotice.undoMove != null}" action="/watchlist/item" method="post" class="watchlist-undo">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -29,7 +29,7 @@
         </form>
     </div>
 
-    <div class="watchlist-toolbar">
+    <div class="watchlist-toolbar" th:fragment="toolbar">
         <nav class="status-segmented watchlist-tabs" th:aria-label="#{watchlist.filter.status}">
             <a th:each="tab : ${tabs}" th:href="${tab.href}" class="status-segment" th:data-status="${tab.status}"
                th:classappend="${tab.active} ? 'active' : ''"
@@ -49,10 +49,10 @@
     <p th:if="${tabHintKey != null and !#lists.isEmpty(items)}" class="watchlist-hint" th:text="#{${tabHintKey}}">What you want to see next.</p>
 
     <!--/* Always rendered (hidden while there are tiles) so watchlist.js can show it when the last tile moves away. */-->
-    <div class="empty-state watchlist-empty" th:hidden="${!#lists.isEmpty(items)}" th:text="#{${emptyKey}}">Nothing here yet.</div>
+    <div class="empty-state watchlist-empty" th:fragment="empty" th:hidden="${!#lists.isEmpty(items)}" th:text="#{${emptyKey}}">Nothing here yet.</div>
 
     <!--/* Each tile: the poster link, then its quick actions as plain POST forms (POST /watchlist/item) that come back to this tab. */-->
-    <div class="list-grid watchlist-grid">
+    <div class="list-grid watchlist-grid" th:fragment="grid">
         <div th:each="item : ${items}" class="watchlist-item">
             <a th:href="${item.href}" class="list-card">
                 <div class="poster-frame">

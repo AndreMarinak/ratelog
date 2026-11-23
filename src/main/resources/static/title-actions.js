@@ -2,13 +2,13 @@
 // save in the background (header `X-Requested-With: fetch`, JSON answer) and every toggle is updated from the server's
 // state, so the page never reloads. After Seen on a movie with no rating, a small "Rate it?" offers a quick score
 // (optional; Skip closes it). Without JS these are plain POST forms that come back to the page, with no prompt.
+// The panel is looked up on every event: the bell (inplace.js) swaps it for a fresh copy.
 (() => {
     if (!window.fetch || !window.URLSearchParams) return;
-    const panel = document.querySelector('.title-panel');
-    if (!panel) return;
 
     const toast = (text) => { if (window.ratelogToast) window.ratelogToast(text); };
-    const nudge = panel.querySelector('[data-rate-nudge]');
+    const panelOf = () => document.querySelector('.title-panel');
+    const nudgeOf = () => document.querySelector('.title-panel [data-rate-nudge]');
 
     function setIcon(button, name) {
         const old = button.querySelector('svg, i');
@@ -25,6 +25,9 @@
 
     /** Brings every toggle on the page in line with the state the server answered. */
     function apply(state) {
+        const panel = panelOf();
+        if (!panel) return;
+        const nudge = nudgeOf();
         const seen = panel.querySelector('[data-title-seen]');
         if (seen) {
             seen.classList.toggle('is-on', state.seen);
@@ -67,14 +70,16 @@
     }
 
     function showNudge() {
+        const nudge = nudgeOf();
         if (!nudge) return;
         nudge.hidden = false;
         const first = nudge.querySelector('.title-nudge-score');
         if (first) first.focus({ preventScroll: true });
     }
 
-    panel.addEventListener('click', (event) => {
-        if (event.target.closest('[data-nudge-skip]') && nudge) nudge.hidden = true;
+    document.addEventListener('click', (event) => {
+        const skip = event.target.closest && event.target.closest('[data-nudge-skip]');
+        if (skip) skip.closest('[data-rate-nudge]').hidden = true;
     });
 
     document.addEventListener('submit', async (event) => {

@@ -270,7 +270,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  max-width: calc(100vw - 32px);
+  /* Fixed at left: 50% would otherwise shrink-wrap to half the screen and wrap the message. */
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
   padding: 8px 8px 8px 18px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;

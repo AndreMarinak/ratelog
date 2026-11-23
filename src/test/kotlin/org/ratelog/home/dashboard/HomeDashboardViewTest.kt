@@ -150,4 +150,34 @@ class HomeDashboardViewTest {
         assertFalse(personal.showWelcome)
         assertTrue(personal.tmdbUnavailable)
     }
+
+    @Test
+    fun `tiles carry the Seen and Watchlist quick actions and the Upcoming badge`() {
+        val tiles = view(
+            HomeRow(HomeRowKind.TRENDING_MOVIES, titles = listOf(
+                title(1003596, releaseDate = LocalDate.of(2026, 12, 18)),
+                title(2, status = WatchStatus.WATCHED, releaseDate = LocalDate.of(2026, 11, 20)),
+            )),
+            HomeRow(HomeRowKind.RECENTLY_RATED, titles = listOf(title(3, score = 8.5, releaseDate = LocalDate.of(1999, 3, 31)))),
+            HomeRow(HomeRowKind.UP_NEXT, titles = listOf(title(4, MediaType.tvshow, status = WatchStatus.WANT_TO_WATCH, releaseDate = LocalDate.of(2026, 11, 23)))),
+        ).rows.flatMap { it.tiles }.associateBy { it.tmdbId }
+
+        val doomsday = tiles.getValue(1003596).actions!!
+        assertTrue(doomsday.upcoming)
+        assertEquals("Dec 18", doomsday.upcomingDate)
+        assertFalse(doomsday.canToggleSeen, "no eye on an upcoming title")
+        assertTrue(doomsday.canToggleWatchlist)
+
+        val watched = tiles.getValue(2).actions!!
+        assertTrue(watched.seen)
+        assertFalse(watched.canToggleWatchlist)
+        assertFalse(watched.upcoming)
+
+        assertTrue(tiles.getValue(3).actions!!.seenLocked, "rated")
+
+        val tomorrow = tiles.getValue(4).actions!!
+        assertEquals("tv", tomorrow.type)
+        assertTrue(tomorrow.upcoming, "first air date tomorrow")
+        assertTrue(tomorrow.onWatchlist)
+    }
 }

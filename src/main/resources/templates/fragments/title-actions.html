@@ -4,7 +4,7 @@
 <!--/*
   Fork: the title page's Letterboxd-style actions. `a` is an org.ratelog.watchlist.seen.TitleActionsView
   (TitleActionsInterceptor). Plain POST forms that come back to the page; with JS, static/title-actions.js saves them
-  in place (`data-title-act`) and keeps every toggle in sync. Styles in static/title-page.css.
+  in place (`data-title-act`) and keeps every toggle in sync; the bell uses inplace.js (`data-inplace`). Styles in static/title-page.css.
 
   In the panel's four toggles (with Rate and Add to list, which stay in the page templates):
     <th:block th:replace="~{fragments/title-actions :: seen(${titleActions})}"></th:block>
@@ -111,7 +111,8 @@
 
     <!--/* Follow only adds release dates to Premieres (Ratings page), so the bell shows only where that can do something
            (ReleaseRules.showFollow), and always while followed, so a follow can be undone. */-->
-    <form th:if="${a.showFollow}" th:action="${a.isTv} ? '/tvshow/follow' : '/movie/follow'" method="post" class="title-follow">
+    <form th:if="${a.showFollow}" th:action="${a.isTv} ? '/tvshow/follow' : '/movie/follow'" method="post" class="title-follow"
+          data-inplace=".title-panel" th:data-inplace-done="${a.followed} ? #{title.follow.done.off} : #{title.follow.done.on}">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" th:name="${a.isTv} ? 'tvShowId' : 'movieId'" th:value="${a.mediaId}" />
         <button type="submit" class="title-chip title-follow-btn" th:classappend="${a.followed} ? 'is-on' : ''"

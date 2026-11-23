@@ -4,12 +4,15 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Discover's "Hide titles I've seen" still uses the old TV rule:** it hides a show with any rated season (`LibraryMark.seen` = rated or Watched), while tiles, title pages and list progress now treat a show that is Watching / Want to watch / Dropped as not seen even with rated seasons. Left alone because Discover was being changed on master at the same time; fix by passing the media type into `LibraryMark.seen`.
+- **Old bookmark handlers are unused after the Seen merge:** the `.home-quick` fetch handler in `home.js` and the bookmark code in `discover.js` (`form.home-quick`) and `browse.js` (`form.browse-bookmark`), plus their CSS. Home, Discover rows and the grid now render the shared quick-action stack (`fragments/tile-actions.html`), saved in place by `tile-actions.js` with the same `type:tmdbId` key. Safe to delete; `home.js`'s scroll restore is still used by `tile-actions.js`'s fallback. Left in place because Discover was being edited on master.
+- **Aired seasons are approximate for shows with three or more unaired seasons** (`AiredSeasons` only sees the last season's date and the next future date). Needs per-season air dates stored, or a TMDB call, to be exact.
+- **Upstream follow controllers redirect to the raw `Referer`** (`/movie/follow`, `/tvshow/follow`). CSRF protects them, but `BackPath` would be safer; left as upstream code.
 - **Owner-only modals on the profile page use `th:if` + `th:replace` on one element** (upstream, `profile.html`: Letterboxd import and create-list modals). `th:replace` runs before `th:if`, so they render on other people's profiles too. Harmless (hidden, and the server checks ownership), but the same pattern made the list page 500 (see Fixed). Fix: wrap in `<th:block th:if>`.
 - **The API can't read progress on other people's public lists:** `GET /api/v1/lists/{id}` only serves your own lists (others are 404 by design), while the web page shows your progress on any public list.
 - **List items can only be appended.** The app and API have no reorder / insert-at-position, so restoring a removed title to its rank (Coco at #3 in the Disney list, 2026-11-22) meant deleting and recreating the list. Idea: `position` on API items + drag-to-reorder on list pages.
 - **Title matcher is strict with same-name knockoffs.** Aladdin (1992), Mulan (1998), Hercules (1997), Pocahontas (1995), The Hunchback of Notre Dame (1996) and Strange World (2022) came back `ambiguous` because TMDB has budget animated films with the same title and year. TMDB also dates some films differently (Hamilton 2025, Snow White 1938). Workaround: send `tmdbId`. Idea: tie-break by TMDB vote count when one candidate dwarfs the others.
 - **TMDB release-date changes break year matching.** Hamilton (2020) is dated 2025 on TMDB after its theatrical re-release, outside the ±1 year slack. Workaround: `tmdbId`.
-- **TV auto-Watched may be premature:** rating any season of a show marked Watching sets the whole show to Watched, even if later seasons are unwatched. Decide whether TV should stay Watching until the last season is rated.
 - **Old Letterboxd imports look "detailed":** before quick rating existed, imports stored the same score in all five categories. They can't be told apart from a real detailed rating with equal scores, so they were not converted.
 - **Float noise in category scores from the API:** categories sent through the API that aren't multiples of 0.25 (e.g. 8.3) display as `8.300000190734863` on the web page because category columns have lower precision. The API itself rounds to 2 decimals; the sliders only produce 0.25 steps.
 
@@ -17,6 +20,14 @@ Problems found while building and running the fork: what happened, the cause, an
 - **`delete-tvshow-rating-modal.html` declares a top-level `const modal`** in a plain `<script>`. Any other top-level `const modal` on the TV page would throw a redeclaration error; wrap it in an IIFE if that page gets more inline scripts.
 
 ## Fixed
+
+- **TV auto-Watched was premature** (open since the statuses feature; user asked 2026-11-23): rating any season marked the whole show Watched. Now rating a season makes it Watching, and Watched only once every aired season is rated (see design decisions).
+- **"Hard to change status or remove" on /watchlist** (user, 2026-11-23): tiles were plain links with no actions. Every tile now has Seen / Watching / Remove buttons, in place, with Undo.
+- **Watchlist toasts wrapped onto four lines on phones** (found in the 360px screenshots): a toast fixed at `left: 50%` shrink-wraps to half the screen. `width: max-content` (capped at the screen width) fixes it; the same applies to any centered fixed toast.
+- **"Watching" was cut to "Watc..." on watchlist tiles** at desktop and phone widths: three labelled buttons didn't fit a card. Narrow cards now give the first action its own row and make Remove a square ✕ (container query on the card).
+- **The Upcoming badge looked indented when it wrapped inside the title** (`h1`): it now sits on its own line right under the title.
+- **`hidden` loses to `display` rules again** (see the button note below): the tile stack's forms and the watchlist tiles set `display`, so `[hidden]` needed explicit `display: none` rules (`tile-actions.css`, `watchlist.css`).
+- **Kotlin test names can't contain `;`** (or `:`, `.`, `/`, `<`, `>`, `[`): `Name contains illegal characters` at test-compile. Use commas or "and".
 
 - **Ratings page posters stretched on phones.** Upstream `.card img:first-child` stretched to the card height, which grows when genre chips wrap. ratings.css keeps a 2:3 box on phones and crops with object-fit: cover elsewhere.
 - **Discover genre rows were nearly all current releases** (TMDB popularity sort). Now all-time most-voted, rated 7+.
