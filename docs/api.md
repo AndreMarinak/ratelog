@@ -202,7 +202,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
     "metacritic": 73, "letterboxd": 4.2,
     "fetchedAt": "2026-11-22T12:00:00Z", "source": "MDBList"
   },
-  "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null}
+  "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null},
+  "inLists": [{"id": 4, "name": "Sci-fi canon", "rank": 3, "url": "/list/4"}]
 }
 ```
 
@@ -211,6 +212,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
   rate limited; any single score inside it can be `null` too. Rotten Tomatoes and Metacritic are 0-100, IMDb 0-10, Letterboxd 0-5.
 - `userRating` is `null` when you haven't rated the title. For shows, `score` is the average of your season ratings and
   `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`.
+- `inLists` names **your own** lists that contain the title, newest list first (`[]` when none); `rank` is its place in
+  the list (1 = first, counted in list order like the list page, so unlike `position` it has no gaps). Added in this fork.
 - Extras are cached (TMDB data weekly; scores daily for titles out under 30 days, weekly under a year, monthly after),
   so values can lag the source a little. Errors: `invalid_type`, `invalid_parameter`, `not_found`, `tmdb_not_configured`, `tmdb_error`.
 

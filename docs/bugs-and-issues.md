@@ -19,9 +19,20 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Float noise in category scores from the API:** categories sent through the API that aren't multiples of 0.25 (e.g. 8.3) display as `8.300000190734863` on the web page because category columns have lower precision. The API itself rounds to 2 decimals; the sliders only produce 0.25 steps.
 
 - **Rating breakdown uses a decimal comma** ("9,00") on title pages in every language (upstream `breakdown.js` replaces `.` with `,`), while the rest of the UI shows "9.05". Cosmetic; left as upstream.
+- **"Rate seasons" wraps onto two lines at 360px** in the TV page's phone action row (found in the In-your-lists check,
+  2026-11-23). It still fits (no overflow; the row grows a little); the other three tiles stay on one line. Pre-existing.
+- **A console 404 on title pages whose trailer has no 1280px YouTube thumbnail** (seen on Finding Nemo and Toy Story,
+  2026-11-23): `title-page.js` probes `maxresdefault.jpg`, which YouTube sometimes answers with a 404 instead of its
+  120x90 placeholder. The page keeps the 480px thumbnail, so only the console shows it. Pre-existing.
 - **`delete-tvshow-rating-modal.html` declares a top-level `const modal`** in a plain `<script>`. Any other top-level `const modal` on the TV page would throw a redeclaration error; wrap it in an IIFE if that page gets more inline scripts.
 
 ## Fixed
+
+- **The add-to-list toast was hidden behind the sheet** (found in the In-your-lists browser check, 2026-11-23): once the
+  sheet stayed open after a tap, the "Added to X" toast (z-index 90) sat under the modal backdrop (z-index 1000). It now
+  shows above the backdrop while the sheet is open, and on phones at the top of the screen so it doesn't cover the lists.
+- **A just-unticked list still looked selected on phones** (same check): touch screens keep `:hover` on the last tapped
+  row, and the hover style (accent border and name) read like a tick. Hover styles are now neutral on `(hover: none)`.
 
 - **Unknown URLs answered with a JSON 500** (upstream, found 2026-11-23 while checking the trailer change): logged in, `/no-such-page`,
   `/movie/abc` or a missing `.css` returned `{"message":"Internal server error"}`. Upstream's `GlobalExceptionHandler` catches every

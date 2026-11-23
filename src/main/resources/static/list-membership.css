@@ -1,0 +1,159 @@
+/* Fork: the add-to-list sheet shows which of your lists have the title (templates/fragments/add-to-list-modal.html,
+   behaviour in list-membership.js). The "New list" row sits at the top, then your lists: a tick box, the name and the
+   title's place in the list ("#3"). The title page's button turns "In 2 lists" with the accent (title-page.css
+   .title-toggle.is-on). */
+
+#addToListModal {
+  .list-member-summary {
+    margin: 2px 0 0;
+    color: var(--text-soft);
+    font-size: 1rem;
+
+    &.is-in {
+      color: var(--accent);
+      font-weight: 600;
+    }
+  }
+
+  /* New list: one compact row at the top (user request 2026-11-23), so the lists stay above the fold on phones. */
+  .list-create-top {
+    margin: 14px 0 0;
+    padding: 0 0 14px;
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
+
+    .flex {
+      flex-wrap: nowrap;
+    }
+
+    button.primary {
+      flex: none;
+      white-space: nowrap;
+    }
+  }
+
+  .list-selection {
+    margin-top: 14px;
+  }
+
+  .empty-state {
+    margin-top: 14px;
+  }
+}
+
+/* The sheet stays open after a tap, so its toast ("Added to X") must show above the modal's backdrop (tile-actions.css
+   puts it at z-index 90). On phones the sheet covers the bottom of the screen: the toast moves to the top there
+   instead of covering the lists. */
+body:has(#addToListModal.visible) .tile-toast {
+  z-index: 1001;
+}
+
+@media (max-width: 600px) {
+  body:has(#addToListModal.visible) .tile-toast {
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
+}
+
+.list-member-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 48px;
+  font-size: 1.05rem;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  .list-selection-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &[aria-busy="true"] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* The tick box: an empty rounded square, filled with the accent and a check when the title is in the list. */
+.list-member-check {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 6px;
+  color: #1c1411;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    stroke-width: 3;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+}
+
+.list-member-toggle:hover .list-member-check {
+  border-color: var(--accent);
+}
+
+.list-member-rank {
+  flex: none;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.list-member-toggle.is-in {
+  border-color: hsl(var(--_brand-clay) / 0.5);
+  background: var(--accent-soft);
+  color: var(--text);
+
+  .list-member-check {
+    border-color: var(--accent);
+    background: var(--accent);
+
+    svg {
+      opacity: 1;
+    }
+  }
+
+  &:hover {
+    color: var(--text);
+    background: hsl(var(--_brand-clay) / 0.22);
+  }
+}
+
+/* Touch screens keep :hover on the last tapped row; it must not make an unticked list look selected. */
+@media (hover: none) {
+  .list-member-toggle:hover {
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .list-member-toggle:hover .list-member-check {
+    border-color: var(--border-strong);
+  }
+
+  .list-member-toggle.is-in:hover {
+    border-color: hsl(var(--_brand-clay) / 0.5);
+    background: var(--accent-soft);
+
+    .list-member-check {
+      border-color: var(--accent);
+    }
+  }
+}
