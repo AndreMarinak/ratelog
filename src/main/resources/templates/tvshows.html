@@ -42,7 +42,7 @@
                     <option value="10764" th:selected="${selectedCategory == '10764'}" th:text="#{genre.10764}">Reality</option>
                     <option value="37" th:selected="${selectedCategory == '37'}" th:text="#{genre.37}">Western</option>
                 </select>
-                <select th:if="${!#lists.isEmpty(userTags)}" id="tag" name="tag" th:aria-label="#{tags.filter.all}">
+                <select th:if="${tagsEnabled == true and !#lists.isEmpty(userTags)}" id="tag" name="tag" th:aria-label="#{tags.filter.all}">
                     <option value="" th:text="#{tags.filter.all}">All tags</option>
                     <option th:each="t : ${userTags}" th:value="${t.id}" th:selected="${selectedTag == t.id}" th:text="${t.name}">comfort watch</option>
                 </select>

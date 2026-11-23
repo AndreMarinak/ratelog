@@ -18,7 +18,7 @@
         <a class="nav-link" href="/browse" th:text="#{nav.browse}" th:classappend="${active == 'browse'} ? 'active' : ''">Browse</a>
         <a class="nav-link" href="/watchlist" th:text="#{nav.watchlist}" th:classappend="${active == 'watchlist'} ? 'active' : ''">Watchlist</a>
         <a class="nav-link" href="/lists" th:text="#{nav.lists}" th:classappend="${active == 'lists'} ? 'active' : ''">Lists</a>
-        <a class="nav-link" href="/tags" th:text="#{nav.tags}" th:classappend="${active == 'tags'} ? 'active' : ''">Tags</a>
+        <a th:if="${tagsEnabled}" class="nav-link" href="/tags" th:text="#{nav.tags}" th:classappend="${active == 'tags'} ? 'active' : ''">Tags</a>
         <a class="nav-link" href="/community" th:text="#{nav.community}" th:classappend="${active == 'community'} ? 'active' : ''">Community</a>
     </nav>
 
@@ -87,7 +87,7 @@
             <i data-lucide="compass" aria-hidden="true"></i>
             <span th:text="#{nav.browse}">Browse</span>
         </a>
-        <a class="nav-sheet-item" href="/tags" th:classappend="${active == 'tags'} ? 'active' : ''">
+        <a th:if="${tagsEnabled}" class="nav-sheet-item" href="/tags" th:classappend="${active == 'tags'} ? 'active' : ''">
             <i data-lucide="tags" aria-hidden="true"></i>
             <span th:text="#{nav.tags}">Tags</span>
         </a>

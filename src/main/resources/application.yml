@@ -25,5 +25,8 @@ server:
     context-path: /
 
 ratelog:
+  features:
+    # Fork: tags are hidden in the web UI for now (code, /tags pages and the API stay). RATELOG_FEATURES_TAGS=true shows them.
+    tags: false
   tmdb:
     base-url: https://api.themoviedb.org/3

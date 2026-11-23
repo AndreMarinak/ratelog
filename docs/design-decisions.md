@@ -54,3 +54,4 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Lists get their own tab** (`/lists`), separate from the watchlist: the watchlist is a status ("want to watch") on titles; lists are curated, ordered collections (often imported by Claude).
 - **Browse uses plain links for every filter** so the URL describes the view and works without JS; the same "Browse by" bar sits at the top of the home page.
 - **One-click bookmark on posters** only toggles Want to watch; titles already Watching/Watched/Dropped show no bookmark so a click can't silently downgrade them.
+- **Tags are hidden in the web UI for now** (user request, 2026-11-23): `ratelog.features.tags` / env `RATELOG_FEATURES_TAGS` (default false) is exposed to templates as `tagsEnabled` by `system/FeatureFlagsAdvice.kt`; it hides the nav link, the title-page tags section, the Top-page tag filter and the profile button. Code, `/tags` pages, the API and list-import tags keep working.

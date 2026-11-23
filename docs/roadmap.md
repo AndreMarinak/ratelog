@@ -32,6 +32,8 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.
 
+Gap research against Letterboxd, the TV trackers and the discovery apps (ranked): [competitor-gaps.md](competitor-gaps.md).
+
 ## Later (todo)
 
 - [ ] Release calendar (upcoming episodes and releases for followed titles, plus an iCal feed)

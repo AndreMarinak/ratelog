@@ -76,7 +76,7 @@
     The user's tags on one title, with an inline add form and an x per chip.
     Included once from movie-detail.html and tvshow-detail.html; data comes from the titleTagsView bean.
 -->
-<section th:fragment="titleTags(mediaType, mediaId, tmdbId)" th:if="${mediaId != null}"
+<section th:fragment="titleTags(mediaType, mediaId, tmdbId)" th:if="${tagsEnabled == true and mediaId != null}"
          th:with="tt=${@titleTagsView.forTitle(mediaType, mediaId)}"
          class="title-tags" th:aria-label="#{tags.title}">
     <style th:replace="~{fragments/tags :: tagStyles}"></style>
