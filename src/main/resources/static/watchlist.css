@@ -1,0 +1,90 @@
+/* Watch statuses (fork): the status control on detail pages and the /watchlist page.
+   Linked from templates/fragments/watch-status.html and templates/watchlist.html. */
+
+.status-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.status-segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: var(--text);
+    background: var(--surface-muted);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.status-count {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.watch-status {
+  margin: 20px 0 4px;
+}
+
+.watchlist-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.watchlist-grid .list-content {
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .status-segmented {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .status-segment {
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .watchlist-toolbar > .status-segmented:not(.watchlist-tabs) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

@@ -68,3 +68,46 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/
   -d '{"name":"Heist classics","items":[{"title":"Heat","year":1995},{"title":"Rififi","year":1955},{"tmdbId":1422,"type":"movie"}]}' \
   "$RATELOG_URL/api/v1/lists"
 ```
+
+## Statuses (watchlist)
+
+Each title can have one status per user: `want_to_watch`, `watching`, `watched` or `dropped` (or none).
+Also accepted on input: `WANT_TO_WATCH`, `want-to-watch`, `watchlist`, `plan_to_watch` (= want_to_watch), `seen`, `completed` (= watched).
+Statuses are separate from following a title (premiere tracking). Rating a title in Ratelog sets it to `watched` automatically
+unless it is `dropped`. The web page is `/watchlist`.
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| GET | `/api/v1/statuses` | optional `status`, `type` | `{items: [StatusItem], counts: {want_to_watch, watching, watched, dropped}}` |
+| PUT | `/api/v1/statuses/{type}/{tmdbId}` | `{status}` | `StatusChange` (the title is saved locally first if needed) |
+| DELETE | `/api/v1/statuses/{type}/{tmdbId}` | | `204`, or `404` if the title has no status |
+| POST | `/api/v1/statuses` | `{status?, items: [StatusItemInput]}` | `BulkStatusResult` |
+
+**StatusItem**: `{tmdbId, type, title, year, posterUrl, status, score, updatedAt}`. `score` is your own score (null if unrated); newest first.
+`counts` respects the `type` filter.
+
+**StatusChange**: `{tmdbId, type, title, year, posterUrl, status, previousStatus}`.
+
+**StatusItemInput**: an Item (see above: `{tmdbId, type}` or `{title, year?, type?}`) plus `status`. The top-level `status` is the default
+for items without one. Same strict title matching as list items; at most **100 items per request**.
+
+**BulkStatusResult**:
+```json
+{
+  "updated":    [{"tmdbId": 949, "type": "movie", "title": "Heat", "year": 1995, "posterUrl": "...", "status": "want_to_watch", "previousStatus": null}],
+  "unchanged":  [],
+  "unresolved": [{"input": {...}, "reason": "ambiguous", "message": "...", "candidates": [Candidate]}],
+  "summary": "1 updated, 0 unchanged, 1 unresolved"
+}
+```
+`unchanged` means the title already had that status. `reason` is one of `not_found`, `ambiguous`, `invalid` (bad type/id/status, or no status), `tmdb_error`.
+One bad item never fails the batch. An unknown `status` query parameter or body field is a `400 invalid_status`.
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"want_to_watch","items":[{"title":"Heat","year":1995},{"tmdbId":1396,"type":"tv","status":"watching"}]}' \
+  "$RATELOG_URL/api/v1/statuses"
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"dropped"}' "$RATELOG_URL/api/v1/statuses/movie/949"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/statuses?status=want_to_watch&type=movie"
+```

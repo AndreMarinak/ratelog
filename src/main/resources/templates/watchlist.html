@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(#{watchlist.title})}"></head>
+<body>
+<link rel="stylesheet" href="/watchlist.css">
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='watchlist')}"></header>
+
+    <h1 th:text="#{watchlist.title}">Watchlist</h1>
+
+    <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
+    <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
+
+    <div class="watchlist-toolbar">
+        <nav class="status-segmented watchlist-tabs" th:aria-label="#{watchlist.filter.status}">
+            <a th:each="tab : ${tabs}" th:href="${tab.href}" class="status-segment"
+               th:classappend="${tab.active} ? 'active' : ''"
+               th:aria-current="${tab.active} ? 'page' : null">
+                <i th:data-lucide="${tab.icon}" aria-hidden="true"></i>
+                <span th:text="#{${tab.labelKey}}">Want to watch</span>
+                <span class="status-count" th:text="${tab.count}">0</span>
+            </a>
+        </nav>
+        <nav class="status-segmented" th:aria-label="#{watchlist.filter.type}">
+            <a th:each="filter : ${typeFilters}" th:href="${filter.href}" class="status-segment"
+               th:classappend="${filter.active} ? 'active' : ''"
+               th:aria-current="${filter.active} ? 'page' : null"
+               th:text="#{${filter.labelKey}}">All</a>
+        </nav>
+    </div>
+
+    <div th:if="${#lists.isEmpty(items)}" class="empty-state" th:text="#{${emptyKey}}">Nothing here yet.</div>
+
+    <div class="list-grid watchlist-grid">
+        <a th:each="item : ${items}" th:href="${item.href}" class="list-card">
+            <div class="poster-frame">
+                <span class="type-tag" th:if="${item.isMovie}" th:title="#{search.type.movie}"><i data-lucide="film" aria-hidden="true"></i></span>
+                <span class="type-tag" th:unless="${item.isMovie}" th:title="#{search.type.tv}"><i data-lucide="tv" aria-hidden="true"></i></span>
+                <img th:if="${item.posterPath != null}" th:src="@{'https://image.tmdb.org/t/p/w185' + ${item.posterPath}}" th:alt="'Poster of ' + ${item.title}" loading="lazy">
+                <div th:unless="${item.posterPath != null}" class="poster-fallback" th:text="${#strings.toUpperCase(#strings.substring(item.title, 0, 1))}">?</div>
+            </div>
+            <div class="list-content">
+                <h3>
+                    <span th:text="${item.title}">Title</span>
+                    <span class="year" th:text="${item.year != null} ? ${item.year} : #{movies.year.unknown}">Year</span>
+                </h3>
+                <span th:if="${item.score != null}" class="rating sm" th:title="#{watchlist.your.score}"
+                      th:text="${#strings.replace(#numbers.formatDecimal(item.score, 1, 2), ',', '.')}">0.00</span>
+            </div>
+        </a>
+    </div>
+</div>
+</body>
+</html>
