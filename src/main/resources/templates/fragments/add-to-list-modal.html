@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <body>
-<div th:fragment="addToListModal(mediaId, mediaType)" id="addToListModal" class="modal medium" data-modal="addToListModal">
+<!--/*
+  Fork: the add-to-list sheet shows which of your lists already have the title and toggles it (`listMembership`, a
+  ListMembershipView from ListMembershipInterceptor). Each list is a plain POST form to /list/{id}/membership that comes
+  back to the title page; with JS, static/list-membership.js saves it in place and the sheet stays open. Removing asks
+  first (data-confirm, static/confirm.js). Lists with the title come first. "New list" sits at the top.
+  Styles in static/list-membership.css.
+*/-->
+<div th:fragment="addToListModal(mediaId, mediaType)" id="addToListModal" class="modal medium" data-modal="addToListModal"
+     th:with="m=${listMembership}, rows=${listMembership != null ? listMembership.rows : null}">
     <div class="modal-content">
         <div class="flex separate">
             <h2 th:text="#{list.add.to}">Add to List</h2>
@@ -9,32 +17,53 @@
                 <i data-lucide="x"></i>
             </button>
         </div>
-        <div th:text="#{list.add.none.yet}" th:if="${#lists.isEmpty(userLists)}" class="empty-state"></div>
-        <div th:unless="${#lists.isEmpty(userLists)}" class="list-selection">
-            <form th:each="list : ${userLists}" th:action="@{'/list/' + ${list.id.value} + '/item'}" method="post" class="list-selection-item"
-                  data-inplace="#addToListModal" th:data-inplace-done="#{list.add.done(${list.name.value})}">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                <input type="hidden" name="mediaId" th:value="${mediaId}" />
-                <input type="hidden" name="mediaType" th:value="${mediaType}" />
-                <button type="submit" class="list-selection-button">
-                    <span class="list-selection-name" th:text="${list.name.value}">List Name</span>
-                </button>
-            </form>
-        </div>
-        <!-- Fork: create a new list and add this title to it in one step. -->
-        <form th:action="@{/list/new-with-item}" method="post" class="list-create-inline"
-              data-inplace="#addToListModal" th:data-inplace-done="#{list.add.new.done}">
+        <p th:if="${rows != null and !#lists.isEmpty(rows)}" class="list-member-summary" data-list-summary
+           th:classappend="${m.inAny} ? 'is-in' : ''" th:text="#{list.member.summary(${m.count})}">In 2 of your lists</p>
+        <!-- Fork: create a new list and add this title to it in one step (at the top, user request 2026-11-23). -->
+        <form action="/list/new-with-item" method="post" class="list-create-inline list-create-top"
+              data-inplace="#addToListModal, [data-list-button]" th:data-inplace-done="#{list.add.new.done}">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <input type="hidden" name="mediaId" th:value="${mediaId}" />
             <input type="hidden" name="mediaType" th:value="${mediaType}" />
-            <label for="newListName" class="title-section-label" th:text="#{list.add.new.heading}">Or start a new list</label>
+            <label for="newListName" class="visually-hidden" th:text="#{list.member.new.label}">Start a new list with this title</label>
             <div class="flex gap">
-                <input id="newListName" type="text" name="name" required maxlength="100"
+                <input id="newListName" type="text" name="name" required maxlength="100" autocomplete="off"
                        th:placeholder="#{list.add.new.placeholder}" placeholder="New list name" />
                 <button type="submit" class="primary" th:text="#{list.add.new.submit}">Create &amp; add</button>
             </div>
         </form>
+        <div th:if="${rows == null or #lists.isEmpty(rows)}" th:text="#{list.member.none}" class="empty-state"></div>
+        <div th:unless="${rows == null or #lists.isEmpty(rows)}" class="list-selection" role="group" th:aria-label="#{list.member.lists.aria}">
+            <form th:each="row : ${rows}" th:action="|/list/${row.listId}/membership|" method="post" class="list-selection-item"
+                  data-list-member th:data-list-id="${row.listId}" th:data-order="${row.order}"
+                  th:data-confirm="${row.inList} ? (${row.rank != null} ? #{list.member.confirm.remove(${row.name}, ${row.rank})} : #{list.member.confirm.remove.norank(${row.name})}) : null">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="mediaId" th:value="${m.mediaId}" />
+                <input type="hidden" name="mediaType" th:value="${m.mediaType}" />
+                <input type="hidden" name="inList" th:value="${!row.inList}" />
+                <input type="hidden" name="back" th:value="${m.back}" />
+                <button type="submit" class="list-selection-button list-member-toggle" th:classappend="${row.inList} ? 'is-in' : ''"
+                        th:aria-pressed="${row.inList}"
+                        th:title="${row.inList} ? #{list.member.toggle.remove(${row.name})} : #{list.member.toggle.add(${row.name})}"
+                        th:data-title-add="#{list.member.toggle.add(${row.name})}"
+                        th:data-title-remove="#{list.member.toggle.remove(${row.name})}">
+                    <span class="list-member-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                    <span class="list-selection-name" th:text="${row.name}">List Name</span>
+                    <span class="list-member-rank" th:hidden="${!row.inList}"
+                          th:text="${row.rank != null} ? #{list.member.rank(${row.rank})} : ''">#3</span>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
+
+<!--/* The title page's Add to list tile. Once the title is in any of your lists: "In 2 lists", a ticked icon, accent. */-->
+<button th:fragment="addToListButton(m)" type="button" class="title-action title-toggle title-toggle-lists"
+        data-open-modal="addToListModal" data-list-button aria-haspopup="dialog"
+        th:classappend="${m != null and m.inAny} ? 'is-on' : ''"
+        th:title="${m != null} ? #{list.member.button.title(${m.count})} : #{title.panel.add.to.list}">
+    <i th:data-lucide="${m != null and m.inAny} ? 'list-checks' : 'list-plus'" aria-hidden="true"></i>
+    <span class="title-toggle-label" th:text="${m != null} ? #{list.member.button(${m.count})} : #{title.panel.add.to.list}">Add to list</span>
+</button>
 </body>
 </html>

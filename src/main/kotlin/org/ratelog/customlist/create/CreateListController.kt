@@ -1,6 +1,8 @@
 package org.ratelog.customlist.create
 
 import org.ratelog.annotations.CurrentUser
+import org.ratelog.customlist.order.numbered.ListNumberedForm
+import org.ratelog.customlist.order.numbered.NumberedField
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.PostMapping
@@ -9,13 +11,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
 @Controller
 class CreateListController(
-    private val handler: CreateListHandler
+    private val handler: CreateListHandler,
+    private val numberedForm: ListNumberedForm, // fork: "Numbered list" checkbox
 ) {
     @PostMapping("/list")
     fun createList(
         @CurrentUser user: User,
         @RequestParam name: String,
         @RequestParam(name = "isPublic", required = false, defaultValue = "false") isPublic: Boolean,
+        @RequestParam(name = NumberedField.PARAM, required = false) numbered: String?,
+        @RequestParam(name = NumberedField.MARKER, required = false) numberedMarker: String?,
         redirectAttributes: RedirectAttributes
     ): String {
         val command = CreateListCommand(user.id!!, name, isPublic)
@@ -28,7 +33,10 @@ class CreateListController(
                 redirectAttributes.addFlashAttribute("error", message)
                 "redirect:/profile"
             },
-            { list -> "redirect:/list/${list.id!!.value}" }
+            { list ->
+                numberedForm.save(list.id!!, user.id, numbered, numberedMarker)
+                "redirect:/list/${list.id.value}"
+            }
         )
     }
 }

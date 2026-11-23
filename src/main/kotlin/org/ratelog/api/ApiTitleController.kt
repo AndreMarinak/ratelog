@@ -7,6 +7,7 @@ import org.ratelog.api.media.ImportError
 import org.ratelog.api.media.ImportException
 import org.ratelog.api.media.LocalMedia
 import org.ratelog.api.media.MediaImporter
+import org.ratelog.customlist.membership.ListMembershipRepository
 import org.ratelog.extras.gettitleinfo.GetTitleInfo
 import org.ratelog.extras.gettitleinfo.GetTitleInfoHandler
 import org.ratelog.extras.gettitleinfo.TitleInfo
@@ -45,7 +46,12 @@ data class TitleDetailDto(
     val externalScores: ExternalScoresDto?,
     /** The caller's own rating, null when not rated. */
     val userRating: UserRatingDto?,
+    /** The caller's own lists that contain the title (newest list first), empty when none. */
+    val inLists: List<TitleListDto> = emptyList(),
 )
+
+/** One of the caller's lists that has the title; `rank` is its place in the list (1 = first), as the list page shows it, or null on a plain list. */
+data class TitleListDto(val id: Long, val name: String, val rank: Int?, val url: String)
 
 data class ExternalScoresDto(
     val imdbRating: Double?,
@@ -81,6 +87,7 @@ class ApiTitleController(
     private val getTitleInfoHandler: GetTitleInfoHandler,
     private val ratingRepository: RatingRepository,
     private val tvRatingRepository: TvRatingRepository,
+    private val listMembershipRepository: ListMembershipRepository,
 ) {
     /** One title with TMDB extras, external scores (when available) and the caller's own rating. */
     @GetMapping("/{type}/{tmdbId}")
@@ -90,10 +97,12 @@ class ApiTitleController(
 
         val local = mediaImporter.ensure(tmdbId, mediaType, user.metadataLang).getOrElse { throw importFailure(it, mediaType, tmdbId) }
         val info = getTitleInfoHandler.handle(GetTitleInfo(mediaType, TmdbId(tmdbId))).getOrNull()
-        return toDto(local, info, userRating(local, user))
+        val inLists = listMembershipRepository.findListsContaining(user.id!!, local.type, local.id)
+            .map { TitleListDto(it.listId.value, it.name, it.rank, "/list/${it.listId.value}") }
+        return toDto(local, info, userRating(local, user), inLists)
     }
 
-    private fun toDto(local: LocalMedia, info: TitleInfo?, userRating: UserRatingDto?) = TitleDetailDto(
+    private fun toDto(local: LocalMedia, info: TitleInfo?, userRating: UserRatingDto?, inLists: List<TitleListDto>) = TitleDetailDto(
         tmdbId = local.tmdbId,
         type = local.type.apiName(),
         title = local.title,
@@ -123,6 +132,7 @@ class ApiTitleController(
             )
         },
         userRating = userRating,
+        inLists = inLists,
     )
 
     private fun userRating(local: LocalMedia, user: User): UserRatingDto? = when (local.type) {

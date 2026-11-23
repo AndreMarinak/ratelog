@@ -20,7 +20,12 @@ import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.delete.DeleteListHandler
 import org.ratelog.customlist.official.OfficialListsFixture
+import org.ratelog.customlist.order.move.MoveListItemHandler
+import org.ratelog.customlist.order.numbered.SetListNumberedHandler
+import org.ratelog.customlist.order.setorder.SetListOrderHandler
 import org.ratelog.customlist.removeitem.RemoveFromListHandler
+import org.ratelog.test.InMemoryListOptionsRepository
+import org.ratelog.test.InMemoryListOrderRepository
 import org.ratelog.customlist.update.UpdateListHandler
 import org.ratelog.tag.assign.AssignTagsHandler
 import org.ratelog.test.InMemoryMovieDescriptionRepository
@@ -36,6 +41,8 @@ import org.springframework.http.HttpStatus
 class ApiOfficialListsTest {
 
     private val f = OfficialListsFixture()
+    private val listOrder = InMemoryListOrderRepository(f.p.lists)
+    private val listOptions = InMemoryListOptionsRepository(f.p.lists)
     private val tmdbClient: TmdbClient = mock()
     private val mediaImporter = MediaImporter(tmdbClient, f.p.movies, InMemoryMovieDescriptionRepository(), f.p.shows, InMemoryTvDescriptionRepository())
     private val controller = ApiListController(
@@ -49,11 +56,17 @@ class ApiOfficialListsTest {
             mediaImporter,
             AddToListHandler(f.lists),
             AssignTagsHandler(InMemoryTagRepository(), f.p.movies, f.p.shows),
+            f.lists,
+            MoveListItemHandler(f.lists, listOrder),
         ),
         mediaImporter = mediaImporter,
         getListProgressHandler = f.p.handler,
         officialLists = f.official,
         setListOfficialHandler = f.setOfficial,
+        listOptions = listOptions,
+        setListNumberedHandler = SetListNumberedHandler(f.lists, listOptions),
+        moveListItemHandler = MoveListItemHandler(f.lists, listOrder),
+        setListOrderHandler = SetListOrderHandler(f.lists, listOrder),
     )
     private val officialController = ApiOfficialListController(f.getOfficial)
     private val admin = f.admin
@@ -82,7 +95,7 @@ class ApiOfficialListsTest {
         assertTrue(controller.list(admin, official.id!!.value).isOfficial)
         assertFalse(controller.list(admin, plain.id!!.value).isOfficial)
         val summaryJson = json.readTree(json.writeValueAsString(controller.lists(admin).first()))
-        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "itemCount", "url"), summaryJson.fieldNames().asSequence().toSet())
+        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "itemCount", "url", "numbered"), summaryJson.fieldNames().asSequence().toSet())
     }
 
     // --- Reading another user's official list ---

@@ -21,6 +21,7 @@
                     <span th:text="#{list.public}">Public</span>
                 </label>
             </div>
+            <th:block th:replace="~{fragments/list-order :: numberedField(${listOrder == null or listOrder.numbered})}"></th:block>
             <button type="submit" class="primary w-100" th:text="#{list.save}">Save</button>
         </form>
     </div>

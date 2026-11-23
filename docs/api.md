@@ -30,18 +30,21 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | GET | `/api/v1/me` | | `{id, username, role}`; `role` is `USER`, `MANAGER`, `ADMIN` or `SUPERADMIN` |
 | GET | `/api/v1/search` | `q`, optional `type`, `year` | `{results: [Candidate]}` (raw TMDB search) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
-| GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url}]` |
+| GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url, numbered}]` |
 | GET | `/api/v1/lists/official` | | every official list, with your progress (see [Official lists](#official-lists)) |
-| POST | `/api/v1/lists` | `{name, isPublic?, isOfficial?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
-| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, isOfficial, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)). Your lists and official lists |
-| PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?, isOfficial?}` | list detail |
+| POST | `/api/v1/lists` | `{name, isPublic?, isOfficial?, numbered?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
+| GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, isOfficial, numbered, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)). Your lists and official lists |
+| PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?, isOfficial?, numbered?}` | list detail |
 | DELETE | `/api/v1/lists/{id}` | | `204` |
 | POST | `/api/v1/lists/{id}/items` | `{items: [Item]}` | `AddItemsResult` |
+| PATCH | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | `{position}` | list detail (see [List order](#list-order)) |
+| PUT | `/api/v1/lists/{id}/order` | `{items: [{tmdbId, type}]}` | list detail (see [List order](#list-order)) |
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
 
 **Item**: `{"tmdbId": 949, "type": "movie"}` or `{"title": "Heat", "year": 1995, "type": "movie"}`. Unknown extra fields are ignored.
 Optional `"tags": ["heist", "comfort watch"]` adds those tags to the title (see [Tags](#tags)), whether it was just added or already in the list.
-Items are appended in the order sent. At most **100 items per request**; at most 50 lists per user.
+Items are appended in the order sent; an item with `"position": 3` is inserted at #3 instead (see [List order](#list-order)).
+At most **100 items per request**; at most 50 lists per user.
 
 **AddItemsResult**:
 ```json
@@ -74,10 +77,12 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 }
 ```
 
-- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. The first six fields are unchanged.
+- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. `position` is the 1-based place in the list
+  (the rank the list page shows).
   `status` is your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or `null`; `score` is your rating or `null`.
 - `seen` is `true` when its status is `watched`, or when you rated it: a movie with any status, a show only if it has no status (a show you're Watching, have on your watchlist or Dropped isn't seen, even with rated seasons). Watching, Want to watch and Dropped are otherwise not seen. Rating a show's season sets it to `watching`, and to `watched` once every aired season is rated.
-- `progress.total` counts the items in the response. Items are in list order; `position` can have gaps after removals.
+- `progress.total` counts the items in the response. Items are in list order, and `position` is 1, 2, 3... with no gaps
+  (before list order it was the stored sort key, which could have gaps after removals).
 - To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
   `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
   The list page's "Add the N unseen to my watchlist" button applies the same filter and never changes an existing status.
@@ -113,6 +118,44 @@ while read -r id; do
     -d '{"isOfficial": true}' "$RATELOG_URL/api/v1/lists/$id" > /dev/null
 done < ids.txt
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/official"
+```
+
+### List order
+
+Every list has an order: the order you added titles in, until you change it. Added in this fork.
+
+- **Numbered or plain:** `numbered: true` (the default, and every list created before this) shows each title's rank on the list
+  page; `false` makes it a plain collection without numbers. The order is kept and editable either way, and `items` always come
+  in list order with their `position`. Set it with `"numbered": false` on `POST /api/v1/lists` or `PATCH /api/v1/lists/{id}`
+  (owner only, like the name). The web page has the same checkbox in the create / edit list forms.
+- **Insert while adding:** an item with `position` (1-based) on `POST /api/v1/lists/{id}/items` or `POST /api/v1/lists` goes
+  to that place and the rest shift down. Items are applied in the order sent, so `[{..., "position": 1}, {..., "position": 2}]`
+  ends up first and second. A `position` past the end appends; `0` or less makes that item `invalid`. A title that is already
+  in the list is reported in `alreadyInList` and **not moved** (use the endpoints below).
+- **Move one title:** `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}` with `{"position": 3}` moves it to #3 (past the end =
+  last). `position` is required and must be 1 or more (`400 invalid_parameter`); a title that isn't in the list is `404`.
+- **Set the whole order:** `PUT /api/v1/lists/{id}/order` with `{"items": [{"tmdbId": 603, "type": "movie"}, ...]}`. Those
+  titles come first, in that order; titles you leave out keep their order after them, so you can send just the new top 5.
+  A title that isn't in the list is `400 not_in_list` (the message lists them), one sent twice is `400 invalid_parameter`,
+  and in both cases nothing changes. Up to 1,000 titles per request (no TMDB lookups).
+- Every change renumbers the list 1..n in one transaction, with the list locked, so two clients reordering at once don't lose
+  moves. Only the owner reorders: an official list is readable by any token, but changes are `403 forbidden`; other people's
+  lists are `404`. Both endpoints answer with the list detail (new `position`s included).
+- The list page has the same tools for the owner ("Edit order": drag, type a number, or top / up / down / bottom) and a Sort
+  menu for everyone, which only changes how that viewer sees the list (`/list/{id}?sort=title`, `reverse`, `newest`, `oldest`,
+  `rating`, `added`); the API always returns list order.
+
+```bash
+# Restore Coco (354912) to #3, insert Up (14160) at #1, then make "Cars" (920) last.
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"position": 3}' "$RATELOG_URL/api/v1/lists/12/items/movie/354912"
+curl -s -X POST -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"items": [{"tmdbId": 14160, "type": "movie", "position": 1}]}' "$RATELOG_URL/api/v1/lists/12/items"
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"position": 1000}' "$RATELOG_URL/api/v1/lists/12/items/movie/920"
+
+# A new top 3; everything else keeps its order after them.
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"items": [{"tmdbId": 238, "type": "movie"}, {"tmdbId": 278, "type": "movie"}, {"tmdbId": 1396, "type": "tv"}]}'   "$RATELOG_URL/api/v1/lists/12/order"
+
+# A plain (unnumbered) collection.
+curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json"   -d '{"numbered": false}' "$RATELOG_URL/api/v1/lists/12"
 ```
 
 ## Tags
@@ -202,7 +245,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
     "metacritic": 73, "letterboxd": 4.2,
     "fetchedAt": "2026-11-22T12:00:00Z", "source": "MDBList"
   },
-  "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null}
+  "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null},
+  "inLists": [{"id": 4, "name": "Sci-fi canon", "rank": 3, "url": "/list/4"}]
 }
 ```
 
@@ -211,6 +255,9 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
   rate limited; any single score inside it can be `null` too. Rotten Tomatoes and Metacritic are 0-100, IMDb 0-10, Letterboxd 0-5.
 - `userRating` is `null` when you haven't rated the title. For shows, `score` is the average of your season ratings and
   `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`.
+- `inLists` names **your own** lists that contain the title, newest list first (`[]` when none); `rank` is its place in
+  the list (1 = first, counted in list order like the list page, the same number as `position` in list responses), or `null` on a
+  plain (unnumbered) list. Added in this fork.
 - Extras are cached (TMDB data weekly; scores daily for titles out under 30 days, weekly under a year, monthly after),
   so values can lag the source a little. Errors: `invalid_type`, `invalid_parameter`, `not_found`, `tmdb_not_configured`, `tmdb_error`.
 
@@ -304,7 +351,7 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?
 
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `forbidden` (403: changing `isOfficial`
 without an admin token, or changing someone else's official list), `not_found` (404, also for other users' lists, except official ones, and tags),
-`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `official_list_public` (400),
+`invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `official_list_public`, `not_in_list` (400),
 `tag_exists` (409), `too_many_items` (413), `rate_limited` (429),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
 
@@ -363,4 +410,48 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/
 curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
   -d '{"status":"dropped"}' "$RATELOG_URL/api/v1/statuses/movie/949"
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/statuses?status=want_to_watch&type=movie"
+```
+
+## Recommendations
+
+`GET /api/v1/titles/{type}/{tmdbId}/recommendations`: what a title page shows under the title. Movies in a TMDB collection get
+`series` (every entry, in release order); movies and shows get `moreLikeThis` (TMDB recommendations, up to 20). The title itself and
+its series entries are left out of `moreLikeThis`, as are posterless titles and released titles with fewer than 10 TMDB votes.
+
+| Param | Values | Effect |
+|---|---|---|
+| `hideSeen` | `true` / `false` (`1`/`0`); default `false` | leave titles you've seen out of `moreLikeThis` (the web page does). The series always lists every entry |
+
+```json
+{
+  "tmdbId": 863, "type": "movie",
+  "series": {
+    "collectionId": 10194, "name": "Toy Story Collection", "seen": 2, "released": 5,
+    "titles": [
+      {"tmdbId": 862, "type": "movie", "title": "Toy Story", "year": 1995, "releaseDate": "1995-11-22",
+       "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/862", "tmdbVoteAverage": 8.0,
+       "upcoming": false, "seen": true, "status": "watched", "userScore": 9.0, "current": false},
+      {"tmdbId": 863, "type": "movie", "title": "Toy Story 2", "year": 1999, "releaseDate": "1999-10-30",
+       "posterUrl": "...", "url": "/movie/863", "tmdbVoteAverage": 7.6,
+       "upcoming": false, "seen": true, "status": "watched", "userScore": null, "current": true}
+    ]
+  },
+  "moreLikeThis": [
+    {"tmdbId": 585, "type": "movie", "title": "Monsters, Inc.", "year": 2001, "releaseDate": "2001-11-01",
+     "posterUrl": "...", "url": "/movie/585", "tmdbVoteAverage": 7.8,
+     "upcoming": false, "seen": false, "status": null, "userScore": null, "current": null}
+  ]
+}
+```
+
+- `series` is `null` for shows and for movies that aren't in a collection of two or more. `seen` / `released` count entries that
+  are out (upcoming and undated ones can't be seen yet); `current` marks the requested title.
+- `seen` per title follows the poster eye: a movie you rated or marked Watched; a show marked Watched, or rated with no status.
+  `status` and `userScore` are your own (null if none). Titles are in your metadata language.
+- Nothing is saved locally. TMDB answers are cached (recommendations a day, collections a week).
+- Errors: `invalid_type`, `invalid_parameter` (400), `not_found` (404: TMDB has no such title), `tmdb_not_configured` (503), `tmdb_error` (502).
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/titles/movie/863/recommendations"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/titles/tv/1396/recommendations?hideSeen=true"
 ```

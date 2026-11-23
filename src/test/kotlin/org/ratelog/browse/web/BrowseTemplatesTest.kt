@@ -80,9 +80,9 @@ class BrowseTemplatesTest {
         assertTrue(html.contains("""href="/discover?type=movie&amp;genre=horror""""), "genre links")
         assertTrue(html.contains("""href="/discover?type=movie&amp;provider=8""""), "service links")
         assertTrue(html.contains("https://image.tmdb.org/t/p/w92/n.png"))
-        assertTrue(html.contains("""<form class="bb-find" action="/" method="get" role="search">"""))
-        assertTrue(html.contains("""name="q""""))
-        assertTrue(html.contains("Find a title..."))
+        // The header search is the only search field (the bar's "Find a title" duplicated it on Home).
+        assertFalse(html.contains("bb-find"), "no second search field in the bar")
+        assertFalse(html.contains("""name="q""""), "no second search field in the bar")
         assertFalse(html.contains("bb-sort"), "no Sort menu outside /browse")
         assertFalse(html.contains("??"), "every message key resolves")
     }

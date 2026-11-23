@@ -6,7 +6,8 @@ Base: [golmenero/ratelog](https://github.com/golmenero/ratelog). Conventions: [C
 Reserved migration numbers (so parallel work never collides): API tokens `V1000`, quick rating `V1010–1019`,
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
-lists (official lists and later list features) `V1120–1129`, accounts and roles `V1130–1139`.
+lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
+accounts and roles `V1130–1139`.
 
 ## Build now (in suggested order)
 
@@ -23,6 +24,8 @@ lists (official lists and later list features) `V1120–1129`, accounts and role
 - [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
   show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
   Optional TV counterpart: "New season of a show you've watched".
+  **Partly covered (2026-11-23, #17):** every movie page in a collection shows the whole series with your Seen marks and
+  "You've seen 2 of 5 · Next: Toy Story 3". Still open: the home row that gathers series you've started.
 - [x] **12. List progress**: on `/list/{id}` (yours or someone's public list) each poster shows its rank, your status and your score;
   "You've seen 9 of 25" with a bar; All · Not seen · Seen tabs (`?show=unseen|seen`, ranks never renumber); "Add the N unseen to my watchlist"
   (only titles with no status). "9/25 seen" on `/lists` cards, a back link above the title. API: `status`/`score`/`seen` per item and
@@ -44,7 +47,25 @@ lists (official lists and later list features) `V1120–1129`, accounts and role
   Watching · Seen · Dropped, with Seen / Watching / Remove (Undo) on every tile. Lists get "Mark what you've seen" tick-off mode.
   "Upcoming · Dec 18" badges on tiles and title pages. Rating a show's season makes it Watching, Watched once every aired season
   is rated. All in place, no reloads. No migration (data model and API unchanged).
-- [x] **17. Manager role** (requested 2026-11-23): a user who can also add plain user accounts (`/accounts/new`, "Add account" in
+- [x] **17. In your lists** (requested 2026-11-23): the title page's add-to-list sheet ticks the lists that already have the
+  title ("In 2 of your lists", its place as "#3"), lists with it first; a tap adds it or takes it out (removing asks first,
+  naming its rank) and the sheet stays open. The title page button reads "In 2 lists" once it's in any. "New list" moved to
+  the top of the sheet. All in place. API: `inLists` on `GET /api/v1/titles/{type}/{tmdbId}` ([docs/api.md](api.md#title-details-scores-and-trailers)).
+  No migration.
+- [x] **18. Series and "More like this" on title pages** (requested 2026-11-23): movies in a TMDB collection get "Part of the Toy
+  Story Collection" (every entry in release order, "You're here", your Seen marks, "You've seen 2 of 5 · Next: Toy Story 3"); movies
+  and shows get "More like this" (TMDB recommendations, seen titles hidden). Loaded lazily under the page, TMDB cached (a day; a week
+  for collections), quick actions in place. API: `GET /api/v1/titles/{type}/{tmdbId}/recommendations`
+  ([docs/api.md](api.md#recommendations)). No migration.
+- [x] **19. List order**: every list has an editable order. Owners get "Edit order" on `/list/{id}` (`?reorder=1`): the list becomes thin
+  rows (grip, rank, poster, title) to drag up or down (mouse anywhere on the row, touch by the grip, auto-scroll at the edges),
+  or type a new number, or use top / up / down / bottom; every move saves in place
+  with a toast, and the forms work without JS. A "Numbered list" setting (create / edit list modals, default on) shows ranks;
+  plain lists are collections without numbers. Everyone gets a "Sort" menu (list order, reverse, title, newest / oldest release,
+  your rating, recently added) that never changes the saved order. API: `numbered` on lists, `position` when adding items,
+  `PATCH /api/v1/lists/{id}/items/{type}/{tmdbId}` and `PUT /api/v1/lists/{id}/order` ([docs/api.md](api.md#list-order)).
+  Table `custom_list_options` (`V1121`). Requested 2026-11-23 ("are lists able to have some more order?").
+- [x] **20. Manager role** (requested 2026-11-23): a user who can also add plain user accounts (`/accounts/new`, "Add account" in
   the header and the phone menu). Admins give or take the role in the admin page. No migration needed (`V1130–1139` reserved for
   accounts and roles). `GET /api/v1/me` reports `MANAGER`.
 - [x] **Security hardening** (2026-11-23): role, deletion and password changes apply to open sessions; sign-in throttling;

@@ -4,6 +4,9 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Series headings mix languages for non-English metadata:** "Part of the {name}" is an English UI string, while the collection name
+  comes from TMDB in the metadata language, so a Spanish metadata setting reads "Part of the Toy Story - Colección". The UI strings
+  are English-only anyway; fix together with real translations (e.g. `recs.series.title` per language).
 - **Discover's "Hide titles I've seen" still uses the old TV rule:** it hides a show with any rated season (`LibraryMark.seen` = rated or Watched), while tiles, title pages and list progress now treat a show that is Watching / Want to watch / Dropped as not seen even with rated seasons. Left alone because Discover was being changed on master at the same time; fix by passing the media type into `LibraryMark.seen`.
 - **Old bookmark handlers are unused after the Seen merge:** the `.home-quick` fetch handler in `home.js` and the bookmark code in `discover.js` (`form.home-quick`) and `browse.js` (`form.browse-bookmark`), plus their CSS. Home, Discover rows and the grid now render the shared quick-action stack (`fragments/tile-actions.html`), saved in place by `tile-actions.js` with the same `type:tmdbId` key. Safe to delete; `home.js`'s scroll restore is still used by `tile-actions.js`'s fallback. Left in place because Discover was being edited on master.
 - **Aired seasons are approximate for shows with three or more unaired seasons** (`AiredSeasons` only sees the last season's date and the next future date). Needs per-season air dates stored, or a TMDB call, to be exact.
@@ -11,14 +14,24 @@ Problems found while building and running the fork: what happened, the cause, an
 - **The API can't read progress on other people's public lists:** `GET /api/v1/lists/{id}` only serves your own lists and official lists (other lists are 404 by design), while the web page shows your progress on any public list.
 - **Unchecking "Public" on an official list does nothing, silently** (upstream's edit modal): official lists stay public, so the save keeps it public without a message. Un-mark it first. Idea: disable the checkbox with a hint while the list is official (an upstream template edit).
 - **The web switch can't mark another user's private list**: upstream's list page refuses to open it, even for admins. Use `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}`.
-- **List items can only be appended.** The app and API have no reorder / insert-at-position, so restoring a removed title to its rank (Coco at #3 in the Disney list, 2026-11-22) meant deleting and recreating the list. Idea: `position` on API items + drag-to-reorder on list pages.
 - **Title matcher is strict with same-name knockoffs.** Aladdin (1992), Mulan (1998), Hercules (1997), Pocahontas (1995), The Hunchback of Notre Dame (1996) and Strange World (2022) came back `ambiguous` because TMDB has budget animated films with the same title and year. TMDB also dates some films differently (Hamilton 2025, Snow White 1938). Workaround: send `tmdbId`. Idea: tie-break by TMDB vote count when one candidate dwarfs the others.
 - **TMDB release-date changes break year matching.** Hamilton (2020) is dated 2025 on TMDB after its theatrical re-release, outside the ±1 year slack. Workaround: `tmdbId`.
 - **Old Letterboxd imports look "detailed":** before quick rating existed, imports stored the same score in all five categories. They can't be told apart from a real detailed rating with equal scores, so they were not converted.
 - **Float noise in category scores from the API:** categories sent through the API that aren't multiples of 0.25 (e.g. 8.3) display as `8.300000190734863` on the web page because category columns have lower precision. The API itself rounds to 2 decimals; the sliders only produce 0.25 steps.
 
 - **Rating breakdown uses a decimal comma** ("9,00") on title pages in every language (upstream `breakdown.js` replaces `.` with `,`), while the rest of the UI shows "9.05". Cosmetic; left as upstream.
+- **"Rate seasons" wraps onto two lines at 360px** in the TV page's phone action row (found in the In-your-lists check,
+  2026-11-23). It still fits (no overflow; the row grows a little); the other three tiles stay on one line. Pre-existing.
+- **A console 404 on title pages whose trailer has no 1280px YouTube thumbnail** (seen on Finding Nemo and Toy Story,
+  2026-11-23): `title-page.js` probes `maxresdefault.jpg`, which YouTube sometimes answers with a 404 instead of its
+  120x90 placeholder. The page keeps the 480px thumbnail, so only the console shows it. Pre-existing.
 - **`delete-tvshow-rating-modal.html` declares a top-level `const modal`** in a plain `<script>`. Any other top-level `const modal` on the TV page would throw a redeclaration error; wrap it in an IIFE if that page gets more inline scripts.
+
+- **Sorting a list then using "Add the N unseen to my watchlist" drops the sort** after the redirect (the bulk form only sends
+  `show` back). Harmless (the list shows in list order again); the bulk form belongs to list progress.
+- **Two tabs reordering the same list:** each move is applied to the order saved at that moment (the list is locked per move), so
+  nothing is lost or duplicated, but a tab that was open during another tab's moves shows its old order until the next move
+  answers with the saved order (then it catches up) or the page reloads.
 
 ## Fixed
 
@@ -40,12 +53,42 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Errors in `GlobalExceptionHandler` left no trace** (upstream): it turned every exception into a 500 without logging.
   It now logs the method, path and a redacted stack trace (2026-11-23).
 
+- **Two search boxes on Home** (user, 2026-11-23): the header search and the Browse bar's "Find a title" both searched titles. The bar's field is gone; the header search is on every page.
+- **No way to delete a rating from the rating editor** (user, 2026-11-23: "im not able to delete a rating when i go to edit"): the
+  panel's "Edit rating" opens the rate modal, which only had Quick / Detailed / Save; the delete was a 28px trash icon at the bottom
+  of the "Your rating" card. Both rate modals (movie, TV season) now show "Delete rating" under Save in edit mode; it closes the
+  editor and opens the existing confirmation (`title-page.js`, the TV season travels on `data-season`).
+
+- **The add-to-list toast was hidden behind the sheet** (found in the In-your-lists browser check, 2026-11-23): once the
+  sheet stayed open after a tap, the "Added to X" toast (z-index 90) sat under the modal backdrop (z-index 1000). It now
+  shows above the backdrop while the sheet is open, and on phones at the top of the screen so it doesn't cover the lists.
+- **A just-unticked list still looked selected on phones** (same check): touch screens keep `:hover` on the last tapped
+  row, and the hover style (accent border and name) read like a tick. Hover styles are now neutral on `(hover: none)`.
+- **Lazily loaded title-page rows came in unstyled** (found in the browser check of "More like this", 2026-11-23): the skeleton
+  section carried the `<link>`s for `home.css` / `title-related.css`, and `title-related.js` replaces that section with the fetched
+  rows, so the styles were removed with it and the posters stacked as a plain list. The links now sit beside the section, and a
+  template test checks they come before it. Rule for any swapped-in fragment: keep its styles outside the element that gets replaced.
 - **Unknown URLs answered with a JSON 500** (upstream, found 2026-11-23 while checking the trailer change): logged in, `/no-such-page`,
   `/movie/abc` or a missing `.css` returned `{"message":"Internal server error"}`. Upstream's `GlobalExceptionHandler` catches every
   `Exception`, including Spring's `NoResourceFoundException`. `system/NotFoundAdvice.kt` (ordered before it) now answers a "Page not
   found" page with a 404 (405 for a wrong method), a JSON 404 under `/api/`, and an empty 404 for missing files.
 - **Trailer thumbnail only 300px wide on desktop**, leaving half the middle column empty (user screenshot, 2026-11-23). It now fills
   the column (up to 720px) with the 1280px YouTube thumbnail where one exists.
+- **List items could only be appended** (2026-11-22, fixed 2026-11-23): there was no reorder or insert-at-position, so restoring a
+  removed title to its rank (Coco at #3 in the Disney list) meant deleting and recreating the list. Now: reorder mode on the list
+  page, `position` on API items, `PATCH .../items/{type}/{tmdbId}` and `PUT .../order` (roadmap 19).
+- **Reorder mode's number field showed no digits on phones** (found in the list-order walkthrough, 2026-11-23): form.css's
+  `input:not([type="checkbox"])` (18px side padding, 40px height) outweighed `.list-order-input`, leaving 4px for the number in a
+  40px field. Fixed with a more specific selector (`.list-order-place input.list-order-input`); keep that in mind for any small input.
+- **Drag auto-scroll crawled upwards on long lists** (found in the 40-title walkthrough, 2026-11-23): `generic.css` sets
+  `scroll-behavior: smooth` on the page, so each per-frame `scrollBy` restarted a smooth scroll instead of moving. The page
+  now scrolls instantly while a drag is in progress (the inline style is removed when the drag ends).
+- **A moved row could end up under the fixed bottom bar**: after an arrow move the row is scrolled into view with
+  `scrollIntoView({block: 'nearest'})`, which put it at the very bottom of the screen, behind the "Editing the order" bar (and the
+  phone tab bar). Rows now carry `scroll-margin` for the sticky header and the bar.
+- **API `position` had gaps after removals** and ties after old appends, so it didn't match the rank on the page. It is now the
+  1-based place in list order (position, then id), the same number the page shows; every reorder also rewrites the stored
+  positions as 1..n.
 
 - **Official list pages said "← admin's profile"** (found in the official-lists walkthrough, 2026-11-23): the back link pointed at the owner's profile, exposing an owner the cards deliberately hide. Official lists now go back to Lists.
 - **"Remove from official" wrapped onto two lines on phones**: the list title column is narrow next to the owner's Public tag and buttons. Shorter labels ("Make official" / "Remove official") that never wrap; checked at 390 and 360px.

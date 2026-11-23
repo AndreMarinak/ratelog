@@ -6,6 +6,9 @@ import org.ratelog.api.AddItemsRequest
 import org.ratelog.api.ApiException
 import org.ratelog.api.CreateListRequest
 import org.ratelog.api.ItemInput
+import org.ratelog.api.MoveItemRequest
+import org.ratelog.api.SetOrderRequest
+import org.ratelog.api.apiName
 import org.ratelog.api.TitleDto
 import org.ratelog.api.UpdateListRequest
 import org.ratelog.api.badRequest
@@ -14,7 +17,9 @@ import org.ratelog.api.media.MediaImporter
 import org.ratelog.api.notFound
 import org.ratelog.api.parseMediaType
 import org.ratelog.api.toDto
+import org.ratelog.MediaType
 import org.ratelog.customlist.CustomList
+import org.ratelog.customlist.CustomListItem
 import org.ratelog.customlist.CustomListRepository
 import org.ratelog.customlist.create.CreateListCommand
 import org.ratelog.customlist.create.CreateListError
@@ -22,6 +27,17 @@ import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.delete.DeleteListCommand
 import org.ratelog.customlist.delete.DeleteListHandler
 import org.ratelog.customlist.official.OfficialListRepository
+import org.ratelog.customlist.order.ListOptionsRepository
+import org.ratelog.customlist.order.ListOrder
+import org.ratelog.customlist.order.move.MoveListItem
+import org.ratelog.customlist.order.move.MoveListItemError
+import org.ratelog.customlist.order.move.MoveListItemHandler
+import org.ratelog.customlist.order.move.MoveTarget
+import org.ratelog.customlist.order.numbered.SetListNumbered
+import org.ratelog.customlist.order.numbered.SetListNumberedHandler
+import org.ratelog.customlist.order.setorder.SetListOrder
+import org.ratelog.customlist.order.setorder.SetListOrderError
+import org.ratelog.customlist.order.setorder.SetListOrderHandler
 import org.ratelog.customlist.official.mark.SetListOfficial
 import org.ratelog.customlist.official.mark.SetListOfficialError
 import org.ratelog.customlist.official.mark.SetListOfficialHandler
@@ -39,6 +55,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -51,9 +68,12 @@ data class ListSummaryDto(
     val isOfficial: Boolean,
     val itemCount: Int,
     val url: String,
+    /** Fork: the list page shows ranks (false = a plain collection; the order is kept either way). */
+    val numbered: Boolean = true,
 )
 
 data class ListItemDto(
+    /** 1-based place in the list (fork: contiguous; it used to be the stored sort key, with gaps after removals). */
     val position: Int,
     val tmdbId: Int,
     val type: String,
@@ -79,6 +99,8 @@ data class ListDetailDto(
     val url: String,
     val items: List<ListItemDto>,
     val progress: ListProgressDto,
+    /** Fork: see [ListSummaryDto.numbered]. */
+    val numbered: Boolean = true,
 )
 
 data class CreateListResponse(val list: ListDetailDto, val items: AddItemsResult?)
@@ -96,14 +118,20 @@ class ApiListController(
     private val getListProgressHandler: GetListProgressHandler,
     private val officialLists: OfficialListRepository,
     private val setListOfficialHandler: SetListOfficialHandler,
+    private val listOptions: ListOptionsRepository,
+    private val setListNumberedHandler: SetListNumberedHandler,
+    private val moveListItemHandler: MoveListItemHandler,
+    private val setListOrderHandler: SetListOrderHandler,
 ) {
     /** Your own lists. Everyone's official lists are at `GET /api/v1/lists/official`. */
     @GetMapping
     fun lists(@CurrentUser user: User): List<ListSummaryDto> {
         val lists = customListRepository.findByUserId(user.id!!)
-        val official = officialLists.officialAmong(lists.mapNotNull { it.id })
+        val ids = lists.mapNotNull { it.id }
+        val official = officialLists.officialAmong(ids)
+        val plain = listOptions.plainAmong(ids)
         return lists.map {
-            ListSummaryDto(it.id!!.value, it.name.value, it.isPublic, it.id in official, it.items.size, "/list/${it.id.value}")
+            ListSummaryDto(it.id!!.value, it.name.value, it.isPublic, it.id in official, it.items.size, "/list/${it.id.value}", it.id !in plain)
         }
     }
 
@@ -129,6 +157,7 @@ class ApiListController(
             { it }
         )
         if (official) setOfficial(list.id!!, user, true)
+        if (body.numbered == false) setNumbered(list.id!!, user, false)
         val itemsResult = if (body.items.isEmpty()) null
         else addListItemsService.addItems(list.id!!, user.id, user.metadataLang, body.items)
 
@@ -153,7 +182,9 @@ class ApiListController(
         if (!isOwner && !official && !(isAdmin && body.isOfficial == true)) throw notFound("List $id not found")
         if (changesOfficial && !isAdmin) throw forbidden(ADMIN_ONLY)
         val editsList = body.name != null || body.isPublic != null
-        if (editsList && !isOwner) throw forbidden("Only the list's owner can change its name or visibility")
+        if ((editsList || body.numbered != null) && !isOwner) {
+            throw forbidden("Only the list's owner can change its name, visibility or numbering")
+        }
         if ((body.isOfficial ?: official) && body.isPublic == false) throw officialMustBePublic()
         if (body.name != null && ListName.parse(body.name).isLeft()) throw badRequest("invalid_name", "name must be 1-100 characters")
 
@@ -170,6 +201,7 @@ class ApiListController(
             }
         }
         if (changesOfficial && body.isOfficial == true) setOfficial(listId, user, true)
+        body.numbered?.let { setNumbered(listId, user, it) }
         return detail(customListRepository.findById(listId)!!, user)
     }
 
@@ -180,7 +212,7 @@ class ApiListController(
         return ResponseEntity.noContent().build()
     }
 
-    /** Append titles in order. Each item: `{tmdbId, type}` or `{title, year?, type?}`. */
+    /** Append titles in order. Each item: `{tmdbId, type}` or `{title, year?, type?}`, optionally with a `position` to insert at. */
     @PostMapping("/{id}/items")
     fun addItems(@CurrentUser user: User, @PathVariable id: Long, @RequestBody body: AddItemsRequest): AddItemsResult {
         val list = ownedList(user, id)
@@ -205,6 +237,64 @@ class ApiListController(
         removeFromListHandler.handle(RemoveFromListCommand(list.id, user.id!!, item.id!!))
             .onLeft { throw notFound("That title is not in this list") }
         return ResponseEntity.noContent().build()
+    }
+
+    /** Fork: moves one title to a 1-based `position` (past the end = last); the rest shift. Owner only. */
+    @PatchMapping("/{id}/items/{type}/{tmdbId}")
+    fun moveItem(
+        @CurrentUser user: User,
+        @PathVariable id: Long,
+        @PathVariable type: String,
+        @PathVariable tmdbId: Int,
+        @RequestBody body: MoveItemRequest,
+    ): ListDetailDto {
+        val list = ownedList(user, id)
+        val position = body.position ?: throw badRequest("invalid_parameter", "position is required (1 = first)")
+        if (position < 1) throw badRequest("invalid_parameter", "position must be 1 or more (1 = first)")
+        val item = itemOf(list, parseMediaType(type)!!, tmdbId, user) ?: throw notFound("That title is not in this list")
+        moveListItemHandler.handle(MoveListItem(list.id!!, user.id!!, item.id!!, MoveTarget.Place(position))).onLeft { error ->
+            throw when (error) {
+                MoveListItemError.ItemNotFound -> notFound("That title is not in this list")
+                MoveListItemError.ListNotFound, MoveListItemError.NotOwner -> notFound("List $id not found")
+            }
+        }
+        return detail(customListRepository.findById(list.id)!!, user)
+    }
+
+    /**
+     * Fork: sets the order at once. `items` are titles of the list (`{tmdbId, type}`) in their new order; titles left
+     * out keep their order after them. Anything unknown or repeated is a 400 and nothing changes. Owner only.
+     */
+    @PutMapping("/{id}/order")
+    fun setOrder(@CurrentUser user: User, @PathVariable id: Long, @RequestBody body: SetOrderRequest): ListDetailDto {
+        val list = ownedList(user, id)
+        if (body.items.size > MAX_ORDER_ITEMS) {
+            throw ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "too_many_items", "Send at most $MAX_ORDER_ITEMS titles per request")
+        }
+        val missing = mutableListOf<String>()
+        val itemIds = body.items.mapIndexedNotNull { index, ref ->
+            val tmdbId = ref.tmdbId?.takeIf { it > 0 } ?: throw badRequest("invalid_parameter", "items[$index] needs a positive tmdbId")
+            val mediaType = parseMediaType(ref.type)
+                ?: throw badRequest("invalid_parameter", "items[$index] needs a type (\"movie\" or \"tv\")")
+            val item = itemOf(list, mediaType, tmdbId, user)
+            if (item == null) missing += "${mediaType.apiName()}/$tmdbId"
+            item?.id
+        }
+        if (missing.isNotEmpty()) throw badRequest("not_in_list", "Not in this list: ${missing.joinToString(", ")}")
+        setListOrderHandler.handle(SetListOrder(list.id!!, user.id!!, itemIds)).onLeft { error ->
+            throw when (error) {
+                is SetListOrderError.Duplicates -> badRequest("invalid_parameter", "Each title can appear only once in items")
+                is SetListOrderError.NotInList -> badRequest("not_in_list", "Some titles are no longer in this list")
+                SetListOrderError.ListNotFound, SetListOrderError.NotOwner -> notFound("List $id not found")
+            }
+        }
+        return detail(customListRepository.findById(list.id)!!, user)
+    }
+
+    /** The list's item for a TMDB title, or null if the title isn't in it (or Ratelog has never seen it). */
+    private fun itemOf(list: CustomList, type: MediaType, tmdbId: Int, user: User): CustomListItem? {
+        val local = mediaImporter.findLocal(tmdbId, type, user.metadataLang) ?: return null
+        return list.items.find { it.mediaType == type && it.mediaId == local.id }
     }
 
     /**
@@ -236,18 +326,25 @@ class ApiListController(
         }
     }
 
+    private fun setNumbered(listId: CustomList.Id, user: User, numbered: Boolean) {
+        setListNumberedHandler.handle(SetListNumbered(listId, user.id!!, numbered)).onLeft {
+            throw notFound("List ${listId.value} not found")
+        }
+    }
+
     private fun officialMustBePublic() =
         badRequest("official_list_public", "Official lists are always public: send \"isOfficial\": false first (admin tokens only)")
 
     private fun detail(list: CustomList, user: User): ListDetailDto {
         // The token user's progress: one marks query per media type, not one per title.
         val progress = getListProgressHandler.progressOf(list, user.id!!).entries.associateBy { it.itemId }
-        val items = list.items.sortedBy { it.position }.mapNotNull { item ->
+        // Fork: list order (position, then id) and 1-based places, the ranks the list page shows.
+        val items = list.items.sortedWith(ListOrder.COMPARATOR).mapIndexedNotNull { index, item ->
             mediaImporter.findLocalById(item.mediaId, item.mediaType, user.metadataLang)?.let { media: org.ratelog.api.media.LocalMedia ->
                 val dto: TitleDto = media.toDto()
                 val entry = progress[item.id]
                 ListItemDto(
-                    position = item.position,
+                    position = index + 1,
                     tmdbId = dto.tmdbId,
                     type = dto.type,
                     title = dto.title,
@@ -267,6 +364,7 @@ class ApiListController(
             url = "/list/${list.id.value}",
             items = items,
             progress = ListProgressDto(seen = items.count { it.seen }, total = items.size),
+            numbered = listOptions.isNumbered(list.id),
         )
     }
 
@@ -278,6 +376,8 @@ class ApiListController(
 
     companion object {
         const val MAX_ITEMS_PER_REQUEST = 100
+        /** `PUT .../order` only reorders (no TMDB lookups), so it takes a whole long list at once. */
+        const val MAX_ORDER_ITEMS = 1000
         const val ADMIN_ONLY = "Only admin tokens can change isOfficial"
     }
 }
