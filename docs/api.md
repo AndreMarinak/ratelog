@@ -87,6 +87,39 @@ or pass `tags` on list items. Other users' tags are never visible: their ids com
 ```bash
 curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
   -d '{"tags":["comfort watch","date night"]}' "$RATELOG_URL/api/v1/titles/movie/116149/tags"
+## Ratings
+
+A rating is **quick** (one overall `score`) or **detailed** (the five categories; its score is their average).
+TV is rated per season, and a show's score is the average of its rated seasons. Scores go from 0 to 10.
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| GET | `/api/v1/ratings` | optional `type` (`movie` or `tv`) | `{movies: [MovieRating], tv: [TvRating]}`, highest score first. A list excluded by `type` is left out |
+| GET | `/api/v1/ratings/movie/{tmdbId}` | | `MovieRating` |
+| PUT | `/api/v1/ratings/movie/{tmdbId}` | `RatingBody` | `201` (new) or `200` (replaced) with `MovieRating` |
+| DELETE | `/api/v1/ratings/movie/{tmdbId}` | | `204` |
+| GET | `/api/v1/ratings/tv/{tmdbId}` | | `TvRating` |
+| PUT | `/api/v1/ratings/tv/{tmdbId}/seasons/{season}` | `RatingBody` | `201` (new season) or `200` (replaced) with the whole `TvRating` |
+| DELETE | `/api/v1/ratings/tv/{tmdbId}/seasons/{season}` | | `204`. Deleting the last rated season removes the show's rating |
+
+**RatingBody**: quick `{"score": 8.5}`, or detailed `{"directing": 9, "cinematography": 8, "acting": 9, "soundtrack": 7, "screenplay": 8}`.
+Optional `reviewTitle` (up to 100 characters) and `reviewText` (up to 5000).
+- Send `score` alone or all five categories without `score`. Anything else (a score plus categories, or only some categories) is `400 invalid_rating`.
+- PUT replaces the scores, so it also switches a rating between quick and detailed.
+- On a PUT that replaces a rating, review fields you leave out keep their saved value. Send `""` to clear one.
+- PUT saves the title from TMDB first if Ratelog doesn't have it yet (same as adding it to a list). `season` must be between 1 and the show's last season.
+
+**MovieRating**: `{tmdbId, type: "movie", title, year, posterUrl, mode: "quick" | "detailed", score, categories, reviewTitle, reviewText, createdAt, url}`.
+`categories` is `{directing, cinematography, acting, soundtrack, screenplay}`, or `null` for a quick rating.
+
+**TvRating**: `{tmdbId, type: "tv", title, year, posterUrl, score, seasons: [{season, mode, score, categories, reviewTitle, reviewText, createdAt}], url}`.
+
+Rating errors: `invalid_rating`, `invalid_score`, `invalid_review`, `invalid_season` (400), `not_found` (404: TMDB doesn't know the id, or you haven't rated it),
+`conflict` (409: another request created the same rating at the same moment; retry).
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"score": 8.5, "reviewTitle": "Still the best"}' "$RATELOG_URL/api/v1/ratings/movie/949"
 ```
 
 ## Errors

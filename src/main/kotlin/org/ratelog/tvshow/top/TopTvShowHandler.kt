@@ -3,6 +3,7 @@ package org.ratelog.tvshow.top
 import org.ratelog.Lang
 import org.ratelog.Rank
 import org.ratelog.tag.Tag
+import org.ratelog.RatingCategory
 import org.ratelog.tvshow.TvDescriptionRepository
 import org.ratelog.tvshow.TvShow
 import org.ratelog.tvshow.TvShowRepository
@@ -35,9 +36,13 @@ class TopTvShowHandler(
     private val tvShowRepository: TvShowRepository,
     private val tvDescriptionRepository: TvDescriptionRepository,
 ) {
+    /**
+     * Ranks by overall score (quick and detailed seasons alike), or by one category averaged over the
+     * detailed seasons; shows rated only with quick ratings are left out. Unknown categories mean overall score.
+     */
     @Transactional
     fun handle(query: TopTvShow): List<TopTvShowItem> =
-        tvRatingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, query.ratingCategory, query.tagId)
+        tvRatingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, RatingCategory.parse(query.ratingCategory)?.name, query.tagId)
             .mapNotNull { toItem(it, query.lang) }
 
     private fun toItem(item: Pair<Rank, TvRating>, lang: Lang) =

@@ -73,3 +73,24 @@
 .rating-delete-form {
   display: inline-flex;
 }
+
+/* Quick rating (fork): shown instead of the category bars */
+.quick-rating-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.quick-rating-label svg {
+  width: 14px;
+  height: 14px;
+}

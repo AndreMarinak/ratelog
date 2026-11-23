@@ -21,11 +21,12 @@ class AddSeasonRatingController(
         @RequestParam("tvShowId") tvShowId: Long,
         @RequestParam("tmdbId") tmdbId: Int,
         @RequestParam("seasonNumber") seasonNumber: Int,
-        @RequestParam("directing") directing: Double,
-        @RequestParam("cinematography") cinematography: Double,
-        @RequestParam("acting") acting: Double,
-        @RequestParam("soundtrack") soundtrack: Double,
-        @RequestParam("screenplay") screenplay: Double,
+        @RequestParam("directing", required = false) directing: Double?,
+        @RequestParam("cinematography", required = false) cinematography: Double?,
+        @RequestParam("acting", required = false) acting: Double?,
+        @RequestParam("soundtrack", required = false) soundtrack: Double?,
+        @RequestParam("screenplay", required = false) screenplay: Double?,
+        @RequestParam("score", required = false) score: Double?,
         @RequestParam("reviewTitle", required = false) reviewTitle: String?,
         @RequestParam("reviewText", required = false) reviewText: String?,
         redirectAttributes: RedirectAttributes
@@ -34,13 +35,14 @@ class AddSeasonRatingController(
             tvShowId = TvShow.Id(tvShowId),
             seasonNumber = seasonNumber.let(::SeasonNumber),
             userId = user.id!!,
-            directing = directing.let(::Score),
-            cinematography = cinematography.let(::Score),
-            acting = acting.let(::Score),
-            soundtrack = soundtrack.let(::Score),
-            screenplay = screenplay.let(::Score),
+            directing = directing?.let(::Score),
+            cinematography = cinematography?.let(::Score),
+            acting = acting?.let(::Score),
+            soundtrack = soundtrack?.let(::Score),
+            screenplay = screenplay?.let(::Score),
             reviewTitle = reviewTitle?.takeIf { it.isNotBlank() },
             reviewText = reviewText?.takeIf { it.isNotBlank() },
+            score = score?.let(::Score),
         ).let(handler::handle)
             .mapLeft(::mapError)
             .fold(
@@ -56,6 +58,7 @@ class AddSeasonRatingController(
 
     private fun mapError(error: AddSeasonRatingHandlerError): String = when (error) {
         AddSeasonRatingHandlerError.InvalidRatingValue -> "error.rating.invalid"
+        AddSeasonRatingHandlerError.InvalidRatingCombination -> "error.rating.combination"
         AddSeasonRatingHandlerError.RatingAlreadyExists -> "error.rating.exists.season"
         AddSeasonRatingHandlerError.TvShowNotFound -> "error.load.tvshow"
         AddSeasonRatingHandlerError.InvalidReviewTitle -> "error.review.title.invalid"

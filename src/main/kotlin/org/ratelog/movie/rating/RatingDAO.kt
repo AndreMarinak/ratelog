@@ -7,16 +7,17 @@ import org.springframework.data.relational.core.mapping.Table
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 
+/** Category columns are null for a quick rating (score only). */
 @Table("movie_ratings")
 data class RatingEntity(
     @Id val id: Long? = null,
     @Column("movie_id") val movieId: Long,
     @Column("user_id") val userId: Long,
-    val directing: Double,
-    val cinematography: Double,
-    val acting: Double,
-    val soundtrack: Double,
-    val screenplay: Double,
+    val directing: Double?,
+    val cinematography: Double?,
+    val acting: Double?,
+    val soundtrack: Double?,
+    val screenplay: Double?,
     @Column("created_at_epoch_ms") val createdAtEpochMs: Long,
     val score: Double?,
     @Column("review_title") val reviewTitle: String?,
@@ -27,11 +28,11 @@ data class RatedMovieRow(
     val id: Long?,
     val movieId: Long,
     val userId: Long,
-    val directing: Double,
-    val cinematography: Double,
-    val acting: Double,
-    val soundtrack: Double,
-    val screenplay: Double,
+    val directing: Double?,
+    val cinematography: Double?,
+    val acting: Double?,
+    val soundtrack: Double?,
+    val screenplay: Double?,
     val createdAtEpochMs: Long,
     val score: Double?,
     val reviewTitle: String?,
@@ -43,6 +44,10 @@ data class RatedMovieRow(
 interface RatingDAO : CrudRepository<RatingEntity, Long> {
     fun findFirstByMovieIdAndUserId(movieId: Long, userId: Long): RatingEntity?
 
+    /**
+     * Ranked by score, or by one category when `ratingCategory` is set. Quick ratings have no
+     * categories, so they are left out of a category ranking (they still rank by overall score).
+     */
     @Query(
         """
         WITH ranked AS (
@@ -56,10 +61,18 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
                            WHEN 'soundtrack' THEN r.soundtrack
                            WHEN 'screenplay' THEN r.screenplay
                            ELSE r.score
-                       END DESC
+                       END DESC NULLS LAST
                    ) AS rank
             FROM movie_ratings r
             WHERE r.user_id = :userId
+              AND (CASE :ratingCategory
+                       WHEN 'directing' THEN r.directing
+                       WHEN 'cinematography' THEN r.cinematography
+                       WHEN 'acting' THEN r.acting
+                       WHEN 'soundtrack' THEN r.soundtrack
+                       WHEN 'screenplay' THEN r.screenplay
+                       ELSE 0
+                   END) IS NOT NULL
         )
         SELECT ranked.*
         FROM ranked
@@ -68,14 +81,7 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
           AND (:name IS NULL OR LOWER(m.original_title) LIKE LOWER(CONCAT('%', :name, '%')))
           AND (:tagId IS NULL OR EXISTS (SELECT 1 FROM tag_assignments ta INNER JOIN tags tg ON tg.id = ta.tag_id
                WHERE ta.tag_id = :tagId AND tg.user_id = :userId AND ta.media_type = 'movie' AND ta.media_id = m.id))
-        ORDER BY CASE :ratingCategory
-            WHEN 'directing' THEN ranked.directing
-            WHEN 'cinematography' THEN ranked.cinematography
-            WHEN 'acting' THEN ranked.acting
-            WHEN 'soundtrack' THEN ranked.soundtrack
-            WHEN 'screenplay' THEN ranked.screenplay
-            ELSE ranked.score
-        END DESC
+        ORDER BY ranked.rank
         LIMIT :limit
         """
     )

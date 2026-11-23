@@ -8,6 +8,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.ratelog.*
 import org.ratelog.movie.Movie
+import org.ratelog.tvshow.TvShow
 import org.ratelog.test.*
 import org.ratelog.tmdb.TmdbClient
 import org.ratelog.tmdb.TmdbGenreResponse
@@ -134,5 +135,45 @@ class LetterboxdImportHandlerTest {
         assertEquals(0, importResult.importedMovies)
         assertEquals(1, importResult.notFound.size)
         assertEquals("Unknown Movie", importResult.notFound[0])
+    }
+
+    @Test
+    fun `should import a movie as a quick rating with the stars doubled`() {
+        movieRepository.save(MovieFactory.aMovie(id = 1, tmdbId = 278, originalTitle = "The Shawshank Redemption", releaseYear = 1994))
+        val csv = """
+            Date,Name,Year,Letterboxd URI,Rating
+            2024-01-15,The Shawshank Redemption,1994,https://letterboxd.com/film/the-shawshank-redemption/,4.5
+        """.trimIndent()
+        val match = TmdbMovieResponse(id = 278, title = "The Shawshank Redemption", originalTitle = "The Shawshank Redemption", releaseDate = "1994-09-23")
+        whenever(tmdbClient.searchMovies("The Shawshank Redemption", Lang.en)).thenReturn((listOf(match) to 1).right())
+
+        val result = handler.handle(ImportLetterboxdCommand(User.Id(1), csv.toByteArray()))
+
+        assertEquals(1, result.getOrNull()!!.importedMovies)
+        val rating = ratingRepository.findByMovieIdAndUserId(Movie.Id(1), User.Id(1))!!
+        assertTrue(rating.isQuick)
+        assertNull(rating.directing)
+        assertNull(rating.screenplay)
+        assertEquals(9.0, rating.score!!.value)
+    }
+
+    @Test
+    fun `should import a tv show as quick ratings for every season`() {
+        tvShowRepository.save(TvShowFactory.aTvShow(id = 7, tmdbId = 1396, originalName = "Breaking Bad", lastSeasonNumber = 2))
+        val csv = """
+            Date,Name,Year,Letterboxd URI,Rating
+            2024-01-15,Breaking Bad,2008,https://letterboxd.com/film/breaking-bad/,3.5
+        """.trimIndent()
+        whenever(tmdbClient.searchMovies("Breaking Bad", Lang.en)).thenReturn((emptyList<TmdbMovieResponse>() to 0).right())
+        val show = TmdbTvShowResponse(id = 1396, name = "Breaking Bad", originalName = "Breaking Bad", firstAirDate = "2008-01-20")
+        whenever(tmdbClient.searchTvShows("Breaking Bad", Lang.en)).thenReturn((listOf(show) to 1).right())
+
+        val result = handler.handle(ImportLetterboxdCommand(User.Id(1), csv.toByteArray()))
+
+        assertEquals(1, result.getOrNull()!!.importedTvShows)
+        val rating = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(7), User.Id(1))!!
+        assertEquals(2, rating.seasonRatings.size)
+        assertTrue(rating.seasonRatings.all { it.isQuick && it.score.value == 7.0 })
+        assertEquals(7.0, rating.score!!.value)
     }
 }

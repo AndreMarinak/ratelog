@@ -2,6 +2,7 @@ package org.ratelog.movie.top
 
 import org.ratelog.Lang
 import org.ratelog.Rank
+import org.ratelog.RatingCategory
 import org.ratelog.movie.Movie
 import org.ratelog.movie.MovieDescriptionRepository
 import org.ratelog.movie.MovieRepository
@@ -35,9 +36,13 @@ class TopMovieHandler(
     private val movieRepository: MovieRepository,
     private val movieDescriptionRepository: MovieDescriptionRepository,
 ) {
+    /**
+     * Ranks by overall score (quick and detailed ratings alike), or by one category, which leaves
+     * quick ratings out since they have no categories. Unknown categories fall back to the overall score.
+     */
     @Transactional
     fun handle(query: TopMovie): List<TopMovieItem> =
-        ratingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, query.ratingCategory, query.tagId)
+        ratingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, RatingCategory.parse(query.ratingCategory)?.name, query.tagId)
             .mapNotNull { toItem(it, query.lang) }
 
     private fun toItem(item: Pair<Rank, Rating>, lang: Lang) =

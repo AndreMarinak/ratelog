@@ -172,4 +172,65 @@ class AddSeasonRatingHandlerTest {
         assertNotNull(savedRating)
         assertNull(savedRating!!.seasonRatings[0].review)
     }
+
+    private fun quickSeason(seasonNumber: Int, score: Double?, directing: Double? = null) = AddSeasonRating(
+        tvShowId = TvShow.Id(1),
+        seasonNumber = SeasonNumber(seasonNumber),
+        userId = User.Id(1),
+        directing = directing?.let { org.ratelog.Score(it) },
+        cinematography = null,
+        acting = null,
+        soundtrack = null,
+        screenplay = null,
+        reviewTitle = null, reviewText = null,
+        score = score?.let { org.ratelog.Score(it) },
+    )
+
+    @Test
+    fun `should add a quick season rating with only the overall score`() {
+        val result = handler.handle(quickSeason(1, 9.0))
+
+        assertTrue(result.isRight())
+        val saved = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))!!
+        val season = saved.seasonRatings.single()
+        assertTrue(season.isQuick)
+        assertNull(season.directing)
+        assertEquals(9.0, season.score.value)
+        assertEquals(9.0, saved.score!!.value)
+    }
+
+    @Test
+    fun `should average quick and detailed seasons into the show score`() {
+        handler.handle(
+            AddSeasonRating(
+                tvShowId = TvShow.Id(1), seasonNumber = SeasonNumber(1), userId = User.Id(1),
+                directing = org.ratelog.Score(6.0), cinematography = org.ratelog.Score(6.0), acting = org.ratelog.Score(6.0),
+                soundtrack = org.ratelog.Score(6.0), screenplay = org.ratelog.Score(6.0),
+                reviewTitle = null, reviewText = null,
+            )
+        )
+
+        handler.handle(quickSeason(2, 9.0))
+
+        val saved = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1))!!
+        assertEquals(2, saved.seasonRatings.size)
+        assertFalse(saved.seasonRatings.first { it.seasonNumber == SeasonNumber(1) }.isQuick)
+        assertTrue(saved.seasonRatings.first { it.seasonNumber == SeasonNumber(2) }.isQuick)
+        assertEquals(7.5, saved.score!!.value)
+    }
+
+    @Test
+    fun `should return InvalidRatingCombination when a score is sent with some categories`() {
+        val result = handler.handle(quickSeason(1, 9.0, directing = 7.0))
+
+        assertEquals(AddSeasonRatingHandlerError.InvalidRatingCombination, result.leftOrNull())
+        assertNull(tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(1), User.Id(1)))
+    }
+
+    @Test
+    fun `should return InvalidRatingCombination when neither score nor categories are sent`() {
+        val result = handler.handle(quickSeason(1, null))
+
+        assertEquals(AddSeasonRatingHandlerError.InvalidRatingCombination, result.leftOrNull())
+    }
 }

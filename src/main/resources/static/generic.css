@@ -78,6 +78,21 @@ body {
 
      a {
         position: relative;
+        transition: transform 0.2s ease;
+     }
+
+     /* Fork: posters at near-full brightness; a bottom gradient keeps the title readable. */
+     a::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 45%;
+        border-radius: 0 0 8px 8px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+        pointer-events: none;
+        z-index: 1;
      }
 
      img,
@@ -85,13 +100,17 @@ body {
         width: 100%;
         aspect-ratio: 2 / 3;
         object-fit: cover;
-        filter: brightness(0.6) saturate(0.6);
+        filter: brightness(0.92) saturate(0.95);
         transition: filter 0.2s ease;
+     }
+
+     a:hover {
+        transform: translateY(-2px);
      }
 
      a:hover img,
      a:hover .poster-fallback {
-        filter: brightness(0.8) saturate(1);
+        filter: brightness(1.05) saturate(1.05);
      }
 
      h3 {

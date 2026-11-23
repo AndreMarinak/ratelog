@@ -2,6 +2,7 @@ package org.ratelog.test
 
 import org.ratelog.MediaType
 import org.ratelog.Rank
+import org.ratelog.RatingCategory
 import org.ratelog.movie.Movie
 import org.ratelog.movie.rating.Rating
 import org.ratelog.movie.rating.RatingRepository
@@ -25,23 +26,18 @@ class InMemoryRatingRepository(private val tags: InMemoryTagRepository? = null) 
         name: String?,
         ratingCategory: String?,
         tagId: Tag.Id?,
-    ): List<Pair<Rank, Rating>> =
-        store.values
+    ): List<Pair<Rank, Rating>> {
+        // Mirrors the SQL: a category ranking skips quick ratings, nulls sort last; ranks are overall
+        // ranks and the tag filter only narrows the list afterwards.
+        val category = RatingCategory.parse(ratingCategory)
+        return store.values
             .filter { it.userId == userId }
-            .sortedByDescending {
-                when (ratingCategory) {
-                    "directing" -> it.directing.value
-                    "cinematography" -> it.cinematography.value
-                    "acting" -> it.acting.value
-                    "soundtrack" -> it.soundtrack.value
-                    "screenplay" -> it.screenplay.value
-                    else -> it.score?.value ?: 0.0
-                }
-            }
+            .filter { category == null || it.rankingScore(category) != null }
+            .sortedByDescending { it.rankingScore(category)?.value ?: Double.NEGATIVE_INFINITY }
             .mapIndexed { index, rating -> Pair(Rank(index + 1), rating) }
-            // Like the SQL: ranks stay overall ranks, the tag filter only narrows the list.
             .filter { (_, rating) -> tagId == null || tags?.isTaggedForUser(tagId, userId, MediaType.movie, rating.movieId.value) == true }
             .take(limit)
+    }
 
     override fun save(rating: Rating) {
         val ratingToSave = if (rating.id == null) {

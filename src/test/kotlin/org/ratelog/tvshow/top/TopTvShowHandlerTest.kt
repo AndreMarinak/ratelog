@@ -78,4 +78,58 @@ class TopTvShowHandlerTest {
 
         assertEquals(0, result.size)
     }
+
+    private fun givenMixedShows() {
+        listOf(1L to "All Detailed", 2L to "All Quick", 3L to "Mixed").forEach { (id, name) ->
+            tvShowRepository.save(TvShowFactory.aTvShow(id = id, tmdbId = 200 + id.toInt(), originalName = name))
+        }
+        val user = User.Id(1)
+        tvRatingRepository.save(
+            TvRatingFactory.aTvRating(
+                id = 1, tvShowId = TvShow.Id(1), userId = user,
+                seasonRatings = listOf(TvRatingFactory.aSeasonRating(tvShowId = TvShow.Id(1), seasonNumber = 1, userId = user, directing = 6.0, cinematography = 7.0, acting = 7.0, soundtrack = 7.0, screenplay = 8.0)),
+            )
+        )
+        tvRatingRepository.save(
+            TvRatingFactory.aTvRating(
+                id = 2, tvShowId = TvShow.Id(2), userId = user,
+                seasonRatings = listOf(
+                    TvRatingFactory.aQuickSeasonRating(tvShowId = TvShow.Id(2), seasonNumber = 1, userId = user, score = 9.5),
+                    TvRatingFactory.aQuickSeasonRating(tvShowId = TvShow.Id(2), seasonNumber = 2, userId = user, score = 8.5),
+                ),
+            )
+        )
+        // Mixed: overall (4 + 9) / 2 = 6.5; directing only counts the detailed season (9.0).
+        tvRatingRepository.save(
+            TvRatingFactory.aTvRating(
+                id = 3, tvShowId = TvShow.Id(3), userId = user,
+                seasonRatings = listOf(
+                    TvRatingFactory.aSeasonRating(tvShowId = TvShow.Id(3), seasonNumber = 1, userId = user, directing = 9.0, cinematography = 1.0, acting = 1.0, soundtrack = 4.0, screenplay = 5.0),
+                    TvRatingFactory.aQuickSeasonRating(tvShowId = TvShow.Id(3), seasonNumber = 2, userId = user, score = 9.0),
+                ),
+            )
+        )
+    }
+
+    @Test
+    fun `should rank shows by overall score including quick seasons`() {
+        givenMixedShows()
+
+        val result = handler.handle(TopTvShow(User.Id(1), null, null, 10, null, Lang.en))
+
+        assertEquals(listOf("All Quick", "All Detailed", "Mixed"), result.map { it.title })
+        assertEquals(9.0, result[0].rating.score!!.value)
+        assertEquals(6.5, result[2].rating.score!!.value)
+    }
+
+    @Test
+    fun `should rank by a category averaged over detailed seasons and leave quick-only shows out`() {
+        givenMixedShows()
+
+        val result = handler.handle(TopTvShow(User.Id(1), null, "directing", 10, null, Lang.en))
+
+        assertEquals(listOf("Mixed", "All Detailed"), result.map { it.title })
+        assertEquals(listOf(1, 2), result.map { it.rank.value })
+        assertEquals(9.0, result[0].rating.categoryAverage(RatingCategory.directing)!!.value)
+    }
 }

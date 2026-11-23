@@ -131,6 +131,29 @@ object RatingFactory {
         score = Score((directing + cinematography + acting + soundtrack + screenplay) / 5.0),
         review = toReview(reviewTitle, reviewText)
     )
+
+    /** A quick rating: one overall score, no categories. */
+    fun aQuickRating(
+        id: Long? = null,
+        movieId: Movie.Id,
+        userId: User.Id,
+        score: Double,
+        createdAt: Instant = Instant.now(),
+        reviewTitle: String? = null,
+        reviewText: String? = null,
+    ) = Rating(
+        id = id?.let { Rating.Id(it) },
+        movieId = movieId,
+        userId = userId,
+        directing = null,
+        cinematography = null,
+        acting = null,
+        soundtrack = null,
+        screenplay = null,
+        createdAt = createdAt,
+        score = Score(score),
+        review = toReview(reviewTitle, reviewText)
+    )
 }
 
 object TvRatingFactory {
@@ -179,6 +202,31 @@ object TvRatingFactory {
         soundtrack = Score(soundtrack),
         screenplay = Score(screenplay),
         score = Score((directing + cinematography + acting + soundtrack + screenplay) / 5.0),
+        createdAt = createdAt,
+        review = toReview(reviewTitle, reviewText)
+    )
+
+    /** A quick season rating: one overall score, no categories. */
+    fun aQuickSeasonRating(
+        id: Long? = null,
+        tvShowId: TvShow.Id,
+        seasonNumber: Int,
+        userId: User.Id,
+        score: Double,
+        createdAt: Instant = Instant.now(),
+        reviewTitle: String? = null,
+        reviewText: String? = null,
+    ) = SeasonRating(
+        id = id?.let { SeasonRating.Id(it) },
+        tvShowId = tvShowId,
+        seasonNumber = SeasonNumber(seasonNumber),
+        userId = userId,
+        directing = null,
+        cinematography = null,
+        acting = null,
+        soundtrack = null,
+        screenplay = null,
+        score = Score(score),
         createdAt = createdAt,
         review = toReview(reviewTitle, reviewText)
     )

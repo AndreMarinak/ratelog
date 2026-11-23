@@ -2,6 +2,7 @@ package org.ratelog.import.letterboxd
 
 import arrow.core.Either
 import arrow.core.raise.either
+import org.ratelog.RatingInput
 import org.ratelog.Score
 import org.ratelog.SeasonNumber
 import org.ratelog.TmdbId
@@ -167,18 +168,9 @@ class LetterboxdImportHandler(
             return ProcessResult.SkippedDuplicate
         }
 
-        Rating(
-            id = null,
-            movieId = movie.id,
-            userId = userId,
-            directing = score,
-            cinematography = score,
-            acting = score,
-            soundtrack = score,
-            screenplay = score,
-            createdAt = Instant.now(),
-            review = null,
-        ).updateScore().let(ratingRepository::save)
+        // Letterboxd only has one star rating, so it becomes a quick rating (no category scores).
+        Rating.create(movie.id, userId, RatingInput.Quick(score), review = null, now = Instant.now())
+            .let(ratingRepository::save)
 
         return ProcessResult.ImportedMovie
     }
@@ -195,11 +187,7 @@ class LetterboxdImportHandler(
         (1..lastSeason).forEach { seasonNumber ->
             tvRating = tvRating.addSeasonRating(
                 seasonNumber = SeasonNumber(seasonNumber),
-                directing = score,
-                cinematography = score,
-                acting = score,
-                soundtrack = score,
-                screenplay = score,
+                input = RatingInput.Quick(score),
                 createdAt = Instant.now(),
                 review = null,
             )

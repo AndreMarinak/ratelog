@@ -20,11 +20,12 @@ class UpdateSeasonRatingController(
         @RequestParam("tvShowId") tvShowId: Long,
         @RequestParam("tmdbId") tmdbId: Int,
         @RequestParam("seasonNumber") seasonNumber: Int,
-        @RequestParam("directing") directing: Double,
-        @RequestParam("cinematography") cinematography: Double,
-        @RequestParam("acting") acting: Double,
-        @RequestParam("soundtrack") soundtrack: Double,
-        @RequestParam("screenplay") screenplay: Double,
+        @RequestParam("directing", required = false) directing: Double?,
+        @RequestParam("cinematography", required = false) cinematography: Double?,
+        @RequestParam("acting", required = false) acting: Double?,
+        @RequestParam("soundtrack", required = false) soundtrack: Double?,
+        @RequestParam("screenplay", required = false) screenplay: Double?,
+        @RequestParam("score", required = false) score: Double?,
         @RequestParam("reviewTitle", required = false) reviewTitle: String?,
         @RequestParam("reviewText", required = false) reviewText: String?,
         redirectAttributes: RedirectAttributes
@@ -40,6 +41,7 @@ class UpdateSeasonRatingController(
             screenplay = screenplay,
             reviewTitle = reviewTitle?.takeIf { it.isNotBlank() },
             reviewText = reviewText?.takeIf { it.isNotBlank() },
+            score = score,
         ).let(handler::handle)
             .mapLeft(::mapError)
             .fold(
@@ -55,6 +57,7 @@ class UpdateSeasonRatingController(
 
     private fun mapError(error: UpdateSeasonRatingHandlerError): String = when (error) {
         UpdateSeasonRatingHandlerError.InvalidRatingValue -> "error.rating.invalid"
+        UpdateSeasonRatingHandlerError.InvalidRatingCombination -> "error.rating.combination"
         UpdateSeasonRatingHandlerError.RatingNotFound,
         UpdateSeasonRatingHandlerError.SeasonRatingNotFound -> "error.rating.update.failed"
         UpdateSeasonRatingHandlerError.InvalidReviewTitle -> "error.review.title.invalid"

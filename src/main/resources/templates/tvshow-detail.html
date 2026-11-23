@@ -66,7 +66,8 @@
                     </button>
                 </div>
                 <div th:if="${season.hasRating}" class="season-card-body">
-                    <div class="rating-breakdown"
+                    <p th:replace="~{fragments/quick-rating :: quickRatingLabel(${season.quickRating})}"></p>
+                    <div class="rating-breakdown" th:unless="${season.quickRating}"
                          th:data-categories="'directing:' + ${season.directing} + ',cinematography:' + ${season.cinematography} + ',acting:' + ${season.acting} + ',soundtrack:' + ${season.soundtrack} + ',screenplay:' + ${season.screenplay}"></div>
                     <span class="visually-hidden" data-i18n-key="directing" th:text="#{tvshows.rating.category.directing}">Directing</span>
                     <span class="visually-hidden" data-i18n-key="cinematography" th:text="#{tvshows.rating.category.cinematography}">Cinematography</span>
@@ -88,6 +89,8 @@
                                 th:data-acting="${season.acting}"
                                 th:data-soundtrack="${season.soundtrack}"
                                 th:data-screenplay="${season.screenplay}"
+                                th:data-score="${season.score}"
+                                th:data-rating-mode="${season.quickRating} ? 'quick' : 'detailed'"
                                 th:data-review-title="${season.reviewTitle}"
                                 th:data-review-text="${season.reviewText}"
                                 th:aria-label="#{tvshow.detail.edit.rating}">

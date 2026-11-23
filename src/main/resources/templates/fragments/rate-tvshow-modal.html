@@ -7,6 +7,8 @@
             </button>
         </div>
 
+        <div th:replace="~{fragments/quick-rating :: ratingModeToggle}"></div>
+
         <div class="rating-modal-summary">
             <span class="rating-modal-summary-label" th:text="#{modal.overall}">Overall</span>
             <span class="rating-modal-summary-value rating-overall-value">5.00</span>
@@ -19,11 +21,14 @@
             <input type="hidden" name="tmdbId" th:value="${show.tmdbId}">
             <input type="hidden" id="seasonNumber" name="seasonNumber">
 
-            <div th:replace="~{fragments/rate-slider :: rateSlider('directing', 'tvshows.rating.category.directing')}"></div>
-            <div th:replace="~{fragments/rate-slider :: rateSlider('cinematography', 'tvshows.rating.category.cinematography')}"></div>
-            <div th:replace="~{fragments/rate-slider :: rateSlider('acting', 'tvshows.rating.category.acting')}"></div>
-            <div th:replace="~{fragments/rate-slider :: rateSlider('soundtrack', 'tvshows.rating.category.soundtrack')}"></div>
-            <div th:replace="~{fragments/rate-slider :: rateSlider('screenplay', 'tvshows.rating.category.screenplay')}"></div>
+            <div th:replace="~{fragments/quick-rating :: quickScorePanel}"></div>
+            <div data-rating-mode-panel="detailed">
+                <div th:replace="~{fragments/rate-slider :: rateSlider('directing', 'tvshows.rating.category.directing')}"></div>
+                <div th:replace="~{fragments/rate-slider :: rateSlider('cinematography', 'tvshows.rating.category.cinematography')}"></div>
+                <div th:replace="~{fragments/rate-slider :: rateSlider('acting', 'tvshows.rating.category.acting')}"></div>
+                <div th:replace="~{fragments/rate-slider :: rateSlider('soundtrack', 'tvshows.rating.category.soundtrack')}"></div>
+                <div th:replace="~{fragments/rate-slider :: rateSlider('screenplay', 'tvshows.rating.category.screenplay')}"></div>
+            </div>
 
             <div class="rate-modal-review">
                 <label for="reviewTitle" class="rate-modal-label" th:text="#{modal.review.title}">Title</label>
@@ -75,6 +80,10 @@
                 if (season && value !== undefined && value !== null && value !== '') season.value = value;
             }
 
+            function setRatingMode(ratingMode) {
+                if (window.rateLogRatingMode) window.rateLogRatingMode.set(modal, ratingMode);
+            }
+
             modal.addEventListener('modal:open', function (e) {
                 const trigger = e.detail.trigger;
                 const form = modal.querySelector('form');
@@ -89,11 +98,16 @@
                 if (mode === 'edit' && trigger) {
                     setReviewTitle(trigger.dataset.reviewTitle);
                     setReviewText(trigger.dataset.reviewText);
+                    resetSliders();
                     fillSliders(trigger.dataset);
+                    setSlider('score', trigger.dataset.score);
+                    setRatingMode(trigger.dataset.ratingMode);
                 } else {
                     setReviewTitle('');
                     setReviewText('');
                     resetSliders();
+                    setSlider('score', DEFAULT_SCORE);
+                    setRatingMode();
                 }
             });
         })();
