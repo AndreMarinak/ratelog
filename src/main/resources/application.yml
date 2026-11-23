@@ -14,6 +14,8 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+    # Fork migrations are numbered V1000+; allow upstream's lower-numbered ones to apply later.
+    out-of-order: true
 
 server:
   port: ${PORT:8080}

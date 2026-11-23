@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(#{api.settings.title})}"></head>
+<body>
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='profile')}"></header>
+
+    <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
+    <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
+
+    <h1 th:text="#{api.settings.title}">API access</h1>
+    <p class="help-text" th:text="#{api.settings.description}">
+        Tokens let scripts and assistants like Claude manage your lists through the JSON API at /api/v1.
+    </p>
+
+    <div th:if="${newToken}" class="card api-new-token">
+        <h2 th:text="#{api.token.created.title(${newTokenName})}">Token created</h2>
+        <p class="warning-text">
+            <i data-lucide="alert-triangle"></i>
+            <span th:text="#{api.token.created.warning}">Copy it now. It won't be shown again.</span>
+        </p>
+        <div class="flex gap centered">
+            <input id="newTokenValue" type="text" readonly th:value="${newToken}" class="w-100" onclick="this.select()" />
+            <button type="button" class="primary" onclick="navigator.clipboard.writeText(document.getElementById('newTokenValue').value); this.textContent='✓';"
+                    th:text="#{api.token.copy}">Copy</button>
+        </div>
+    </div>
+
+    <form th:action="@{/settings/api/tokens}" method="post" class="flex gap centered api-create-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="text" name="name" required maxlength="100" class="w-100"
+               th:placeholder="#{api.token.name.placeholder}" placeholder="Token name, e.g. Claude" />
+        <button type="submit" class="primary" th:text="#{api.token.create}">Create token</button>
+    </form>
+
+    <div th:if="${#lists.isEmpty(tokens)}" class="empty-state" th:text="#{api.token.none}">No tokens yet.</div>
+
+    <div th:each="token : ${tokens}" class="card flex separate centered api-token-row">
+        <div>
+            <strong th:text="${token.name}">Claude</strong>
+            <div class="date">
+                <code th:text="${token.prefix} + '…'">rl_abc123…</code>
+                · <span th:text="#{api.token.created.at}">Created</span> <span th:text="${token.createdAt}"></span>
+                · <span th:text="#{api.token.last.used}">Last used</span>
+                <span th:text="${token.lastUsedAt} ?: #{api.token.never}">never</span>
+            </div>
+        </div>
+        <form th:action="@{'/settings/api/tokens/' + ${token.id} + '/revoke'}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button type="submit" class="link secondary" th:aria-label="#{api.token.revoke}" th:title="#{api.token.revoke}">
+                <i data-lucide="trash"></i>
+            </button>
+        </form>
+    </div>
+</div>
+<style>
+    .api-new-token, .api-create-form, .api-token-row { margin-top: 1rem; }
+    .api-new-token input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+</style>
+</body>
+</html>

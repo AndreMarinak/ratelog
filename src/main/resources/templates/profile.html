@@ -25,6 +25,10 @@
                 <button th:if="${isLoggedUser}" type="button" data-open-modal="letterboxdImportModal" class="link secondary">
                     <i data-lucide="upload"></i>
                 </button>
+                <button th:if="${isLoggedUser}" type="button" class="link secondary" onclick="location.href='/settings/api'"
+                        th:title="#{api.settings.title}" th:aria-label="#{api.settings.title}">
+                    <i data-lucide="key-round"></i>
+                </button>
             </div>
 
             <form th:unless="${isLoggedUser}" th:action="@{/user/follow}" method="post">
