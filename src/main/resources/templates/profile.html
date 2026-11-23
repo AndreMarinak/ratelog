@@ -29,6 +29,10 @@
                         th:title="#{api.settings.title}" th:aria-label="#{api.settings.title}">
                     <i data-lucide="key-round"></i>
                 </button>
+                <button th:if="${isLoggedUser}" type="button" class="link secondary" onclick="location.href='/tags'"
+                        th:title="#{tags.title}" th:aria-label="#{tags.title}">
+                    <i data-lucide="tags"></i>
+                </button>
             </div>
 
             <form th:unless="${isLoggedUser}" th:action="@{/user/follow}" method="post">

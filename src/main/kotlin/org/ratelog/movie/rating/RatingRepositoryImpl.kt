@@ -6,6 +6,7 @@ import org.ratelog.ReviewText
 import org.ratelog.ReviewTitle
 import org.ratelog.Score
 import org.ratelog.movie.Movie
+import org.ratelog.tag.Tag
 import org.ratelog.user.User
 import org.springframework.stereotype.Repository
 import java.time.Instant
@@ -26,9 +27,9 @@ class RatingRepositoryImpl(
     }
 
     override fun findRankedByUserIdWithFilters(
-        userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?
+        userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id?
     ): List<Pair<Rank, Rating>> =
-        ratingDAO.findRankedRows(userId.value, genreId, name, limit, ratingCategory)
+        ratingDAO.findRankedRows(userId.value, genreId, name, limit, ratingCategory, tagId?.value)
             .map { Rank(it.rank.toInt()) to it.toDomain() }
 
     private fun RatingEntity.toDomain(): Rating {

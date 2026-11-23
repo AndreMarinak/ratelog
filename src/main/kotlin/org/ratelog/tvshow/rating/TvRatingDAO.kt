@@ -90,6 +90,8 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
         INNER JOIN tv t ON ranked.tv_show_id = t.id
         WHERE (:genreId IS NULL OR t.genres LIKE CONCAT('%', :genreId, '%'))
           AND (:name IS NULL OR LOWER(t.original_name) LIKE LOWER(CONCAT('%', :name, '%')))
+          AND (:tagId IS NULL OR EXISTS (SELECT 1 FROM tag_assignments ta INNER JOIN tags tg ON tg.id = ta.tag_id
+               WHERE ta.tag_id = :tagId AND tg.user_id = :userId AND ta.media_type = 'tvshow' AND ta.media_id = t.id))
         ORDER BY CASE :ratingCategory
             WHEN 'directing' THEN ranked.avg_directing
             WHEN 'cinematography' THEN ranked.avg_cinematography
@@ -101,7 +103,7 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
         LIMIT :limit
         """
     )
-    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?): List<RatedTvRow>
+    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?, tagId: Long?): List<RatedTvRow>
 }
 
 @Repository

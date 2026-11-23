@@ -3,6 +3,7 @@ package org.ratelog.api.lists
 import arrow.core.left
 import arrow.core.right
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -10,6 +11,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.ratelog.Lang
 import org.ratelog.ListName
+import org.ratelog.MediaType
 import org.ratelog.TmdbId
 import org.ratelog.api.ItemInput
 import org.ratelog.api.media.MediaImporter
@@ -17,9 +19,14 @@ import org.ratelog.api.media.TitleResolver
 import org.ratelog.customlist.CustomList
 import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.movie.MovieDescription
+import org.ratelog.tag.Tag
+import org.ratelog.tag.TagName
+import org.ratelog.tag.TagRepository
+import org.ratelog.tag.assign.AssignTagsHandler
 import org.ratelog.test.InMemoryCustomListRepository
 import org.ratelog.test.InMemoryMovieDescriptionRepository
 import org.ratelog.test.InMemoryMovieRepository
+import org.ratelog.test.InMemoryTagRepository
 import org.ratelog.test.InMemoryTvDescriptionRepository
 import org.ratelog.test.InMemoryTvShowRepository
 import org.ratelog.test.MovieFactory
@@ -37,10 +44,12 @@ class AddListItemsServiceTest {
     private val lists = InMemoryCustomListRepository()
     private val movies = InMemoryMovieRepository()
     private val shows = InMemoryTvShowRepository()
+    private val tags = InMemoryTagRepository()
     private val service = AddListItemsService(
         TitleResolver(tmdbClient),
         MediaImporter(tmdbClient, movies, InMemoryMovieDescriptionRepository(), shows, InMemoryTvDescriptionRepository()),
         AddToListHandler(lists),
+        AssignTagsHandler(tags, movies, shows),
     )
     private val user = User.Id(1)
     private lateinit var listId: CustomList.Id
@@ -138,5 +147,51 @@ class AddListItemsServiceTest {
         val result = service.addItems(listId, user, Lang.en, listOf(ItemInput(tmdbId = 603, type = "movie")))
         assertEquals(listOf(603), result.added.map { it.tmdbId })
         assertEquals("The Matrix", result.added.single().title)
+    }
+
+    @Test
+    fun `item tags are applied to added and already-present titles`() {
+        service.addItems(listId, user, Lang.en, listOf(ItemInput(tmdbId = 1396, type = "tv")))
+
+        val result = service.addItems(
+            listId, user, Lang.en,
+            listOf(
+                ItemInput(title = "Heat", year = 1995, tags = listOf("heist", "Comfort watch")),
+                ItemInput(tmdbId = 1396, type = "tv", tags = listOf("comfort watch")),
+            ),
+        )
+
+        assertEquals(listOf(949), result.added.map { it.tmdbId })
+        assertEquals(listOf(1396), result.alreadyInList.map { it.tmdbId })
+        val heat = movies.findByTmdbId(TmdbId(949))!!.id!!.value
+        val breakingBad = shows.findByTmdbId(TmdbId(1396))!!.id!!.value
+        assertEquals(listOf("Comfort watch", "heist"), tags.findForTitle(user, MediaType.movie, heat).map { it.name.value })
+        assertEquals(listOf("Comfort watch"), tags.findForTitle(user, MediaType.tvshow, breakingBad).map { it.name.value })
+        assertEquals(2, tags.findByUserId(user).size)
+    }
+
+    @Test
+    fun `an invalid tag name makes the item invalid and nothing is added`() {
+        val result = service.addItems(listId, user, Lang.en, listOf(ItemInput(title = "Heat", year = 1995, tags = listOf("x".repeat(41)))))
+
+        assertEquals("invalid", result.unresolved.single().reason)
+        assertEquals(0, lists.findById(listId)!!.items.size)
+        assertTrue(tags.findByUserId(user).isEmpty())
+    }
+
+    @Test
+    fun `when the tag limit is reached the item is reported and not added`() {
+        repeat(TagRepository.MAX_TAGS_PER_USER) { tags.save(Tag(null, user, TagName("tag $it"), null, 0)) }
+
+        val result = service.addItems(listId, user, Lang.en, listOf(ItemInput(title = "Heat", year = 1995, tags = listOf("brand new"))))
+
+        assertEquals("invalid", result.unresolved.single().reason)
+        assertEquals(0, lists.findById(listId)!!.items.size)
+    }
+
+    @Test
+    fun `items without tags leave tags untouched`() {
+        service.addItems(listId, user, Lang.en, listOf(ItemInput(title = "Heat", year = 1995)))
+        assertTrue(tags.findByUserId(user).isEmpty())
     }
 }

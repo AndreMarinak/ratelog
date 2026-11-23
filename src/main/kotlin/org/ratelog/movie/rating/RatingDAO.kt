@@ -66,6 +66,8 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
         INNER JOIN movies m ON ranked.movie_id = m.id
         WHERE (:genreId IS NULL OR m.genres LIKE CONCAT('%', :genreId, '%'))
           AND (:name IS NULL OR LOWER(m.original_title) LIKE LOWER(CONCAT('%', :name, '%')))
+          AND (:tagId IS NULL OR EXISTS (SELECT 1 FROM tag_assignments ta INNER JOIN tags tg ON tg.id = ta.tag_id
+               WHERE ta.tag_id = :tagId AND tg.user_id = :userId AND ta.media_type = 'movie' AND ta.media_id = m.id))
         ORDER BY CASE :ratingCategory
             WHEN 'directing' THEN ranked.directing
             WHEN 'cinematography' THEN ranked.cinematography
@@ -77,5 +79,5 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
         LIMIT :limit
         """
     )
-    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?): List<RatedMovieRow>
+    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?, tagId: Long?): List<RatedMovieRow>
 }

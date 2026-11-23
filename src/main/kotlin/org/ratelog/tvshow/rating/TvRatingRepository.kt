@@ -4,6 +4,7 @@ import org.ratelog.Review
 import org.ratelog.Rank
 import org.ratelog.Score
 import org.ratelog.SeasonNumber
+import org.ratelog.tag.Tag
 import org.ratelog.tvshow.TvShow
 import org.ratelog.user.User
 import org.springframework.stereotype.Repository
@@ -103,7 +104,7 @@ data class SeasonRating(
 @Repository
 interface TvRatingRepository {
     fun findByTvShowIdAndUserId(tvShowId: TvShow.Id, userId: User.Id): TvRating?
-    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?): List<Pair<Rank, TvRating>>
+    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id? = null): List<Pair<Rank, TvRating>>
 
     fun save(rating: TvRating)
     fun deleteById(tvRatingId: TvRating.Id)

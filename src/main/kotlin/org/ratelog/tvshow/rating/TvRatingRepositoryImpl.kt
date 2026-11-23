@@ -6,6 +6,7 @@ import org.ratelog.ReviewText
 import org.ratelog.ReviewTitle
 import org.ratelog.Score
 import org.ratelog.SeasonNumber
+import org.ratelog.tag.Tag
 import org.ratelog.tvshow.TvShow
 import org.ratelog.user.User
 import org.springframework.stereotype.Repository
@@ -39,9 +40,10 @@ class TvRatingRepositoryImpl(
         genreId: String?,
         limit: Int,
         name: String?,
-        ratingCategory: String?
+        ratingCategory: String?,
+        tagId: Tag.Id?,
     ): List<Pair<Rank, TvRating>> =
-        tvRatingDAO.findRankedRows(userId.value, genreId, name, limit, ratingCategory)
+        tvRatingDAO.findRankedRows(userId.value, genreId, name, limit, ratingCategory, tagId?.value)
             .map { Rank(it.rank.toInt()) to it.toDomain() }
 
     private fun TvRatingEntity.toDomain(): TvRating {
