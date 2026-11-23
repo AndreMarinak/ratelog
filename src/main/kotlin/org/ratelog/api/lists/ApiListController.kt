@@ -1,5 +1,6 @@
 package org.ratelog.api.lists
 
+import org.ratelog.ListName
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.api.AddItemsRequest
 import org.ratelog.api.ApiException
@@ -8,6 +9,7 @@ import org.ratelog.api.ItemInput
 import org.ratelog.api.TitleDto
 import org.ratelog.api.UpdateListRequest
 import org.ratelog.api.badRequest
+import org.ratelog.api.forbidden
 import org.ratelog.api.media.MediaImporter
 import org.ratelog.api.notFound
 import org.ratelog.api.parseMediaType
@@ -19,6 +21,10 @@ import org.ratelog.customlist.create.CreateListError
 import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.delete.DeleteListCommand
 import org.ratelog.customlist.delete.DeleteListHandler
+import org.ratelog.customlist.official.OfficialListRepository
+import org.ratelog.customlist.official.mark.SetListOfficial
+import org.ratelog.customlist.official.mark.SetListOfficialError
+import org.ratelog.customlist.official.mark.SetListOfficialHandler
 import org.ratelog.customlist.progress.GetListProgressHandler
 import org.ratelog.customlist.removeitem.RemoveFromListCommand
 import org.ratelog.customlist.removeitem.RemoveFromListHandler
@@ -37,7 +43,15 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-data class ListSummaryDto(val id: Long, val name: String, val isPublic: Boolean, val itemCount: Int, val url: String)
+data class ListSummaryDto(
+    val id: Long,
+    val name: String,
+    val isPublic: Boolean,
+    /** An admin-curated list every account can read (fork). */
+    val isOfficial: Boolean,
+    val itemCount: Int,
+    val url: String,
+)
 
 data class ListItemDto(
     val position: Int,
@@ -61,6 +75,7 @@ data class ListDetailDto(
     val id: Long,
     val name: String,
     val isPublic: Boolean,
+    val isOfficial: Boolean,
     val url: String,
     val items: List<ListItemDto>,
     val progress: ListProgressDto,
@@ -79,20 +94,32 @@ class ApiListController(
     private val addListItemsService: AddListItemsService,
     private val mediaImporter: MediaImporter,
     private val getListProgressHandler: GetListProgressHandler,
+    private val officialLists: OfficialListRepository,
+    private val setListOfficialHandler: SetListOfficialHandler,
 ) {
+    /** Your own lists. Everyone's official lists are at `GET /api/v1/lists/official`. */
     @GetMapping
-    fun lists(@CurrentUser user: User): List<ListSummaryDto> =
-        customListRepository.findByUserId(user.id!!).map {
-            ListSummaryDto(it.id!!.value, it.name.value, it.isPublic, it.items.size, "/list/${it.id.value}")
+    fun lists(@CurrentUser user: User): List<ListSummaryDto> {
+        val lists = customListRepository.findByUserId(user.id!!)
+        val official = officialLists.officialAmong(lists.mapNotNull { it.id })
+        return lists.map {
+            ListSummaryDto(it.id!!.value, it.name.value, it.isPublic, it.id in official, it.items.size, "/list/${it.id.value}")
         }
+    }
 
+    /** Your lists, and official lists (any token can read those). */
     @GetMapping("/{id}")
-    fun list(@CurrentUser user: User, @PathVariable id: Long): ListDetailDto = detail(ownedList(user, id), user)
+    fun list(@CurrentUser user: User, @PathVariable id: Long): ListDetailDto = detail(readableList(user, id), user)
 
     @PostMapping
     fun create(@CurrentUser user: User, @RequestBody body: CreateListRequest): ResponseEntity<CreateListResponse> {
         checkBatchSize(body.items)
-        val list = createListHandler.handle(CreateListCommand(user.id!!, body.name.orEmpty(), body.isPublic)).fold(
+        val official = body.isOfficial == true
+        // Checked before anything is created, so a refused request leaves no list behind.
+        if (official && !user.role.isAdminLike) throw forbidden(ADMIN_ONLY)
+        if (official && body.isPublic == false) throw officialMustBePublic()
+        val isPublic = official || body.isPublic == true
+        val list = createListHandler.handle(CreateListCommand(user.id!!, body.name.orEmpty(), isPublic)).fold(
             { error ->
                 throw when (error) {
                     CreateListError.InvalidListName -> badRequest("invalid_name", "name must be 1-100 characters")
@@ -101,6 +128,7 @@ class ApiListController(
             },
             { it }
         )
+        if (official) setOfficial(list.id!!, user, true)
         val itemsResult = if (body.items.isEmpty()) null
         else addListItemsService.addItems(list.id!!, user.id, user.metadataLang, body.items)
 
@@ -108,18 +136,41 @@ class ApiListController(
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateListResponse(detail(fresh, user), itemsResult))
     }
 
+    /**
+     * `name` / `isPublic`: the owner only. `isOfficial`: admin tokens only, on any list; sending its current value is
+     * a no-op for anyone (so a GET response can be sent back). Everything is checked before anything changes.
+     */
     @PatchMapping("/{id}")
     fun update(@CurrentUser user: User, @PathVariable id: Long, @RequestBody body: UpdateListRequest): ListDetailDto {
-        val list = ownedList(user, id)
-        updateListHandler.handle(
-            UpdateListCommand(list.id!!, user.id!!, body.name ?: list.name.value, body.isPublic ?: list.isPublic)
-        ).onLeft { error ->
-            throw when (error) {
-                UpdateListError.InvalidListName -> badRequest("invalid_name", "name must be 1-100 characters")
-                UpdateListError.ListNotFound, UpdateListError.NotOwner -> notFound("List $id not found")
+        val list = customListRepository.findById(CustomList.Id(id)) ?: throw notFound("List $id not found")
+        val listId = list.id!!
+        val isOwner = list.userId == user.id
+        val isAdmin = user.role.isAdminLike
+        val official = officialLists.isOfficial(listId)
+        val changesOfficial = body.isOfficial != null && body.isOfficial != official
+
+        // Others' lists stay hidden (404) unless they are official, or an admin is marking one official.
+        if (!isOwner && !official && !(isAdmin && body.isOfficial == true)) throw notFound("List $id not found")
+        if (changesOfficial && !isAdmin) throw forbidden(ADMIN_ONLY)
+        val editsList = body.name != null || body.isPublic != null
+        if (editsList && !isOwner) throw forbidden("Only the list's owner can change its name or visibility")
+        if ((body.isOfficial ?: official) && body.isPublic == false) throw officialMustBePublic()
+        if (body.name != null && ListName.parse(body.name).isLeft()) throw badRequest("invalid_name", "name must be 1-100 characters")
+
+        // Un-mark before a visibility change (official lists can't go private), mark after it.
+        if (changesOfficial && body.isOfficial == false) setOfficial(listId, user, false)
+        if (editsList) {
+            updateListHandler.handle(
+                UpdateListCommand(listId, user.id!!, body.name ?: list.name.value, body.isPublic ?: list.isPublic)
+            ).onLeft { error ->
+                throw when (error) {
+                    UpdateListError.InvalidListName -> badRequest("invalid_name", "name must be 1-100 characters")
+                    UpdateListError.ListNotFound, UpdateListError.NotOwner -> notFound("List $id not found")
+                }
             }
         }
-        return detail(customListRepository.findById(list.id)!!, user)
+        if (changesOfficial && body.isOfficial == true) setOfficial(listId, user, true)
+        return detail(customListRepository.findById(listId)!!, user)
     }
 
     @DeleteMapping("/{id}")
@@ -156,12 +207,37 @@ class ApiListController(
         return ResponseEntity.noContent().build()
     }
 
-    /** Other users' lists are reported as missing so list ids can't be probed. */
+    /**
+     * For changes. Other users' lists are reported as missing so list ids can't be probed; official lists are
+     * readable by everyone, so changing someone else's is a plain 403.
+     */
     private fun ownedList(user: User, id: Long): CustomList {
-        val list = customListRepository.findById(CustomList.Id(id))
-        if (list == null || list.userId != user.id) throw notFound("List $id not found")
+        val list = customListRepository.findById(CustomList.Id(id)) ?: throw notFound("List $id not found")
+        if (list.userId != user.id) {
+            if (officialLists.isOfficial(list.id!!)) throw forbidden("Only the list's owner can change it")
+            throw notFound("List $id not found")
+        }
         return list
     }
+
+    /** Your lists and every official list. */
+    private fun readableList(user: User, id: Long): CustomList {
+        val list = customListRepository.findById(CustomList.Id(id)) ?: throw notFound("List $id not found")
+        if (list.userId != user.id && !officialLists.isOfficial(list.id!!)) throw notFound("List $id not found")
+        return list
+    }
+
+    private fun setOfficial(listId: CustomList.Id, user: User, official: Boolean) {
+        setListOfficialHandler.handle(SetListOfficial(listId, user.id!!, official)).onLeft { error ->
+            throw when (error) {
+                SetListOfficialError.NotAdmin -> forbidden(ADMIN_ONLY)
+                SetListOfficialError.ListNotFound -> notFound("List ${listId.value} not found")
+            }
+        }
+    }
+
+    private fun officialMustBePublic() =
+        badRequest("official_list_public", "Official lists are always public: send \"isOfficial\": false first (admin tokens only)")
 
     private fun detail(list: CustomList, user: User): ListDetailDto {
         // The token user's progress: one marks query per media type, not one per title.
@@ -187,6 +263,7 @@ class ApiListController(
             id = list.id!!.value,
             name = list.name.value,
             isPublic = list.isPublic,
+            isOfficial = officialLists.isOfficial(list.id),
             url = "/list/${list.id.value}",
             items = items,
             progress = ListProgressDto(seen = items.count { it.seen }, total = items.size),
@@ -201,5 +278,6 @@ class ApiListController(
 
     companion object {
         const val MAX_ITEMS_PER_REQUEST = 100
+        const val ADMIN_ONLY = "Only admin tokens can change isOfficial"
     }
 }

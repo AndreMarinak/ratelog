@@ -58,13 +58,18 @@ data class AddItemsRequest(val items: List<ItemInput> = emptyList())
 
 data class CreateListRequest(
     val name: String? = null,
-    val isPublic: Boolean = false,
+    /** Omitted = private, unless [isOfficial] (official lists are always public). */
+    val isPublic: Boolean? = null,
     val items: List<ItemInput> = emptyList(),
+    /** Admin tokens only (others get 403). Makes the list official, and so public. */
+    val isOfficial: Boolean? = null,
 )
 
 data class UpdateListRequest(
     val name: String? = null,
     val isPublic: Boolean? = null,
+    /** Admin tokens only, on any list (others get 403). `true` also makes the list public; `false` leaves it public. */
+    val isOfficial: Boolean? = null,
 )
 
 data class ResolveRequest(

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: official lists (admin-curated lists every account sees; their progress is the viewer's own).
+  Styles in official-lists.css; the row and the cards reuse home.css (home "Your lists" collage cards).
+
+  Lists tab:   <th:block th:replace="~{fragments/official-lists :: listsSection(${officialLists})}"></th:block>
+  Discover:    <th:block th:replace="~{fragments/official-lists :: discoverRow}"></th:block>   (reads `officialListsRow`)
+  List page:   <th:block th:replace="~{fragments/official-lists :: listHeader(${listOfficial}, ${list.name})}"></th:block>
+*/-->
+
+<!--/* Lists tab: a row at the very top (OfficialListsRowView, null = no official lists = nothing rendered). home.js runs the arrows. */-->
+<th:block th:fragment="listsSection(row)">
+<th:block th:if="${row != null}">
+    <link rel="stylesheet" href="/official-lists.css">
+    <script src="/home.js" defer></script>
+    <section th:replace="~{fragments/official-lists :: row(${row}, 'lists-section')}"></section>
+</th:block>
+</th:block>
+
+<!--/* Discover landing: the same row; `discover-row` lets discover.js run its arrows. The model value is lazy. */-->
+<th:block th:fragment="discoverRow">
+<th:block th:with="officialRow=${officialListsRow}">
+<th:block th:if="${officialRow != null}">
+    <link rel="stylesheet" href="/official-lists.css">
+    <section th:replace="~{fragments/official-lists :: row(${officialRow}, 'discover-row')}"></section>
+</th:block>
+</th:block>
+</th:block>
+
+<section th:fragment="row(row, extraClass)" class="home-row official-row" th:classappend="${extraClass}" th:id="${row.id}"
+         th:aria-labelledby="${row.id + '-title'}">
+    <div class="home-row-head">
+        <h2 th:id="${row.id + '-title'}" th:text="#{lists.official}">Official lists</h2>
+        <a class="home-row-more" th:href="${row.seeAllHref}" th:aria-label="#{lists.official.see.all.aria(${row.total})}">
+            <span th:text="#{lists.official.see.all(${row.total})}">See all 26</span>
+            <i data-lucide="arrow-right" aria-hidden="true"></i>
+        </a>
+        <div class="home-row-arrows">
+            <button type="button" data-row-prev th:aria-label="#{home.row.scroll.back}" disabled>
+                <i data-lucide="chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" data-row-next th:aria-label="#{home.row.scroll.forward}">
+                <i data-lucide="chevron-right" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+    <div class="home-row-track is-lists" tabindex="0" th:aria-label="#{lists.official}">
+        <th:block th:each="card : ${row.cards}">
+            <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+        </th:block>
+    </div>
+</section>
+
+<!--/* List page, under the title: the badge for everyone, and for admins the toggle (POST, CSRF, asks first). */-->
+<th:block th:fragment="listHeader(official, listName)">
+<div th:if="${official != null and (official.official or official.canToggle)}" class="list-official-bar">
+    <link rel="stylesheet" href="/official-lists.css">
+    <span th:if="${official.official}" class="list-official-badge" th:title="#{lists.official.badge.title}">
+        <i data-lucide="badge-check" aria-hidden="true"></i>
+        <span th:text="#{lists.official.badge.list}">Official list</span>
+    </span>
+    <form th:if="${official.canToggle}" class="list-official-toggle" method="post" th:action="${official.toggleHref}" data-inplace="#listRegion"
+          th:data-confirm="${official.official} ? #{list.official.unmark.confirm(${listName})} : #{list.official.mark.confirm(${listName})}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="official" th:value="${official.nextValue}" />
+        <button type="submit" class="list-official-button" th:title="#{list.official.admin.only}">
+            <i th:data-lucide="${official.official} ? 'badge-x' : 'badge-check'" aria-hidden="true"></i>
+            <span th:text="${official.official} ? #{list.official.unmark} : #{list.official.mark}">Make official</span>
+        </button>
+    </form>
+</div>
+</th:block>
+</body>
+</html>

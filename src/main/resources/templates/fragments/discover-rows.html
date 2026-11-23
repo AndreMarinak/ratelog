@@ -10,9 +10,12 @@
   one row:  <section th:replace="~{fragments/discover-rows :: row(row=${row})}"></section>
 */-->
 <div th:fragment="rows" class="discover-rows" id="discoverRows" th:aria-label="#{discover.rows.aria}" role="region">
-    <th:block th:each="row : ${rows}">
+    <th:block th:each="row, rowStat : ${rows}">
         <section th:replace="~{fragments/discover-rows :: row(row=${row})}"></section>
+        <!--/* Fork: the Official lists row (fragments/official-lists.html) goes right after "Popular now". */-->
+        <th:block th:if="${rowStat.first}"><th:block th:replace="~{fragments/official-lists :: discoverRow}"></th:block></th:block>
     </th:block>
+    <th:block th:if="${#lists.isEmpty(rows)}"><th:block th:replace="~{fragments/official-lists :: discoverRow}"></th:block></th:block>
 </div>
 
 <!--/* /discover/row: the row, or nothing when it failed or had no titles (discover.js then removes the placeholder). */-->

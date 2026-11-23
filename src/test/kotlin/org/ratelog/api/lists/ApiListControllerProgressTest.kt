@@ -16,13 +16,16 @@ import org.ratelog.api.media.TitleResolver
 import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.delete.DeleteListHandler
+import org.ratelog.customlist.official.mark.SetListOfficialHandler
 import org.ratelog.customlist.progress.ListProgressFixture
 import org.ratelog.customlist.removeitem.RemoveFromListHandler
 import org.ratelog.customlist.update.UpdateListHandler
 import org.ratelog.tag.assign.AssignTagsHandler
 import org.ratelog.test.InMemoryMovieDescriptionRepository
+import org.ratelog.test.InMemoryOfficialListRepository
 import org.ratelog.test.InMemoryTagRepository
 import org.ratelog.test.InMemoryTvDescriptionRepository
+import org.ratelog.test.InMemoryUserRepository
 import org.ratelog.test.UserFactory
 import org.ratelog.tmdb.TmdbClient
 import org.ratelog.watchlist.WatchStatus
@@ -33,6 +36,7 @@ class ApiListControllerProgressTest {
 
     private val f = ListProgressFixture()
     private val tmdbClient: TmdbClient = mock()
+    private val officialLists = InMemoryOfficialListRepository(f.lists)
     private val mediaImporter = MediaImporter(tmdbClient, f.movies, InMemoryMovieDescriptionRepository(), f.shows, InMemoryTvDescriptionRepository())
     private val controller = ApiListController(
         customListRepository = f.lists,
@@ -48,6 +52,8 @@ class ApiListControllerProgressTest {
         ),
         mediaImporter = mediaImporter,
         getListProgressHandler = f.handler,
+        officialLists = officialLists,
+        setListOfficialHandler = SetListOfficialHandler(f.lists, officialLists, InMemoryUserRepository()),
     )
     private val user = UserFactory.aUser(id = 1)
     private val userId = user.id!!
@@ -87,7 +93,8 @@ class ApiListControllerProgressTest {
 
         val json = jacksonObjectMapper().readTree(jacksonObjectMapper().writeValueAsString(controller.list(user, list.id!!.value)))
 
-        assertEquals(setOf("id", "name", "isPublic", "url", "items", "progress"), json.fieldNames().asSequence().toSet())
+        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "url", "items", "progress"), json.fieldNames().asSequence().toSet())
+        assertFalse(json["isOfficial"].asBoolean())
         assertEquals(1, json["progress"]["seen"].asInt())
         assertEquals(1, json["progress"]["total"].asInt())
         val item = json["items"][0]

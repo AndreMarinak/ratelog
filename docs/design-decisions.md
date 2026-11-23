@@ -39,6 +39,40 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **List filters are plain links** (`/list/{id}?show=unseen` / `?show=seen`, unknown values = All) so they work without JS and can be shared. Ranks are places in the whole list (by position, then id), computed before filtering, so a filtered view never renumbers and removed titles leave no gaps.
 - **"Add the N unseen to my watchlist" never touches an existing status.** N counts unseen titles with **no status** (so the button disappears once there's nothing left to add, and Watching/Dropped titles aren't "added"). The write is a single `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, so even a status set a moment earlier wins; rated titles without a status are skipped. Earlier ranks get later timestamps, so the watchlist (newest first) lists them in the list's order. Asks first (`data-confirm`), flashes the count, and returns to the same tab.
 
+- **Official lists live in their own table** (`official_lists(list_id PK -> custom_lists ON DELETE CASCADE, created_at_epoch_ms)`, `V1120`)
+  instead of a column on upstream's `custom_lists`, so upstream's entity, DAO and migrations stay untouched. Deleting a list deletes its mark.
+- **Official implies public.** Marking sets `is_public`, so every existing visibility check (list page, progress, profile) just works.
+  While a list is official, every save keeps it public: a `@Primary` decorator on `CustomListRepository`
+  (`OfficialListsStayPublicRepository`, same pattern as the auto-Watched rating repositories) covers upstream's edit form, the API
+  and any future path. The API answers `isPublic: false` on an official list with `400 official_list_public` instead of ignoring it.
+  Un-marking leaves the list public; the owner can make it private again.
+- **Only ADMIN / SUPERADMIN mark lists official, on any list.** The handler reads the role from the database, not the session, so a
+  demoted admin's open session can't keep doing it. The web switch shows on lists the admin can open; the API reaches any list id
+  (including someone else's private list, which marking makes public). Changing an official list's name, visibility or titles stays
+  the owner's: an admin can un-mark it but not edit it.
+- **API visibility:** official lists are readable by any token (`GET /api/v1/lists/{id}`), with the token user's own progress; other
+  users' ordinary lists stay `404`. Changes to someone else's official list are `403 forbidden` rather than `404`, since the id is no
+  secret. Changing `isOfficial` needs an admin token, but sending the value it already has is a no-op for anyone, so a script can
+  send a `GET` response back without tripping over the field.
+- **The Lists tab shows official lists as a row, not a grid** (home "Your lists" collage cards, up to 20, "See all N" to
+  `/lists/official`). The admin has 26 official lists: as a grid they would push "My lists" about two screens down on desktop and
+  five on a phone. Official lists are excluded from "From people you follow" and "More public lists" in the SQL itself, so the
+  "Load more" page size and flag aren't thrown off. They are **kept under the owner's "My lists"** (the owner's view of everything
+  they own), with the badge in place of the Public pill.
+- **Official cards show no owner**: the badge takes the owner / visibility slot, so the list reads as the site's (Letterboxd shows
+  its official lists the same way), with the viewer's "9/25 seen". For the same reason the list page's back link reads "← Lists"
+  on an official list instead of "← admin's profile" (`OfficialListBackLinkInterceptor`, set after the list advices ran).
+- **Order: most recently active first** (created, or a title added), the rule every other list section uses. Empty official lists
+  are shown, unlike empty public lists, because an admin picked them.
+- **Discover: the Official lists row comes right after "Popular now"**, not at the end. At 1440x900 it is fully above the fold;
+  after the 13 genre rows (most of them loaded on scroll) hardly anyone would reach it. "Popular now" stays first as the "what's new"
+  row. The same row shows on the Movies and TV landings (lists mix both) and never on the filtered grid. It needs no TMDB, so it
+  still shows when every TMDB row failed. The model value is a Thymeleaf `LazyContextVariable`, loaded only when the landing renders
+  the row, so the grid, "Load more" fragments and the many `/discover/row` fetches run no extra queries.
+- **One include per template**: `lists.html` (the row), `list-detail.html` (badge + admin switch under the title) and
+  `fragments/discover-rows.html` (after the first row). The switch posts a CSRF form, asks first (`data-confirm`: marking says the
+  list becomes public) and redirects back with a flash message.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);

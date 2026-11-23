@@ -14,6 +14,8 @@ data class ListSummary(
     val coverPosterPaths: List<String>,
     /** When the list was created or last had a title added. */
     val lastActivityEpochMs: Long,
+    /** An admin-curated list every account sees (fork, `official_lists`). Official lists are always public. */
+    val isOfficial: Boolean = false,
 ) {
     companion object {
         const val COVER_SIZE = 4
@@ -25,9 +27,12 @@ interface ListSummaryRepository {
     /** Every list of the owner, public or private. */
     fun findByOwner(ownerId: User.Id): List<ListSummary>
 
-    /** Public, non-empty lists of these owners. */
+    /** Public, non-empty lists of these owners, leaving out official lists (they have their own section). */
     fun findPublicByOwners(ownerIds: Collection<User.Id>, limit: Int): List<ListSummary>
 
-    /** Public, non-empty lists of everyone except these owners. */
+    /** Public, non-empty lists of everyone except these owners, leaving out official lists. */
     fun findPublicExcludingOwners(excludedOwnerIds: Collection<User.Id>, limit: Int): List<ListSummary>
+
+    /** Every official list (any owner, empty ones too), most recently active first. */
+    fun findOfficial(): List<ListSummary>
 }

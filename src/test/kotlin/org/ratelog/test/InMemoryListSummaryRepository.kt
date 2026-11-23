@@ -9,22 +9,29 @@ import org.ratelog.movie.Movie
 import org.ratelog.tvshow.TvShow
 import org.ratelog.user.User
 
-/** Summaries computed from the other in-memory fakes, with the same filters as ListSummaryDAO. Owners must be saved users. */
+/**
+ * Summaries computed from the other in-memory fakes, with the same filters as ListSummaryDAO. Owners must be saved users.
+ * Without [official], no list is official.
+ */
 class InMemoryListSummaryRepository(
     private val lists: InMemoryCustomListRepository,
     private val users: InMemoryUserRepository,
     private val movies: InMemoryMovieRepository = InMemoryMovieRepository(),
     private val shows: InMemoryTvShowRepository = InMemoryTvShowRepository(),
+    private val official: InMemoryOfficialListRepository? = null,
 ) : ListSummaryRepository {
 
     override fun findByOwner(ownerId: User.Id): List<ListSummary> =
         all().filter { it.ownerId == ownerId }
 
     override fun findPublicByOwners(ownerIds: Collection<User.Id>, limit: Int): List<ListSummary> =
-        all().filter { it.isPublic && it.itemCount > 0 && it.ownerId in ownerIds }.take(limit)
+        all().filter { it.isPublic && it.itemCount > 0 && !it.isOfficial && it.ownerId in ownerIds }.take(limit)
 
     override fun findPublicExcludingOwners(excludedOwnerIds: Collection<User.Id>, limit: Int): List<ListSummary> =
-        all().filter { it.isPublic && it.itemCount > 0 && it.ownerId !in excludedOwnerIds }.take(limit)
+        all().filter { it.isPublic && it.itemCount > 0 && !it.isOfficial && it.ownerId !in excludedOwnerIds }.take(limit)
+
+    override fun findOfficial(): List<ListSummary> =
+        all().filter { it.isOfficial && it.isPublic }
 
     private fun all(): List<ListSummary> =
         users.findAll()
@@ -40,6 +47,7 @@ class InMemoryListSummaryRepository(
         itemCount = items.size,
         coverPosterPaths = items.sortedBy { it.position }.mapNotNull { posterOf(it) }.take(ListSummary.COVER_SIZE),
         lastActivityEpochMs = maxOf(createdAtEpochMs, items.maxOfOrNull { it.addedAtEpochMs } ?: 0L),
+        isOfficial = official?.isOfficial(id!!) == true,
     )
 
     private fun posterOf(item: CustomListItem): String? = when (item.mediaType) {
