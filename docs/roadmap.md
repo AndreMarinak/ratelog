@@ -43,6 +43,9 @@ lists (official lists and later list features) `V1120–1129`.
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.
+- 2026-11-23 batch: one Ratings tab (Movies | TV Shows switch), Browse renamed Discover, title page redesign (desktop three columns,
+  phone action bar), small actions save in place (no reload), Classics home row, tags hidden behind a feature flag, compact
+  Discover bar on phones, no white overscroll. Details in [design-decisions.md](design-decisions.md).
 
 Gap research against Letterboxd, the TV trackers and the discovery apps (ranked): [competitor-gaps.md](competitor-gaps.md).
 
