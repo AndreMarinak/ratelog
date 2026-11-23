@@ -23,6 +23,8 @@ lists (official lists and later list features) `V1120–1129`.
 - [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
   show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
   Optional TV counterpart: "New season of a show you've watched".
+  **Partly covered (2026-11-23, #17):** every movie page in a collection shows the whole series with your Seen marks and
+  "You've seen 2 of 5 · Next: Toy Story 3". Still open: the home row that gathers series you've started.
 - [x] **12. List progress**: on `/list/{id}` (yours or someone's public list) each poster shows its rank, your status and your score;
   "You've seen 9 of 25" with a bar; All · Not seen · Seen tabs (`?show=unseen|seen`, ranks never renumber); "Add the N unseen to my watchlist"
   (only titles with no status). "9/25 seen" on `/lists` cards, a back link above the title. API: `status`/`score`/`seen` per item and
@@ -44,6 +46,11 @@ lists (official lists and later list features) `V1120–1129`.
   Watching · Seen · Dropped, with Seen / Watching / Remove (Undo) on every tile. Lists get "Mark what you've seen" tick-off mode.
   "Upcoming · Dec 18" badges on tiles and title pages. Rating a show's season makes it Watching, Watched once every aired season
   is rated. All in place, no reloads. No migration (data model and API unchanged).
+- [x] **17. Series and "More like this" on title pages** (requested 2026-11-23): movies in a TMDB collection get "Part of the Toy
+  Story Collection" (every entry in release order, "You're here", your Seen marks, "You've seen 2 of 5 · Next: Toy Story 3"); movies
+  and shows get "More like this" (TMDB recommendations, seen titles hidden). Loaded lazily under the page, TMDB cached (a day; a week
+  for collections), quick actions in place. API: `GET /api/v1/titles/{type}/{tmdbId}/recommendations`
+  ([docs/api.md](api.md#recommendations)). No migration.
 
 ## Fixes and housekeeping done
 

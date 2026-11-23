@@ -359,3 +359,47 @@ curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: appli
   -d '{"status":"dropped"}' "$RATELOG_URL/api/v1/statuses/movie/949"
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/statuses?status=want_to_watch&type=movie"
 ```
+
+## Recommendations
+
+`GET /api/v1/titles/{type}/{tmdbId}/recommendations`: what a title page shows under the title. Movies in a TMDB collection get
+`series` (every entry, in release order); movies and shows get `moreLikeThis` (TMDB recommendations, up to 20). The title itself and
+its series entries are left out of `moreLikeThis`, as are posterless titles and released titles with fewer than 10 TMDB votes.
+
+| Param | Values | Effect |
+|---|---|---|
+| `hideSeen` | `true` / `false` (`1`/`0`); default `false` | leave titles you've seen out of `moreLikeThis` (the web page does). The series always lists every entry |
+
+```json
+{
+  "tmdbId": 863, "type": "movie",
+  "series": {
+    "collectionId": 10194, "name": "Toy Story Collection", "seen": 2, "released": 5,
+    "titles": [
+      {"tmdbId": 862, "type": "movie", "title": "Toy Story", "year": 1995, "releaseDate": "1995-11-22",
+       "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/862", "tmdbVoteAverage": 8.0,
+       "upcoming": false, "seen": true, "status": "watched", "userScore": 9.0, "current": false},
+      {"tmdbId": 863, "type": "movie", "title": "Toy Story 2", "year": 1999, "releaseDate": "1999-10-30",
+       "posterUrl": "...", "url": "/movie/863", "tmdbVoteAverage": 7.6,
+       "upcoming": false, "seen": true, "status": "watched", "userScore": null, "current": true}
+    ]
+  },
+  "moreLikeThis": [
+    {"tmdbId": 585, "type": "movie", "title": "Monsters, Inc.", "year": 2001, "releaseDate": "2001-11-01",
+     "posterUrl": "...", "url": "/movie/585", "tmdbVoteAverage": 7.8,
+     "upcoming": false, "seen": false, "status": null, "userScore": null, "current": null}
+  ]
+}
+```
+
+- `series` is `null` for shows and for movies that aren't in a collection of two or more. `seen` / `released` count entries that
+  are out (upcoming and undated ones can't be seen yet); `current` marks the requested title.
+- `seen` per title follows the poster eye: a movie you rated or marked Watched; a show marked Watched, or rated with no status.
+  `status` and `userScore` are your own (null if none). Titles are in your metadata language.
+- Nothing is saved locally. TMDB answers are cached (recommendations a day, collections a week).
+- Errors: `invalid_type`, `invalid_parameter` (400), `not_found` (404: TMDB has no such title), `tmdb_not_configured` (503), `tmdb_error` (502).
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/titles/movie/863/recommendations"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/titles/tv/1396/recommendations?hideSeen=true"
+```

@@ -1,0 +1,105 @@
+/* Fork: rows under a title page (templates/fragments/title-related.html, behaviour in title-related.js):
+   "Part of the ... Collection" (movies) and "More like this". Rows and tiles are home.css's, quick actions
+   tile-actions.css's, the skeleton discover.css's; this file adds the spacing, the series progress line and the
+   "You're here" tile. */
+
+.title-related {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-top: 44px;
+}
+
+/* Two-line headings: "Part of the Lord of the Rings Collection" shouldn't be cut on a phone. */
+.related-head {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.15;
+  }
+}
+
+.related-progress {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+/* This page's own title in the series row: outlined, "You're here" under it, no lift (it isn't a link). */
+.home-tile-wrap.is-current {
+  &:hover {
+    transform: none;
+  }
+
+  .home-poster::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 3px var(--accent);
+    pointer-events: none;
+  }
+
+  .home-poster img {
+    filter: none;
+  }
+}
+
+.related-here {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-weight: 700;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+}
+
+/* Its Seen state, read-only (the page's Seen button changes it). Same green as a tile's Seen eye. */
+.related-seen-mark.tile-badge {
+  background: var(--seen-strong);
+  color: #fff;
+}
+
+/* Skeleton heading (the row bodies use Discover's .discover-skeleton). */
+.related-skeleton-heading {
+  display: block;
+  width: min(240px, 60%);
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, #231e1b 30%, #2e2723 50%, #231e1b 70%) 0 0 / 300% 100%;
+  animation: discover-shimmer 1.4s ease-in-out infinite;
+}
+
+.title-related.is-pending .home-row-track {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .related-skeleton-heading {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .title-related {
+    gap: 28px;
+    margin-top: 32px;
+  }
+
+  .related-progress {
+    font-size: 0.92rem;
+  }
+}
