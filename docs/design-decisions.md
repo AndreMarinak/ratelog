@@ -39,6 +39,33 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **List filters are plain links** (`/list/{id}?show=unseen` / `?show=seen`, unknown values = All) so they work without JS and can be shared. Ranks are places in the whole list (by position, then id), computed before filtering, so a filtered view never renumbers and removed titles leave no gaps.
 - **"Add the N unseen to my watchlist" never touches an existing status.** N counts unseen titles with **no status** (so the button disappears once there's nothing left to add, and Watching/Dropped titles aren't "added"). The write is a single `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, so even a status set a moment earlier wins; rated titles without a status are skipped. Earlier ranks get later timestamps, so the watchlist (newest first) lists them in the list's order. Asks first (`data-confirm`), flashes the count, and returns to the same tab.
 
+## When the page reloads (audit 2026-11-23)
+
+Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
+**navigation and changes to the whole result set load a page** (they get their own URL, and Back works).
+Everything in place is progressive enhancement: without JS, or on any error, the plain form post / link still works.
+Generic hooks live in `static/inplace.js` (`data-inplace="<regions to refresh>"` on a form, `data-append` on a
+"Load more" link); a few pages have their own handler.
+
+| Action | Before | Now |
+|---|---|---|
+| Home poster bookmark | reload + scroll restore | in place (`home.js`), all copies of the title flip, toast |
+| Discover row / grid bookmark | in place | in place (`discover.js`, `browse.js`) |
+| Discover "Load more", lazy rows | in place | in place |
+| Search results infinite scroll | in place | in place (`search.js`) |
+| List page All / Not seen / Seen tabs | reload | in place with URL + Back (`list-filter.js`) |
+| List page remove item (after confirm) | reload | in place: progress, tabs and grid refresh (`#listRegion`) |
+| Add to list (modal), create list + add | **navigated to the list page** | stays on the title, modal closes, toast "Added to X" |
+| Lists tab "Load more" | reload | appends in place |
+| Profile follow / unfollow user | reload | in place |
+| Title page Follow, watch status, Seen/Watchlist | reload | being moved to `data-inplace` in the Seen/Watchlist batch |
+| Watchlist page quick actions, list tick-off | — | built in place in the Seen/Watchlist batch |
+| Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save |
+| Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
+| Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
+| Ratings Movies / TV switch and filter form | page load | **page load kept**: different page / explicit Search |
+| Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
+
 ## Deployment (Railway)
 
 - **Dockerfile build, `/api/health` healthcheck, `PORT=8080` pinned** to match the domain's target port; `server.forward-headers-strategy=framework` so redirects use https behind the proxy.
@@ -55,6 +82,9 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Home is a dashboard of horizontal rows** (Letterboxd-style): trending movies, trending TV, in theaters and coming soon first (user preference), then personal rows (only when non-empty), then popular TV; TMDB rows are cached (20 each) with "See all" links into `/browse`. A failing TMDB feed drops its row instead of erroring the page.
 - **Navigation:** desktop shows logo + "Ratelog" wordmark (both link home), Ratings · Browse · Watchlist · Lists · Community (Tags when enabled), and an always-visible search field (`/` focuses it). At 900px and below: logo + search + menu sheet on top, and a 5-tab bottom bar with Home leftmost (user preference), then Ratings, Browse, Watchlist, Lists.
 - **One Ratings tab for movies and TV** (user request, 2026-11-23): `/ratings` redirects to the movie ranking (`?type=tv` to TV); `/movies` and `/tvshows` keep their filters and are joined by a Movies | TV Shows switch (`fragments/ratings-switch.html`). Merging them freed a bottom-bar slot for Browse.
+- **Discover genre rows are all-time, not "popular now"** (user feedback 2026-11-23: "almost strictly 2026 movies"): each genre row is TMDB's most-voted titles rated 7+, so it spans decades; "Popular now" stays the row for current releases. The "More" grid uses the same filters.
+- **Home Classics row**: acclaimed films from before 2000 (TMDB `vote_average.desc`, 4,000+ votes, no documentaries), placed after your own rows; it walks pages 1-3 by ISO week so it changes weekly.
+- **Ranking posters keep their 2:3 shape** on phones (object-fit: cover, fixed width) instead of stretching to the card height.
 - **Lists get their own tab** (`/lists`), separate from the watchlist: the watchlist is a status ("want to watch") on titles; lists are curated, ordered collections (often imported by Claude).
 - **Browse uses plain links for every filter** so the URL describes the view and works without JS; the same "Browse by" bar sits at the top of the home page.
 - **One-click bookmark on posters** only toggles Want to watch; titles already Watching/Watched/Dropped show no bookmark so a click can't silently downgrade them.

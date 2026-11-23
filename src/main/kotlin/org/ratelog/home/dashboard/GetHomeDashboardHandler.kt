@@ -37,6 +37,7 @@ enum class HomeRowKind(val apiName: String, val titleKey: String, val feed: Disc
     UP_NEXT("up_next", "home.row.up.next"),
     RECENTLY_RATED("recently_rated", "home.row.recently.rated"),
     YOUR_LISTS("your_lists", "home.row.your.lists"),
+    CLASSICS("classics", "home.row.classics", DiscoverFeed.CLASSICS),
     POPULAR_TV("popular_tv", "home.row.popular.tv", DiscoverFeed.POPULAR_TV);
 
     val isPersonal: Boolean get() = feed == null
@@ -68,7 +69,7 @@ data class HomeDashboard(
 }
 
 /**
- * The home page: rows in [HomeRowKind] order (trending / in theaters / coming soon, the viewer's own non-empty rows, popular TV).
+ * The home page: rows in [HomeRowKind] order (trending / in theaters / coming soon, the viewer's own non-empty rows, classics, popular TV).
  * A TMDB feed that fails just leaves its row out; the dashboard itself never fails.
  */
 @Service

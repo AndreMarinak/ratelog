@@ -89,6 +89,7 @@ val HomeRowKind.moreHref: String
         HomeRowKind.TRENDING_TV -> "/discover?type=tv&popular=week"
         HomeRowKind.IN_THEATERS -> "/discover?type=movie&sort=newest"
         HomeRowKind.COMING_SOON -> "/discover?type=movie&year=upcoming"
+        HomeRowKind.CLASSICS -> "/discover?type=movie&sort=rating"
         HomeRowKind.POPULAR_TV -> "/discover?type=tv&popular=now"
     }
 

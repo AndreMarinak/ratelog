@@ -1,0 +1,39 @@
+/* Fork: toast for in-place saves (inplace.js). */
+.inplace-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 95;
+  max-width: calc(100vw - 32px);
+  padding: 10px 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+
+  &.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  &.is-error {
+    border-color: hsl(0 70% 60% / 0.5);
+  }
+}
+
+form[aria-busy='true'] button,
+a[aria-busy='true'] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 900px) {
+  .inplace-toast {
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+}

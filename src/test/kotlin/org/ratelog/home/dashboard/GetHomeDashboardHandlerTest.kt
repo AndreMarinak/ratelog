@@ -90,6 +90,7 @@ class GetHomeDashboardHandlerTest {
         feed(DiscoverFeed.NOW_PLAYING, tmdb(12, "Zootopia 2"))
         feed(DiscoverFeed.UPCOMING, tmdb(13, "Avatar: Fire and Ash", releaseDate = today.plusDays(25)))
         feed(DiscoverFeed.POPULAR_TV, tmdb(14, "Stranger Things", MediaType.tvshow))
+        feed(DiscoverFeed.CLASSICS, tmdb(15, "Casablanca"))
 
         val dashboard = handle()
 
@@ -244,7 +245,7 @@ class GetHomeDashboardHandlerTest {
             val first = realHandler.handle(GetHomeDashboard(me, Lang.en))
             val second = realHandler.handle(GetHomeDashboard(me, Lang.en))
 
-            assertEquals(5, tmdb.requests.size)
+            assertEquals(DiscoverFeed.entries.size, tmdb.requests.size) // one call per feed, then none
             assertEquals(first.rows.map { it.kind }, second.rows.map { it.kind })
             assertEquals(
                 "The Hunger Games: Sunrise on the Reaping",

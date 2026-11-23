@@ -73,3 +73,24 @@
     }
   }
 }
+
+/* Ranking cards: never stretch the poster (user report 2026-11-23: distorted height-wise on phones, where the
+   genre chips wrap and make the card tall). Keep the 2:3 shape and crop instead of squashing. */
+.ratings-switch ~ .grid a.card img:first-child {
+  object-fit: cover;
+}
+
+@media (max-width: 720px) {
+  .ratings-switch ~ .grid a.card img:first-child {
+    align-self: flex-start;
+    width: 72px;
+    min-width: 72px;
+    height: auto;
+    aspect-ratio: 2 / 3;
+  }
+
+  .ratings-switch ~ .grid a.card .tag {
+    padding: 2px 8px;
+    font-size: 0.78rem;
+  }
+}

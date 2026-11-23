@@ -35,7 +35,7 @@
                 </button>
             </div>
 
-            <form th:unless="${isLoggedUser}" th:action="@{/user/follow}" method="post">
+            <form th:unless="${isLoggedUser}" th:action="@{/user/follow}" method="post" class="profile-follow" data-inplace=".profile-follow">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <input type="hidden" name="id" th:value="${followId}" />
                 <button th:class="${isFollowed} ? '' : 'primary'" type="submit" th:title="${isFollowed} ? #{community.unfollow} : #{community.follow}">

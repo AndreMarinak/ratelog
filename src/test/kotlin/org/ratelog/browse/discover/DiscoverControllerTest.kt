@@ -116,12 +116,15 @@ class DiscoverControllerTest {
         assertTrue(rows.drop(4).all { it.pending && it.tiles.isEmpty() })
         assertEquals(20, rows[0].tiles.size)
         assertEquals("/discover?type=movie&popular=now", rows[0].moreHref)
-        assertEquals("/discover?type=movie&genre=horror", rows[1].moreHref)
+        assertEquals("/discover?type=movie&popular=alltime&minRating=7&genre=horror", rows[1].moreHref)
         assertEquals("/discover/row?type=movie&row=drama", rows[5].srcHref)
 
         // Popular now, Horror, Comedy, Action: one TMDB page each, the same requests their "More" grids make.
         assertEquals(listOf(null, "27", "35", "28"), requests.map { it.params["with_genres"] })
-        assertTrue(requests.all { it.path == "/discover/movie" && it.params["page"] == "1" && it.params["sort_by"] == "popularity.desc" })
+        assertTrue(requests.all { it.path == "/discover/movie" && it.params["page"] == "1" })
+        // "Popular now" is what's current; genre rows are well-known, well-rated titles from every era.
+        assertEquals("popularity.desc", requests.first().params["sort_by"])
+        assertTrue(requests.drop(1).all { it.params["sort_by"] == "vote_count.desc" && it.params["vote_average.gte"]?.startsWith("7") == true })
 
         assertNull(model.bar().sortMenu, "rows have fixed orderings, so no Sort menu")
         assertEquals(SeenToggleView(on = true, href = "/discover?type=movie&hideSeen=0"), model.toggle())
@@ -142,7 +145,7 @@ class DiscoverControllerTest {
         )
         assertEquals(listOf(null, "18", "35", "80"), requests.map { it.params["with_genres"] })
         assertTrue(requests.all { it.path == "/discover/tv" })
-        assertEquals("/discover?type=tv&genre=sci-fi-fantasy", model.rows()[4].moreHref)
+        assertEquals("/discover?type=tv&popular=alltime&minRating=7&genre=sci-fi-fantasy", model.rows()[4].moreHref)
     }
 
     @Test
@@ -227,7 +230,10 @@ class DiscoverControllerTest {
         assertEquals(true, model.getAttribute("landing"))
         assertTrue(model.bar().chips.isEmpty())
         assertTrue(requests.all { it.path == "/discover/tv" && it.params["page"] == "1" })
-        assertTrue(requests.none { it.params.containsKey("first_air_date.gte") || it.params.containsKey("vote_average.gte") })
+        assertTrue(requests.none { it.params.containsKey("first_air_date.gte") })
+        // The bad minRating=11 is ignored: only the genre rows' own 7+ floor is sent, and "Popular now" has none.
+        assertTrue(requests.none { it.params["vote_average.gte"]?.startsWith("11") == true })
+        assertNull(requests.first().params["vote_average.gte"])
         assertEquals("popularity.desc", requests.first().params["sort_by"])
     }
 
@@ -341,12 +347,12 @@ class DiscoverControllerTest {
         assertEquals("Mystery", row.title)
         assertFalse(row.pending)
         assertEquals(18, row.tiles.size)
-        assertEquals("/discover?type=movie&genre=mystery", row.moreHref)
+        assertEquals("/discover?type=movie&popular=alltime&minRating=7&genre=mystery", row.moreHref)
         assertEquals("9648", requests.single().params["with_genres"])
 
         val shown = ConcurrentModel().also { controller.row(user, BrowseParams(type = "movie", hideSeen = "0"), "mystery", it) }
         assertEquals(20, (shown.getAttribute("row") as DiscoverRowView).tiles.size)
-        assertEquals("/discover?type=movie&genre=mystery&hideSeen=0", (shown.getAttribute("row") as DiscoverRowView).moreHref)
+        assertEquals("/discover?type=movie&popular=alltime&minRating=7&genre=mystery&hideSeen=0", (shown.getAttribute("row") as DiscoverRowView).moreHref)
     }
 
     @Test
