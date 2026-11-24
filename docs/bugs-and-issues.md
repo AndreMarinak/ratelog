@@ -8,11 +8,6 @@ Problems found while building and running the fork: what happened, the cause, an
   "posts still need the CSRF token" got `/login?error=true` when signing in. Likely cause: each test signs in from
   `198.51.100.(nanoTime % 250)`, so two tests can share an address, and the lockout test's wrong passwords then count
   against the other's login. Fix: a distinct address per test (a counter), not a random one.
-- **Search results skip most of each TMDB page** (upstream, found 2026-11-24 building the search Year menu): results page N
-  shows the first 9 titles of TMDB page N (Any: of movies and shows interleaved) and page N+1 starts at TMDB page N+1, so
-  titles 10-20 of every TMDB page (and most shows for Any) never appear, however far you scroll. `SearchHandler`'s
-  `take(PAGE_SIZE)`. A decade (fork) shows every match of the pages it reads, so it is not affected. Fix: show the whole TMDB
-  page (20, or 40 for Any), or keep an offset within the page.
 - **An admin can "Save" their own official list, and it doesn't stick on screen** (found 2026-11-24): the toggle is offered
   on every official card, the save is stored and the toast says "first in Official lists now", but pages leave out your own
   saved lists (`GetSavedListsHandler(includeOwn = false)`), so after a reload the card reads "Save" again and keeps its usual
@@ -95,6 +90,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Search results skip most of each TMDB page** (upstream, found 2026-11-24 building the search Year menu): results page N
+  shows the first 9 titles of TMDB page N (Any: of movies and shows interleaved) and page N+1 starts at TMDB page N+1, so
+  titles 10-20 of every TMDB page (and most shows for Any) never appear, however far you scroll. `SearchHandler`'s
+  `take(PAGE_SIZE)`. A decade (fork) shows every match of the pages it reads, so it is not affected.
+  **Fixed 2026-11-24:** a results page is now the whole TMDB page (20; 40 for Any), `hasMore` from TMDB's page count.
 - **"⋯" not in the corner on iPhone, eye / ★ too high** (user, 2026-11-24: "the 3 dots ... are NOT at the top right" on Home
   and Discover, after the 2026-11-23 fix): Safari (WebKit) sizes an absolutely positioned box with `left: 0; right: 0`, an
   `aspect-ratio` and padding 8px too narrow (90px on a 98px poster), so the overlay holding "⋯" and the marks was smaller than

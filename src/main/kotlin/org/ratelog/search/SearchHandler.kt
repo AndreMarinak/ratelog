@@ -55,30 +55,28 @@ class SearchHandler(
         val decade = query.decade
         if (query.year == null && decade != null) return@either decadeSearch(query, SearchYearFilter.Decade(decade)).bind()
 
+        // Fork (2026-11-24): a results page is the whole TMDB page (20; 40 for Any, movies and shows interleaved). It was
+        // cut to the first 9 while the next page started at the next TMDB page, so titles 10-20 of every page never showed.
         when (query.mediaType) {
             MediaType.movie -> {
                 val movies = searchMovies(query.query, query.lang, query.page, query.year).bind()
-                val items = movies.first.take(PAGE_SIZE)
-                SearchResult(items, movies.first.size > PAGE_SIZE || movies.second > query.page)
+                SearchResult(movies.first, movies.second > query.page)
             }
             MediaType.tvshow -> {
                 val shows = searchTvShows(query.query, query.lang, query.page, query.year).bind()
-                val items = shows.first.take(PAGE_SIZE)
-                SearchResult(items, shows.first.size > PAGE_SIZE || shows.second > query.page)
+                SearchResult(shows.first, shows.second > query.page)
             }
             null -> {
                 val movies = searchMovies(query.query, query.lang, query.page, query.year).bind()
                 val shows = searchTvShows(query.query, query.lang, query.page, query.year).bind()
-                val interleaved = interleave(movies.first, shows.first)
-                val items = interleaved.take(PAGE_SIZE)
-                SearchResult(items, interleaved.size > PAGE_SIZE || movies.second > query.page || shows.second > query.page)
+                SearchResult(interleave(movies.first, shows.first), movies.second > query.page || shows.second > query.page)
             }
         }
     }
 
     /**
      * Fork (2026-11-24): a decade, filtered here. Reads TMDB pages from `query.page` on (movies and TV page by page
-     * together for Any) and keeps the titles of the decade, until a results page is filled ([PAGE_SIZE]), TMDB has no
+     * together for Any) and keeps the titles of the decade, until [DECADE_FILL] are found, TMDB has no
      * more pages, or [DECADE_PAGES_PER_LOAD] pages were read; never past TMDB page [DECADE_MAX_PAGE]. Every match of
      * the pages read is shown (none dropped: the next load starts after [SearchResult.lastPage]). The trade-off is
      * documented in docs/decisions/people-and-credits.md "Year menu".
@@ -103,12 +101,13 @@ class SearchHandler(
             } else emptyList()
             found += interleave(movies.filter { decade.contains(it.year) }, shows.filter { decade.contains(it.year) })
             more = page < DECADE_MAX_PAGE && ((wantMovies && page < movieTotal) || (wantShows && page < showTotal))
-        } while (more && found.size < PAGE_SIZE && page - start + 1 < DECADE_PAGES_PER_LOAD)
+        } while (more && found.size < DECADE_FILL && page - start + 1 < DECADE_PAGES_PER_LOAD)
         SearchResult(found.distinctBy { it.type to it.tmdbId }, more, lastPage = page)
     }
 
     companion object {
-        private const val PAGE_SIZE = 9
+        /** A decade's results page stops reading TMDB pages once this many titles of the decade were found. */
+        private const val DECADE_FILL = 9
 
         /** At most this many TMDB pages (per type) are read for one results page of a decade (latency cap). */
         const val DECADE_PAGES_PER_LOAD = 5

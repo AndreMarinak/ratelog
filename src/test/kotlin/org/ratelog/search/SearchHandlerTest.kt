@@ -155,11 +155,11 @@ class SearchHandlerTest {
     }
 
     @Test
-    fun `should limit results to 9 items per page`() {
+    fun `a results page is the whole TMDB page, so scrolling on never skips titles`() {
         val movies = (1..10).map { TmdbMovieResponse(it, "Movie $it", overview = "Overview", releaseDate = "2023-01-01", posterPath = "/poster.jpg", voteAverage = 7.5, originalTitle = "a-title") }
         val shows = (1..10).map { TmdbTvShowResponse(it, "Show $it", overview = "Overview", firstAirDate = "2023-01-01", posterPath = "/poster.jpg", voteAverage = 8.0, originalName = "a-title") }
 
-        whenever(tmdbClient.searchMovies("test", Lang.en, 1)).thenReturn((movies to 1).right())
+        whenever(tmdbClient.searchMovies("test", Lang.en, 1)).thenReturn((movies to 2).right())
         whenever(tmdbClient.searchTvShows("test", Lang.en, 1)).thenReturn((shows to 1).right())
 
         val query = SearchQuery("test", User.Id(1), Lang.en, null)
@@ -167,8 +167,12 @@ class SearchHandlerTest {
 
         assertTrue(result.isRight())
         val results = result.getOrElse { SearchResult(emptyList(), false) }
-        assertEquals(9, results.items.size)
-        assertTrue(results.hasMore)
+        assertEquals(20, results.items.size, "every title of both TMDB pages, interleaved")
+        assertEquals(listOf("Movie 1", "Show 1", "Movie 2"), results.items.take(3).map { it.title })
+        assertTrue(results.hasMore, "movies have a page 2")
+
+        whenever(tmdbClient.searchMovies("test", Lang.en, 1)).thenReturn((movies to 1).right())
+        assertFalse(handler.handle(query).getOrElse { SearchResult(emptyList(), false) }.hasMore, "the last page says so")
     }
 
     @Test
@@ -298,7 +302,7 @@ class SearchHandlerTest {
 
         val result = handler.handle(decadeQuery(MediaType.movie).copy(year = 1984)).getOrElse { SearchResult(emptyList(), false) }
 
-        assertEquals(9, result.items.size)
+        assertEquals(20, result.items.size, "the whole TMDB page")
         assertNull(result.lastPage)
         org.mockito.kotlin.verify(tmdbClient, org.mockito.kotlin.never()).searchMovies("star", Lang.en, 1)
     }
