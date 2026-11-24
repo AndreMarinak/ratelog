@@ -70,6 +70,14 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Rating several seasons of a show reloaded the TV page after each one** (user, 2026-11-23: "on a tv show rating when im
+  rating mult seasons it reloads the page after each rating"): the season rate modal and the delete confirmation were plain
+  form posts that redirected back to `/tv/{id}`, so every season cost a full page load (and a TMDB call) and the scroll
+  jumped. Both forms now save in place (`data-inplace="#seasons, .title-panel"`, `static/inplace.js`): the modal closes, a
+  toast confirms, the season cards and the action panel (your overall score, Seen) are swapped in from the page. The cards'
+  expand handler moved from an inline script to a delegated `static/tv-seasons.js` (an open card stays open after the swap),
+  and `breakdown.js` redraws category bars in swapped-in regions (`inplace:swapped` event). Without JS it is still a post and
+  a redirect.
 - **Two search boxes on the search results page** (user, phone, 2026-11-23): the earlier fix removed the Browse bar's field on
   Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see design-decisions.
 - **Going back to Discover's grid or search results only showed the first page again** (found building the back links,

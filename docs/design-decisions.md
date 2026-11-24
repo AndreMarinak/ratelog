@@ -616,7 +616,8 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
 | List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |
-| Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
+| Rate / edit / delete rating (modals) | reload | **reload kept** for movies: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
+| TV page: rate / edit / delete a season (modals) | reload | in place (2026-11-23, user: "it reloads the page after each rating"): `data-inplace="#seasons, .title-panel"`, the modal closes, toast, the season cards and the panel's overall score and Seen are swapped in; rating several seasons in a row never leaves the page |
 | Poster ★: rate, change or delete a quick rating (every poster) | — (title page only) | in place (`tile-rate.js`, `POST /movie/rate/tile`, JSON): every copy's chip and eye update, list progress counts, toast |
 | Poster ★ on a detailed rating, "Detailed rating…" | — | **page load**: the title page opens its rate modal (`?rate=edit` / `?rate=detailed`); five categories need the full form |
 | Poster Add to list (every poster) | — (title page only) | in place: the title page's sheet loads on the page (`GET /tile/lists`), ticks save in place, the poster's button ticks; New list stays on the page |

@@ -133,15 +133,7 @@
     <script src="/title-actions.js" defer></script>
     <script src="/list-membership.js" defer></script>
     <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
+    <script src="/tv-seasons.js" defer></script>
 </body>
-<script>
-    document.querySelectorAll('.season-card.expandable').forEach(card => {
-        const header = card.querySelector('.season-card-header');
-        if (!header) return;
-        header.addEventListener('click', (e) => {
-            if (e.target.closest('form, button')) return;
-            card.classList.toggle('expanded');
-        });
-    });
-</script>
+
 </html>

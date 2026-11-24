@@ -5,7 +5,7 @@
 //   POSTs in the background. When it succeeds, the current page is fetched again and each listed region is
 //   swapped in from it, so counts, badges and button states stay right without per-feature JS. An empty
 //   data-inplace swaps nothing. The server's flash message (or data-inplace-done) shows as a toast. A form inside
-//   an open modal closes that modal first.
+//   an open modal closes that modal first. After a swap, `inplace:swapped` fires on document.
 //
 // <a data-append="<selector>">  ("Load more")
 //   Fetches the link, appends the children of <selector> from that page to <selector> here, and replaces the
@@ -86,6 +86,8 @@
         const fresh = await getPage(window.location.href);
         if (!swapRegions(selectors, fresh)) { window.location.reload(); return; }
         refreshIcons();
+        // Scripts that draw into a region (breakdown.js's category bars) redraw the swapped-in copies.
+        document.dispatchEvent(new CustomEvent('inplace:swapped', { detail: { selectors } }));
       }
       showToast(flash ? flash.textContent.trim() : (isError ? '' : form.dataset.inplaceDone || ''), isError);
     } catch (err) {
