@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="guide(guideText)" class="card api-guide" id="apiGuide">
+    <h2 th:text="#{api.guide.title}">Use Ratelog with an AI assistant</h2>
+    <p class="help-text" th:text="#{api.guide.description}">Paste this guide into Claude, ChatGPT or any assistant, then give it a token.</p>
+    <textarea id="apiGuideText" class="api-guide-text" readonly spellcheck="false" rows="12" th:text="${guideText}"
+              th:aria-label="#{api.guide.title}"></textarea>
+    <div class="api-guide-actions flex gap centered">
+        <button type="button" class="primary" id="apiGuideCopy" th:data-copied="#{api.guide.copied}"
+                th:text="#{api.token.copy}">Copy</button>
+        <a class="btn api-guide-download" href="/settings/api/guide.md" download="ratelog-api-guide.md"
+           th:href="@{/settings/api/guide.md}" th:text="#{api.guide.download}">Download (.md)</a>
+        <span class="api-guide-status" id="apiGuideStatus" role="status" aria-live="polite" hidden></span>
+    </div>
+    <p class="warning-text api-guide-warning">
+        <i data-lucide="alert-triangle"></i>
+        <span th:text="#{api.guide.warning}">A token gives full access to your account.</span>
+    </p>
+</section>
+</body>
+</html>

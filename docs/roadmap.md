@@ -159,6 +159,8 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 
 ## Fixes and housekeeping done
 
+- [x] **API guide for AI assistants** (asked 2026-11-24, "make a documentation page under the key thing so someone could copy and paste it into Claude or chat or whatnot"):
+  `/settings/api` has a copy-paste guide box (Copy, Download .md) and `GET /settings/api/guide.md`; text in `src/main/resources/api-guide.md`.
 - [x] **Account backup** (asked 2026-11-24, "make a copy of all my data so far and keep it git ignored in repo"):
   `tools/export-account.py` saves an account's ratings, statuses, lists, saved lists, tags and stats through the API into
   git-ignored `backups/`. No server change. How to run it: [deploy-railway.md](deploy-railway.md#back-up-an-account).

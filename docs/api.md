@@ -10,6 +10,8 @@ JSON API for scripts and assistants (e.g. Claude) to manage your lists. Added in
    - `Authorization: Bearer rl_...`
    - `X-API-Key: rl_...`
 
+**Using an AI assistant (2026-11-24):** `/settings/api` also has a copy-paste guide ("Use Ratelog with an AI assistant"), also served at `GET /settings/api/guide.md` (logged-in users). It is a short version of this document, written for a chat assistant, with the site's own base URL filled in and a `<YOUR_TOKEN>` placeholder; its source is `src/main/resources/api-guide.md` and it must change when this file does.
+
 Browser sessions do not work on `/api/v1` (and the API needs no CSRF token). Revoke tokens on the same page.
 
 ## Titles

@@ -71,6 +71,7 @@ class SecurityChainIntegrationTest {
         @GetMapping("/home")
         fun home(): String = (SecurityContextHolder.getContext().authentication!!.principal as AppUserDetails).let { "${it.username}:${it.role}" }
 
+        @GetMapping("/settings/api/guide.md") fun guide() = "# guide"
         @GetMapping("/admin/configuration") fun admin() = "admin page"
         @GetMapping("/accounts/new") fun addAccount() = "add account page"
         @PostMapping("/write") fun write() = "saved"
@@ -131,6 +132,13 @@ class SecurityChainIntegrationTest {
         val response = mvc.perform(get("/fonts/CrimsonPro-Regular.woff2")).andReturn().response
         assertEquals(null, response.redirectedUrl, "redirected to the login page")
         assertTrue(response.status != 302 && response.status != 401 && response.status != 403, "status ${response.status}")
+    }
+
+    @Test
+    fun `the API guide download needs a login`() {
+        val response = mvc.perform(get("/settings/api/guide.md")).andReturn().response
+        assertEquals(302, response.status)
+        assertEquals("/login", response.redirectedUrl)
     }
 
     @Test
