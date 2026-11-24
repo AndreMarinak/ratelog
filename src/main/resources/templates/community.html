@@ -3,13 +3,16 @@
 <head th:replace="~{fragments/head :: head(#{community.title})}"></head>
 <body>
     <div th:replace="~{fragments/loader}"></div>
+    <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
     <div class="page">
         <header class="site-header" th:replace="~{fragments/nav :: nav(active='community')}"></header>
 
         <h1 th:text="#{community.title}">Community.</h1>
 
-        <div class="grid">
-            <div>
+        <!-- Fork: Activity | People (People comes first on phones, see static/community-people.css). -->
+        <div class="grid community-grid">
+            <section id="communityFeed" class="community-activity" aria-labelledby="communityActivityTitle">
+                <h2 id="communityActivityTitle" th:text="#{community.activity.title}">Activity</h2>
                 <div th:if="${feed == null or #lists.isEmpty(feed)}" class="empty-state" th:text="#{community.empty}">No posts yet.</div>
                 <div th:unless="${feed == null or #lists.isEmpty(feed)}">
                     <div th:each="item : ${feed}">
@@ -48,26 +51,18 @@
                         </a>
                     </div>
                 </div>
-            </div>
-            <div>
-                <h2 th:text="#{community.search.users}">Search Users</h2>
-                <div class="search-wrapper">
-                    <input type="text" id="user-search-input" name="username" th:placeholder="#{community.search.placeholder}" autocomplete="off" th:value="${searchedUsername}" class="w-100" th:data-no-users-msg="#{community.search.no.users.found}" />
-                    <div id="user-search-dropdown" class="search-dropdown"></div>
-                </div>
-
-                <div class="separator"></div>
-
-                <div th:if="${followedUsers != null and !#lists.isEmpty(followedUsers)}">
-                    <div th:each="followedUser : ${followedUsers}">
-                        <a th:href="@{'/profile/' + ${followedUser.id}}" class="link" th:text="${followedUser.username}">Username</a>
-                    </div>
-                </div>
-                <div th:if="${followedUsers != null and #lists.isEmpty(followedUsers)}" class="empty-state" th:text="#{community.no.followed}">You are not following anyone yet.</div>
-            </div>
+            </section>
+            <!-- Fork: People directory with Follow / Following buttons (replaces the search box + followed list). -->
+            <aside class="community-side">
+                <section th:replace="~{fragments/community-people :: people(${communityPeople}, @{/community(limit=${limit})})}"></section>
+            </aside>
         </div>
     </div>
     <div th:replace="~{fragments/review-detail-modal :: reviewDetailModal}"></div>
+    <link rel="stylesheet" href="/follow.css">
+    <link rel="stylesheet" href="/community-people.css">
     <script src="/usersearch.js" defer></script>
+    <script src="/confirm.js" defer></script>
+    <script src="/follow-button.js" defer></script>
 </body>
 </html>

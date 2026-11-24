@@ -1,0 +1,100 @@
+/* Fork: Community page, Activity | People (templates/community.html, fragments/community-people.html). */
+.community-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+
+  & > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    /* Phones: People first, so following someone is one tap away and the feed below can grow without moving it. */
+    .community-side {
+      order: -1;
+    }
+  }
+}
+
+.community-activity > h2,
+.community-people h2 {
+  margin: 0 0 12px;
+}
+
+.community-people-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+
+  h2 {
+    margin-bottom: 8px;
+  }
+}
+
+.community-people-summary {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+}
+
+.community-people-search {
+  margin-bottom: 12px;
+}
+
+.people-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+
+  & + & {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.person-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  color: var(--text);
+  text-decoration: none;
+
+  &:hover .person-name {
+    color: var(--accent);
+  }
+}
+
+.person-text {
+  display: grid;
+  min-width: 0;
+}
+
+.person-name {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-meta {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.person-row .follow-form {
+  flex: 0 0 auto;
+}

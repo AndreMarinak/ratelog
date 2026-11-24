@@ -33,8 +33,9 @@ interface UserDAO : CrudRepository<UserEntity, Long> {
     fun findByUsername(username: String): Optional<UserEntity>
     fun findByEmail(email: String): Optional<UserEntity>
 
-    @Query("SELECT * FROM users WHERE username LIKE CONCAT('%', :username, '%')")
-    fun findByUsernameContaining(username: String): List<UserEntity>
+    // Fork: case-insensitive, and `_` / `%` typed by the user match only themselves (see UsernameSearch.likePattern).
+    @Query("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(:pattern) ESCAPE '!' ORDER BY LOWER(username), id")
+    fun findByUsernameContaining(pattern: String): List<UserEntity>
 
     @Query("SELECT * FROM users ORDER BY created_at_epoch_ms DESC, id DESC")
     fun findAllOrdered(): List<UserEntity>
