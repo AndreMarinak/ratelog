@@ -1,0 +1,58 @@
+.api-guide {
+  margin-top: 2rem;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  h2 {
+    margin-top: 0;
+  }
+
+  .help-text {
+    margin-bottom: 12px;
+  }
+}
+
+.api-guide-text {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  height: 18rem;
+  min-height: 10rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+  resize: vertical;
+}
+
+.api-guide-actions {
+  flex-wrap: wrap;
+  margin-top: 12px;
+
+  button[hidden],
+  [hidden] {
+    display: none;
+  }
+
+  a.btn {
+    padding: 10px 14px;
+    border: 1px solid var(--border-strong);
+    font-weight: 700;
+    text-decoration: none;
+  }
+}
+
+.api-guide-status {
+  color: var(--success-text);
+  font-size: 0.9rem;
+}
+
+.api-guide-warning {
+  margin: 12px 0 0;
+  align-items: flex-start;
+
+  i, svg {
+    flex: none;
+  }
+}

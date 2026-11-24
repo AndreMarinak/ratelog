@@ -53,11 +53,15 @@
             </button>
         </form>
     </div>
+
+    <div th:replace="~{fragments/api-guide :: guide(${apiGuide})}"></div>
 </div>
+<link rel="stylesheet" href="/api-guide.css">
 <style>
     .api-new-token, .api-create-form, .api-token-row { margin-top: 1rem; }
     .api-new-token input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 </style>
     <script src="/confirm.js" defer></script>
+    <script src="/api-guide.js" defer></script>
 </body>
 </html>

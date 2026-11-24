@@ -65,6 +65,7 @@ agent branches). Before every commit and push, check each file below and update 
 | [docs/bugs-and-issues.md](docs/bugs-and-issues.md) | you find a bug (cause + fix), or leave one open (move it from Open to Fixed when fixed) |
 | [docs/roadmap.md](docs/roadmap.md) | a feature is requested, started or finished; new migration ranges |
 | [docs/api.md](docs/api.md) | any `/api/v1` endpoint, field or error code changes |
+| `src/main/resources/api-guide.md` | `docs/api.md` changes (an endpoint, field, rule or limit): it is the copy-paste "API guide for AI assistants" on `/settings/api`; keep its endpoints and rules the same |
 | [docs/deploy-railway.md](docs/deploy-railway.md) | env vars, Railway setup or recovery steps change |
 | [docs/competitor-gaps.md](docs/competitor-gaps.md) | a researched gap is built or re-ranked |
 | [docs/testing.md](docs/testing.md) | a browser suite, step or the way the app is run for tests changes |

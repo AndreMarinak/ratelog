@@ -10,6 +10,8 @@
 - **`type` is required with `tmdbId`** because TMDB movie and TV ids are separate namespaces.
 - **API never logs TMDB exception messages** (they contain the `api_key` URL); TMDB failures map to `tmdb_error` / `tmdb_not_configured`.
 
+- **API guide for AI assistants (user, 2026-11-24: "make a documentation page under the key thing so someone could copy and paste it into Claude or chat or whatnot"):** `/settings/api` has a "Use Ratelog with an AI assistant" box: the guide in a read-only text area, a Copy button (clipboard API, falling back to selecting the text) and a Download (.md) link; the same text is at `GET /settings/api/guide.md` for logged-in users. The text is `src/main/resources/api-guide.md` (about 130 lines, a condensed `docs/api.md`) with `{{BASE_URL}}` filled from the request (so it names the site it is served from), a `<YOUR_TOKEN>` placeholder (never a real token) and a warning that a token gives full account access. Admin-only features and tags (hidden behind a flag) are left out. Why a file: one place to keep current; `CLAUDE.md`'s documentation table requires updating it with `docs/api.md`.
+
 ## Standing decisions
 
 - **External scores via MDBList.** There's no free official source: Rotten Tomatoes licenses only to partners and bans scraping; IMDb's API costs ~$400k/yr; OMDb lacks RT audience scores and TV. MDBList returns IMDb, RT critics/audience, Metacritic and Letterboxd in one call (free 1,000/day). Cached per title (daily for new releases, weekly within a year, monthly older, 7 days for "no data"), process-wide backoff on 429. RT is labeled "Rotten Tomatoes®" and linked; the app never scrapes RT itself. Fine for a private, login-only household instance; not for a public site.
