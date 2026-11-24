@@ -369,7 +369,8 @@ class ApiOfficialListsTest {
         assertEquals(ListProgressDto(seen = 0, total = 3), officialController.official(admin).single { it.name == "AFI 100" }.progress)
 
         val dtoJson = json.readTree(json.writeValueAsString(afiDto))
-        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "itemCount", "url", "owner", "progress"), dtoJson.fieldNames().asSequence().toSet())
+        assertEquals(setOf("id", "name", "isPublic", "isOfficial", "itemCount", "url", "owner", "progress", "saved"), dtoJson.fieldNames().asSequence().toSet())
+        assertFalse(afiDto.saved, "nothing saved yet (saved lists, 2026-11-24)")
         assertEquals(setOf("seen", "total"), dtoJson["progress"].fieldNames().asSequence().toSet())
     }
 

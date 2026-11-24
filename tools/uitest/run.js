@@ -11,7 +11,7 @@ const { launch, makeContext, VIEWPORTS } = require('./lib/browser');
 const { createToken, revokeTokens, makeApi, snapshot, restore, deleteLists } = require('./lib/api');
 
 // Run order; a name only counts once its suites/<name>.js exists.
-const ORDER = ['home', 'seen', 'tilerate', 'title', 'inlists', 'recs', 'listorder', 'backnav', 'listsuggest', 'misc'];
+const ORDER = ['home', 'seen', 'tilerate', 'title', 'inlists', 'recs', 'listorder', 'backnav', 'listsuggest', 'savedlists', 'misc'];
 const SUITES = ORDER.filter((n) => fs.existsSync(path.join(__dirname, 'suites', `${n}.js`)));
 
 function parseArgs(argv) {

@@ -306,13 +306,16 @@
     min-height: 34px;
   }
 
-  /* Phones: one line that scrolls sideways instead of a stack of chips above the actions. */
+  /* Phones: one line that scrolls sideways instead of a stack of chips above the actions. The head column sits beside
+     the poster here, so the label is just its icon (the group keeps its name for screen readers) and the right edge fades
+     to say there is more. */
   .title-official-lists {
     flex-wrap: nowrap;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
-    padding-bottom: 2px;
+    padding: 0 28px 2px 0;
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 
     &::-webkit-scrollbar {
       display: none;
@@ -327,6 +330,15 @@
 
   .title-official-chip-text {
     overflow: visible;
+  }
+
+  .title-official-label > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 
