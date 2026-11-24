@@ -53,5 +53,7 @@ ratelog:
   features:
     # Fork: tags are hidden in the web UI for now (code, /tags pages and the API stay). RATELOG_FEATURES_TAGS=true shows them.
     tags: false
+    # Fork: cast / crew names link to /person/{id} (person pages). Off until those pages exist. RATELOG_FEATURES_PEOPLE=true.
+    people: false
   tmdb:
     base-url: https://api.themoviedb.org/3

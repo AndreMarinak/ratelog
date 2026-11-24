@@ -903,6 +903,51 @@ or the five categories, create and edit) and the delete confirmation were plain 
 - **Not changed here:** the "Rate it?" prompt after Seen still saves with a page load (it lives in
   `fragments/title-actions.html`, which another branch was editing; see bugs-and-issues Open).
 
+### Credits on title pages: director, writers, cast, age rating, tagline (2026-11-24)
+
+Asked by the user on 2026-11-24: "also with the description is there more data we can get, director? Cast?" Agreed: a
+director / writers line, the top cast with photos and characters, the age rating and the tagline. Layout picked after mockups
+(`Movies/mockups/title-credits`, variant D): for laptops it was the user's own idea, "it could probably go right below seen,
+watchlist, rating buttons? on the right side?"; for phones, "pick the best one for mobile … and go with it".
+
+- **Data: no extra request.** The TMDB extras call each title page already makes appends `credits,release_dates` (movies) or
+  `aggregate_credits,content_ratings` (shows); `created_by`, networks, episodes, status, tagline, budget, revenue and studios
+  are in the base response. Parsed by `TitleCreditsParser` into `TitleCredits` and cached with the other extras in
+  `title_extras.credits_json` (V1143, one compact JSON value, refreshed weekly like the rest). Kept: up to 3 directors, up to 6
+  writers (one entry per person with their jobs: screenplay, novel, story...; story editors / staff writers are left out), the
+  top 10 cast (TV: the character with the most episodes, plus their episode count), the **US** certification (theatrical
+  release first; no fallback to other countries, whose scales differ), up to 3 studios / networks, budget and box office
+  (TMDB's 0 = unknown), first / last air years and episode count. Text comes in English (the extras call is `en-US`), like the
+  trailer and runtime.
+- **Old cached rows** (no credits yet): V1143 makes them due, and `GetTitleInfoHandler` treats a due row without credits like
+  a first view: it fetches while the page waits (at most `ratelog.extras.sync-timeout-ms`, 3 s), so the first view after the
+  deploy already shows the cast. A failed fetch defers TMDB an hour as before, so it is not retried on every view.
+- **Laptop (>= 1100px, variant D):** a **Details** card (Director / Created by, Writers with their job in grey, Studio /
+  Network, Budget + Box office; TV: Aired + Episodes) and a **Cast** card (round 40px photo, name, character; six rows, "Show
+  all 10" expands in place) under the action panel. The **right column now scrolls with the page** whenever it has these
+  cards (`.title-col-side:has(.title-about) { position: static }`): it is often taller than the screen, and a sticky column
+  taller than the screen clips its bottom (the cast) until the page ends. Making only the action panel sticky was rejected:
+  inside a column that is exactly as tall as its content a sticky panel has no room to move, and stretching the column to
+  the row height would make the cards scroll underneath the panel (overlap). Titles without credits keep the sticky panel.
+- **Tablet and phone (< 1100px, the main session's pick):** tagline above the overview; one line under it, "Directed by X ·
+  Written by Y" (TV: "Created by X"; at most 3 writers, then "+N more", the full list then sits in More details); a sideways
+  **cast row** of small round photos (64px) with name and character, about half the height of the mockup's poster-style cards,
+  scrolling inside itself (`overflow-x: auto`, the page never scrolls sideways); studio / budget / box office (TV: network,
+  years, episodes) inside a collapsed **"More details"** (`<details>`, works without JS). Where to watch and the action bar
+  stay where they were (the action bar is still above the fold). Both layouts are in the page; CSS shows one
+  (`static/title-credits.css`).
+- **Everywhere:** the tagline in italics above the overview, and the age rating as an outlined chip right after the runtime
+  (R, PG-13, TV-MA), titled "Rated R (US)".
+- **Names link only once person pages exist:** every name carries `data-person-id`; it becomes a link to `/person/{id}` only
+  when the feature flag `ratelog.features.people` (`RATELOG_FEATURES_PEOPLE`, default false) is on, so no dead links ship
+  before the person pages (the next feature) do.
+- **Missing data degrades cleanly:** no empty cards (each card, the line, the cast row and More details render only with
+  something in them), a cast member without a photo gets their initial in a circle, and a title TMDB knows nothing about looks
+  exactly as before. "Show all 10" without JS: every name shows and the toggle stays hidden (`static/title-credits.js` folds
+  rows 7-10 and reveals it).
+- **Images:** `image.tmdb.org` only (inside the CSP): `w185` profiles; the 40px desktop photos use `w45` at 1x and `w185` at 2x.
+- **API:** `credits` on `GET /api/v1/titles/{type}/{tmdbId}` ([api.md](api.md#title-details-scores-and-trailers)).
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -1082,7 +1127,7 @@ The user asked for a hardening pass on 2026-11-23. The rules now:
 - **Top up only when hiding removed titles:** fewer than 12 visible after hiding pulls the next TMDB page (cached), up to 3 pages per row or grid page. A page that is simply short, with nothing hidden, costs no extra calls.
 - **Discover landing performance:** the first 4 rows are fetched by the server in parallel on a 4-thread pool with a short queue (so one page never runs more than 4 TMDB calls at once), waiting at most 2.5 s. Rows that are slower and rows 5+ render as poster-shaped skeletons that `discover.js` fetches from `/discover/row` as they come within 800px of the viewport, at most 3 at a time. A failing row is dropped (server or browser); only when every server row fails does the page show the TMDB message. Cold cache: 4 TMDB calls before first paint; warm: none. Tunable with `ratelog.discover.eager-rows`, `parallel-rows`, `wait-ms`.
 - **The seen switch is a link** (`role="switch"`, `aria-checked`; Space toggles it via JS) to keep the "plain links, URL describes the view" rule. Row bookmarks post in place (fetch) instead of reloading, so rows loaded on scroll aren't lost.
-- **Title pages: three columns on desktop, an action bar on phones** (2026-11-23, replaces the two-column layout; the user found it "ehhhhhhh" at 1475px and said the phone page "wastes space"). Desktop (1100px+): poster + Where to watch | title, runtime/genres, score badges, overview, trailer thumbnail, Your rating | a sticky action panel with labeled controls (watchlist status tiles, Rate or "Edit rating" + your score, Follow, Add to list, tags when enabled; the controls are now the Seen / Watchlist / Rate / Add to list toggles and the follow bell, see "Seen / Watchlist instead of four statuses"). *(Panel contents superseded by the Seen / Watchlist toggles, see Features.)* Tablet (700-1099px): two columns, the panel moves right under the title. Phone (<700px): a 108px poster beside the title, facts, TMDB/IMDb badges and a "Play trailer" button; then a one-row action bar (Rate, Follow, Watchlist, Add to list; 60px tiles), the overview clamped to 3 lines with "More", Where to watch, Your rating, seasons. Seasons stay full width below on TV. Layout in `static/title-page.css`; one DOM, rearranged per breakpoint with grid + `display: contents`.
+- **Title pages: three columns on desktop, an action bar on phones** (2026-11-23, replaces the two-column layout; the user found it "ehhhhhhh" at 1475px and said the phone page "wastes space"). Desktop (1100px+): poster + Where to watch | title, runtime/genres, score badges, overview, trailer thumbnail, Your rating | a sticky action panel with labeled controls (watchlist status tiles, Rate or "Edit rating" + your score, Follow, Add to list, tags when enabled; the controls are now the Seen / Watchlist / Rate / Add to list toggles and the follow bell, see "Seen / Watchlist instead of four statuses"). *(Panel contents superseded by the Seen / Watchlist toggles, see Features.)* *(Since 2026-11-24 the right column scrolls with the page when it holds the Details / Cast cards; see "Credits on title pages".)* Tablet (700-1099px): two columns, the panel moves right under the title. Phone (<700px): a 108px poster beside the title, facts, TMDB/IMDb badges and a "Play trailer" button; then a one-row action bar (Rate, Follow, Watchlist, Add to list; 60px tiles), the overview clamped to 3 lines with "More", Where to watch, Your rating, seasons. Seasons stay full width below on TV. Layout in `static/title-page.css`; one DOM, rearranged per breakpoint with grid + `display: contents`.
 - **No sticky action bar on phones.** It would sit on top of the fixed 5-tab bottom nav (two bars, ~130px of an 844px screen). The action bar is already above the fold at 390x844 and 360x740, so it stays in the page flow.
 - **Phone "Watchlist" opens a status sheet** (`watchStatusModal`, same `/status` form as the desktop tiles) instead of toggling, so Watching / Watched / Dropped stay reachable; the button shows the current status. Desktop and tablet keep the four status tiles inline in the panel. *(Superseded the same day by "Seen / Watchlist instead of four statuses" above: the four status tiles and the sheet were replaced by Seen · Watchlist · Rate · Add to list toggles, with Watching / Dropped only on shows.)*
 - **Trailer plays in a modal.** Desktop shows a thumbnail that fills the middle column (up to 720px; it was 300px until the user asked

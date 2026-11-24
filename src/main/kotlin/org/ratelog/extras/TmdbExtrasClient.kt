@@ -24,9 +24,10 @@ sealed interface TmdbExtrasError {
 }
 
 /**
- * Trailer, runtime, vote count and IMDb id for a title in ONE TMDB call
- * (`/movie/{id}` or `/tv/{id}` with `append_to_response=videos,external_ids`, i.e. the `/videos` and
- * `/external_ids` sub-resources). Kept apart from [org.ratelog.tmdb.TmdbClient]; same API key lookup.
+ * Trailer, runtime, vote count, IMDb id and credits for a title in ONE TMDB call
+ * (`/movie/{id}` or `/tv/{id}` with `append_to_response`: `videos,external_ids` plus, since 2026-11-24,
+ * `credits,release_dates` for movies or `aggregate_credits,content_ratings` for shows).
+ * Kept apart from [org.ratelog.tmdb.TmdbClient]; same API key lookup.
  */
 @Component
 class TmdbExtrasClient(
@@ -57,6 +58,10 @@ class TmdbExtrasClient(
             MediaType.movie -> "/movie/{id}"
             MediaType.tvshow -> "/tv/{id}"
         }
+        val append = when (type) {
+            MediaType.movie -> "videos,external_ids,credits,release_dates"
+            MediaType.tvshow -> "videos,external_ids,aggregate_credits,content_ratings"
+        }
         return try {
             rateLimiter.acquire()
             val response = restClient.get()
@@ -64,7 +69,7 @@ class TmdbExtrasClient(
                     builder.path(path)
                         .queryParam("api_key", apiKey)
                         .queryParam("language", "en-US")
-                        .queryParam("append_to_response", "videos,external_ids")
+                        .queryParam("append_to_response", append)
                         .queryParam("include_video_language", "en,null")
                         .build(tmdbId.value)
                 }
@@ -97,6 +102,7 @@ class TmdbExtrasClient(
                     numberOfSeasons = null,
                     trailerYoutubeKey = TrailerSelector.select(videos?.results.orEmpty()),
                     imdbId = cleanImdbId(externalIds?.imdbId) ?: cleanImdbId(imdbId),
+                    credits = TitleCreditsParser.movie(this),
                 )
                 MediaType.tvshow -> TmdbExtras(
                     title = name?.takeIf { it.isNotBlank() },
@@ -107,6 +113,7 @@ class TmdbExtrasClient(
                     numberOfSeasons = numberOfSeasons?.takeIf { it > 0 },
                     trailerYoutubeKey = TrailerSelector.select(videos?.results.orEmpty()),
                     imdbId = cleanImdbId(externalIds?.imdbId),
+                    credits = TitleCreditsParser.tv(this),
                 )
             }
         }

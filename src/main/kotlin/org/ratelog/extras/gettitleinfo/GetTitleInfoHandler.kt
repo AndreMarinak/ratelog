@@ -8,6 +8,7 @@ import org.ratelog.TmdbId
 import org.ratelog.extras.ExternalScores
 import org.ratelog.extras.ExtrasTaskRunner
 import org.ratelog.extras.RefreshPolicy
+import org.ratelog.extras.TitleCredits
 import org.ratelog.extras.TitleExtrasRecord
 import org.ratelog.extras.TitleExtrasRefresher
 import org.ratelog.extras.TitleExtrasRepository
@@ -37,6 +38,8 @@ data class TitleInfo(
     val numberOfSeasons: Int?,
     val trailerYoutubeKey: String?,
     val imdbId: String?,
+    /** Director, writers, cast, age rating, tagline... (fork, 2026-11-24). Null when not cached yet. */
+    val credits: TitleCredits? = null,
     /** Null when MDBList is not configured, has nothing for the title, or hasn't answered yet. */
     val scores: ExternalScores?,
     val scoresFetchedAt: Instant?,
@@ -53,7 +56,8 @@ sealed interface GetTitleInfoError {
 /**
  * Serves extras from the `title_extras` cache.
  * - Cached: returned as is; stale halves are refreshed in the background, so the page never waits.
- * - Never fetched: fetched now, waiting at most [syncTimeoutMs]; a slower answer still lands in the cache.
+ * - Never fetched (or cached before credits existed): fetched now, waiting at most [syncTimeoutMs]; a slower answer
+ *   still lands in the cache.
  * - No `MDBLIST_API_KEY`: scores are left out, nothing else changes.
  */
 @Component
@@ -70,7 +74,9 @@ class GetTitleInfoHandler(
         val key = "${query.type.name}:${query.tmdbId.value}"
         var record = repository.find(query.type, query.tmdbId)
 
-        val firstTmdb = record?.tmdbNextRefreshAt == null
+        // Rows cached before credits existed (2026-11-24, V1143 made them due) are fetched like a first view.
+        val missingCredits = record?.tmdb != null && record.tmdb.credits == null && RefreshPolicy.isDue(record.tmdbNextRefreshAt, clock.instant())
+        val firstTmdb = record?.tmdbNextRefreshAt == null || missingCredits
         val firstScores = scoresEnabled && record?.scoresNextRefreshAt == null && !mdbListClient.isPaused()
         if (firstTmdb || firstScores) {
             runner.submit(key) { refresher.refresh(query.type, query.tmdbId, firstTmdb, firstScores) }
@@ -101,6 +107,7 @@ class GetTitleInfoHandler(
             numberOfSeasons = tmdb?.numberOfSeasons,
             trailerYoutubeKey = tmdb?.trailerYoutubeKey,
             imdbId = imdbId,
+            credits = tmdb?.credits,
             scores = visibleScores,
             scoresFetchedAt = scoresFetchedAt.takeIf { visibleScores != null },
         )

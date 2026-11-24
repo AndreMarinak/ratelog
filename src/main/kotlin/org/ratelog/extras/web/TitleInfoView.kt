@@ -37,6 +37,9 @@ class TitleInfoView(val info: TitleInfo) {
     /** Letterboxd resolves TMDB movie ids itself; it has no reliable equivalent for shows. */
     val letterboxdUrl: String? get() = if (isMovie) "https://letterboxd.com/tmdb/${info.tmdbId}/" else null
 
+    /** Director, writers, cast, age rating, tagline (fork, 2026-11-24): null when not cached yet or TMDB has none. */
+    val credits: TitleCreditsView? = info.credits?.let { TitleCreditsView(it, isMovie) }?.takeUnless { it.isEmpty }
+
     val hasScores: Boolean get() = info.scores != null
     val hasFacts: Boolean get() = tmdbScore != null || runtimeMinutes != null || numberOfSeasons != null
 

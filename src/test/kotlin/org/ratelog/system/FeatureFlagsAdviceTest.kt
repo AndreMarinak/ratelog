@@ -10,4 +10,10 @@ class FeatureFlagsAdviceTest {
         assertFalse(FeatureFlagsAdvice(tagsEnabled = false).tagsEnabled())
         assertTrue(FeatureFlagsAdvice(tagsEnabled = true).tagsEnabled())
     }
+
+    @Test
+    fun `exposes the people switch to templates, off by default`() {
+        assertFalse(FeatureFlagsAdvice(tagsEnabled = false).peopleEnabled())
+        assertTrue(FeatureFlagsAdvice(tagsEnabled = false, peopleEnabled = true).peopleEnabled())
+    }
 }

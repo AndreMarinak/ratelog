@@ -16,7 +16,10 @@ import org.ratelog.TmdbId
 import org.ratelog.api.media.MediaImporter
 import org.ratelog.customlist.CustomList
 import org.ratelog.customlist.CustomListItem
+import org.ratelog.extras.CastMember
+import org.ratelog.extras.CreditPerson
 import org.ratelog.extras.ExternalScores
+import org.ratelog.extras.TitleCredits
 import org.ratelog.extras.gettitleinfo.GetTitleInfo
 import org.ratelog.extras.gettitleinfo.GetTitleInfoError
 import org.ratelog.extras.gettitleinfo.GetTitleInfoHandler
@@ -156,6 +159,43 @@ class ApiTitleControllerTest {
         assertNull(dto.externalScores)
         assertNull(dto.userRating)
         assertEquals(emptyList<TitleListDto>(), dto.inLists)
+        assertNull(dto.credits)
+    }
+
+    @Test
+    fun `given cached credits then returns director, writers with jobs, cast with photo URLs and the age rating`() {
+        // Given
+        whenever(getTitleInfoHandler.handle(GetTitleInfo(MediaType.movie, TmdbId(603)))).thenReturn(
+            TitleInfo(
+                type = MediaType.movie, tmdbId = 603, title = "The Matrix", tmdbVoteAverage = 8.2, tmdbVoteCount = 26_543,
+                runtimeMinutes = 136, numberOfSeasons = null, trailerYoutubeKey = null, imdbId = null,
+                credits = TitleCredits(
+                    tagline = "Free your mind.",
+                    certification = "R",
+                    directors = listOf(CreditPerson(9340, "Lana Wachowski")),
+                    writers = listOf(CreditPerson(9340, "Lana Wachowski", listOf("Writer"))),
+                    cast = listOf(CastMember(6384, "Keanu Reeves", "Neo", "/k.jpg"), CastMember(2975, "Laurence Fishburne", "Morpheus", null)),
+                    studios = listOf("Village Roadshow Pictures"),
+                    budget = 63_000_000,
+                ),
+                scores = null, scoresFetchedAt = null,
+            ).right()
+        )
+
+        // When
+        val credits = controller.title(user, "movie", 603).credits!!
+
+        // Then
+        assertEquals("Free your mind.", credits.tagline)
+        assertEquals("R", credits.certification)
+        assertEquals(listOf(CreditPersonDto(9340, "Lana Wachowski")), credits.directors)
+        assertEquals(listOf("Writer"), credits.writers.single().jobs)
+        assertEquals(CastMemberDto(6384, "Keanu Reeves", "Neo", "https://image.tmdb.org/t/p/w185/k.jpg", null), credits.cast[0])
+        assertNull(credits.cast[1].profileUrl)
+        assertEquals(listOf("Village Roadshow Pictures"), credits.studios)
+        assertEquals(63_000_000L, credits.budget)
+        assertNull(credits.revenue)
+        assertEquals(emptyList<CreditPersonDto>(), credits.createdBy)
     }
 
     @Test

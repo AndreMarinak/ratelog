@@ -1,0 +1,411 @@
+/* Fork (2026-11-24): credits on movie / TV title pages (templates/fragments/title-credits.html, layout in title-page.css).
+   Everywhere: an age rating chip after the runtime and the tagline above the overview.
+   Desktop (>= 1100px): Details and Cast cards under the action panel in the right column; the column then scrolls with
+   the page (a sticky column taller than the screen would clip the cast).
+   Tablet and phone (< 1100px): a "Directed by · Written by" line under the overview, a sideways cast row with small round
+   photos (it scrolls inside itself) and a collapsed "More details" (<details>, works without JS). */
+
+/* ----- Age rating and tagline ----- */
+
+.title-cert {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.title-tagline {
+  margin: 0 0 6px;
+  max-width: 68ch;
+  color: var(--text-soft);
+  font-size: 1.12rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+/* ----- Names: plain text, or links once person pages exist (ratelog.features.people) ----- */
+
+a.person-link {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.credit-job {
+  color: var(--text-soft);
+  font-size: 0.9em;
+}
+
+/* ----- Facts list (desktop Details card and the phone's More details) ----- */
+
+.title-facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+
+  dt {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+
+  dd {
+    margin: 1px 0 0;
+    font-size: 1rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* ----- Cast photos ----- */
+
+.cast-photo {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  background: var(--surface-muted);
+}
+
+.cast-initial {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.cast-name {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cast-role {
+  color: var(--text-soft);
+  line-height: 1.25;
+}
+
+.cast-eps {
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* ----- Desktop: cards in the right column ----- */
+
+.title-about {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+
+  h2.title-section-label {
+    margin: 0 0 10px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: inherit;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+  }
+}
+
+.cast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cast-line {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+
+  .cast-photo {
+    grid-row: 1 / span 2;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .cast-name,
+  .cast-role {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cast-name {
+    font-size: 0.98rem;
+    align-self: end;
+  }
+
+  .cast-role {
+    font-size: 0.86rem;
+    align-self: start;
+  }
+
+  /* No character: the name sits in the middle of the photo. */
+  .cast-name:last-child {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+}
+
+/* "Show all 10": title-credits.js marks the card collapsible (without JS all ten show). */
+.title-about-cast.is-collapsible:not(.is-open) .cast-line.is-extra {
+  display: none;
+}
+
+button.cast-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 2px 0;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 0.98rem;
+  font-weight: 700;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    color: var(--accent-strong);
+  }
+
+  &[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* The column holds content now, often taller than the screen: it scrolls with the page instead of sticking. Titles
+   without credits keep the sticky panel. */
+.title-col-side:has(.title-about) {
+  position: static;
+}
+
+/* Desktop has the cards; the tablet / phone block stays out. */
+.title-credits-mobile {
+  display: none;
+}
+
+/* ----- Tablet and phone ----- */
+
+@media (max-width: 1099px) {
+  .title-about {
+    display: none;
+  }
+
+  .title-credits-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Right after the overview (same order, later in the page). */
+    order: 3;
+  }
+
+  .title-credit-line {
+    margin: 0;
+    max-width: 68ch;
+    color: var(--text-soft);
+    font-size: 1rem;
+    line-height: 1.5;
+
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .credit-part + .credit-part::before {
+      content: "\00b7";
+      margin: 0 8px;
+      opacity: 0.6;
+    }
+
+    .credit-more {
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+  }
+
+  /* Small round photos in a row that scrolls sideways inside itself (never the page). */
+  .cast-row {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+    padding: 2px 0 8px;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+  }
+
+  .cast-chip {
+    flex: 0 0 84px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    text-align: center;
+    scroll-snap-align: start;
+
+    .cast-photo {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 4px;
+      font-size: 1.4rem;
+    }
+
+    .cast-name,
+    .cast-role {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .cast-name {
+      -webkit-line-clamp: 2;
+      font-size: 0.86rem;
+    }
+
+    .cast-role {
+      -webkit-line-clamp: 3;
+      font-size: 0.78rem;
+    }
+
+    .cast-eps {
+      display: block;
+
+      .sep {
+        display: none;
+      }
+    }
+  }
+
+  .title-more-details {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 44px;
+      padding: 8px 14px;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      svg {
+        width: 18px;
+        height: 18px;
+        color: var(--text-soft);
+        transition: transform 0.15s ease;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+        border-radius: 12px;
+      }
+    }
+
+    &[open] summary svg {
+      transform: rotate(180deg);
+    }
+
+    .title-facts-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 16px;
+      padding: 2px 14px 14px;
+
+      .pair,
+      .wide {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+}
+
+/* Tablet: one more row in the grid, so the poster column still spans everything (title-page.css). */
+@media (min-width: 700px) and (max-width: 1099px) {
+  .title-layout:has(.title-credits-mobile) {
+    grid-template-rows: repeat(6, auto) 1fr;
+  }
+}
+
+@media (max-width: 699px) {
+  .title-cert {
+    padding: 0 6px;
+    font-size: 0.8rem;
+  }
+
+  .title-tagline {
+    font-size: 1.02rem;
+  }
+
+  .title-credits-mobile {
+    gap: 12px;
+    /* After the overview (order 2), before Where to watch (order 3). */
+    order: 2;
+  }
+
+  .title-credit-line {
+    font-size: 0.95rem;
+  }
+}

@@ -18,6 +18,8 @@ data class TmdbExtras(
     val numberOfSeasons: Int?,
     val trailerYoutubeKey: String?,
     val imdbId: String?,
+    /** Null only for rows cached before credits were fetched (2026-11-24); a fetch always sets it. */
+    val credits: TitleCredits? = null,
 )
 
 /** Third-party scores (via MDBList). Any of them can be missing. */

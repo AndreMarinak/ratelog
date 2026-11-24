@@ -67,12 +67,13 @@ class TmdbExtrasClientTest {
                 numberOfSeasons = null,
                 trailerYoutubeKey = "vKQi3bBA1y8",
                 imdbId = "tt0133093",
+                credits = TitleCredits(),
             ),
             extras,
         )
         val request = server.requests.single()
         assertTrue(request.startsWith("/3/movie/603?"), request)
-        assertTrue(request.contains("append_to_response=videos,external_ids"), request)
+        assertTrue(request.contains("append_to_response=videos,external_ids,credits,release_dates"), request)
         assertTrue(request.contains("api_key=tmdb-key"), request)
     }
 
@@ -103,6 +104,7 @@ class TmdbExtrasClientTest {
         assertNull(extras.trailerYoutubeKey)
         assertEquals("tt0944947", extras.imdbId)
         assertTrue(server.requests.single().startsWith("/3/tv/1399?"))
+        assertTrue(server.requests.single().contains("append_to_response=videos,external_ids,aggregate_credits,content_ratings"))
     }
 
     @Test
@@ -110,7 +112,7 @@ class TmdbExtrasClientTest {
         val extras = TmdbExtrasResponse(title = " ", releaseDate = "", voteAverage = 0.0, voteCount = 0, runtime = 0, imdbId = "")
             .let { with(TmdbExtrasClient) { it.toExtras(MediaType.movie) } }
 
-        assertEquals(TmdbExtras(null, null, null, null, null, null, null, null), extras)
+        assertEquals(TmdbExtras(null, null, null, null, null, null, null, null, credits = TitleCredits()), extras)
     }
 
     @Test
