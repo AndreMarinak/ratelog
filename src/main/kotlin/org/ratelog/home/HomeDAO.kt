@@ -113,6 +113,7 @@ interface HomeDAO : Repository<HomeMarker, Long> {
                    COALESCE(
                        (SELECT MAX(sr.created_at_epoch_ms) FROM season_ratings sr
                          WHERE sr.tv_show_id = r.tv_show_id AND sr.user_id = r.user_id),
+                       r.show_rated_at_epoch_ms,
                        r.created_at_epoch_ms) AS sort_key
             FROM tv_ratings r
             JOIN tv t ON t.id = r.tv_show_id

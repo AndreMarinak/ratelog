@@ -36,7 +36,7 @@ interface BrowseLibraryDAO : Repository<BrowseLibraryMarker, Long> {
         SELECT t.tmdb_id AS tmdb_id,
                (SELECT r.score FROM tv_ratings r
                  WHERE r.tv_show_id = t.id AND r.user_id = :userId ORDER BY r.id DESC LIMIT 1) AS score,
-               EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = :userId) AS rated,
+               (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = :userId) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = t.id AND tr.user_id = :userId AND tr.show_score IS NOT NULL)) AS rated,
                (SELECT s.status FROM media_statuses s
                  WHERE s.user_id = :userId AND s.media_type = 'tvshow' AND s.media_id = t.id) AS status
         FROM tv t

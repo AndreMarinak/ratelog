@@ -19,9 +19,33 @@ data class TvRating(
     val seasonRatings: List<SeasonRating>,
     val userId: User.Id,
     val createdAt: Instant,
+    /**
+     * The show's overall score: the average of the rated seasons when at least one is rated, else [showScore]
+     * (stored in `tv_ratings.score`, so every reader gets this rule for free).
+     */
     val score: Score? = null,
+    /**
+     * Fork: one score for the whole show, given without rating seasons. Kept while seasons are rated (their average
+     * wins), so deleting every season rating brings it back.
+     */
+    val showScore: Score? = null,
+    /** When [showScore] was last set (feed, "Recently rated"). */
+    val showRatedAt: Instant? = null,
 ) {
     data class Id(val value: Long)
+
+    /** Rated at all: a season, or the whole show. */
+    val isRated: Boolean get() = seasonRatings.isNotEmpty() || showScore != null
+
+    /** At least one season is rated, so [score] is their average and [showScore] is not used. */
+    val ratedBySeason: Boolean get() = seasonRatings.isNotEmpty()
+
+    /** Nothing left to keep: the row can go. */
+    val isEmpty: Boolean get() = !isRated
+
+    fun withShowScore(score: Score, at: Instant) = copy(showScore = score, showRatedAt = at).updateScore()
+
+    fun withoutShowScore() = copy(showScore = null, showRatedAt = null).updateScore()
 
     fun deleteSeasonRating(seasonNumber: SeasonNumber) =
         copy(seasonRatings = seasonRatings - (seasonRatings.filter { it.seasonNumber == seasonNumber }).toSet())
@@ -69,7 +93,7 @@ data class TvRating(
     /** What the top list ranks by: the overall score, or one category averaged over the detailed seasons. */
     fun rankingScore(category: RatingCategory?): Score? = if (category == null) score else categoryAverage(category)
 
-    private fun updateScore() = if (seasonRatings.isEmpty()) copy(score = null)
+    private fun updateScore() = if (seasonRatings.isEmpty()) copy(score = showScore)
         else copy(score = seasonRatings.map { it.score.value }.average().let(::Score))
 
     companion object {

@@ -15,6 +15,9 @@ data class TvRatingEntity(
     @Column("user_id") val userId: Long,
     @Column("created_at_epoch_ms") val createdAtEpochMs: Long,
     val score: Double?,
+    // Fork (V1140): the whole-show score, used as `score` while no season is rated.
+    @Column("show_score") val showScore: Double? = null,
+    @Column("show_rated_at_epoch_ms") val showRatedAtEpochMs: Long? = null,
 )
 
 @Table("season_ratings")
@@ -41,6 +44,8 @@ data class RatedTvRow(
     val userId: Long,
     val createdAtEpochMs: Long,
     val score: Double?,
+    val showScore: Double?,
+    val showRatedAtEpochMs: Long?,
     val rank: Long,
     val avgDirecting: Double?,
     val avgCinematography: Double?,
@@ -58,6 +63,8 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
      * Ranked by score, or by one category when `ratingCategory` is set. A show's category score is the
      * average over its detailed seasons (AVG skips quick ratings' nulls); shows rated only quickly are
      * left out of a category ranking.
+     * Fork: shows rated only as a whole (`show_score`, no seasons) are ranked by that score (LEFT JOIN), and like
+     * quick-only shows they have no categories.
      */
     @Query(
         """
@@ -74,7 +81,7 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
             GROUP BY sr.tv_show_id
         ),
         ranked AS (
-            SELECT r.id, r.tv_show_id, r.user_id, r.created_at_epoch_ms, r.score,
+            SELECT r.id, r.tv_show_id, r.user_id, r.created_at_epoch_ms, r.score, r.show_score, r.show_rated_at_epoch_ms,
                    sa.avg_directing, sa.avg_cinematography, sa.avg_acting,
                    sa.avg_soundtrack, sa.avg_screenplay, sa.avg_score,
                    ROW_NUMBER() OVER (
@@ -88,8 +95,9 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
                        END DESC NULLS LAST
                    ) AS rank
             FROM tv_ratings r
-            INNER JOIN season_averages sa ON r.tv_show_id = sa.tv_show_id
+            LEFT JOIN season_averages sa ON r.tv_show_id = sa.tv_show_id
             WHERE r.user_id = :userId
+              AND (sa.tv_show_id IS NOT NULL OR r.show_score IS NOT NULL)
               AND (CASE :ratingCategory
                        WHEN 'directing' THEN sa.avg_directing
                        WHEN 'cinematography' THEN sa.avg_cinematography

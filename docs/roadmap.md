@@ -7,7 +7,7 @@ Reserved migration numbers (so parallel work never collides): API tokens `V1000`
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
 lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
-accounts and roles `V1130–1139`.
+accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`).
 
 ## Build now (in suggested order)
 
@@ -118,6 +118,14 @@ accounts and roles `V1130–1139`.
   order, Edit list, Make / Remove official, Delete list), a small meta line (Official, Public, "You've seen 3 of 14" + slim bar),
   and one toolbar row (All / Not seen / Seen, Sort, Mark what you've seen). Header 301 → 169px at 1440, 483 → 227px on phones.
   The bulk watchlist add now saves in place with a toast. No migration, no server change.
+- [x] **28. TV: rate a show as a whole; season ratings save in place** (requested 2026-11-23: "on a tv show rating when im
+  rating mult seasons it reloads the page after each rating", "I should be able to rate show as a whole and then if u rate any
+  season at all then the overall rating becomes the average"). Rating, editing and deleting a season no longer reloads the TV
+  page (modal closes, toast, seasons and panel update). A show can get one whole-show score (TV page "Rate" / "Whole show"
+  card, or a poster's ★ / "⋯"); once any season is rated the show's score is their average and the whole-show score is kept
+  unused (it comes back if every season rating is deleted). Rated means seen (a whole-show score marks it Watched). Everywhere
+  a show's score shows follows the rule. API: `PUT` / `DELETE /api/v1/ratings/tv/{tmdbId}`, `scoreSource` and `showScore` on
+  `TvRating`. Migration `V1140`. Details in [design-decisions.md](design-decisions.md#tv-rate-a-show-as-a-whole-or-by-season-seasons-save-in-place-2026-11-23).
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.

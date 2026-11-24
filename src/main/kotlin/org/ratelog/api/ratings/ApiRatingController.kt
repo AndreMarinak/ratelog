@@ -1,5 +1,6 @@
 package org.ratelog.api.ratings
 
+import arrow.core.getOrElse
 import com.fasterxml.jackson.annotation.JsonInclude
 import org.ratelog.CategoryScores
 import org.ratelog.MediaType
@@ -40,6 +41,12 @@ import org.ratelog.tvshow.rating.addseason.AddSeasonRatingHandler
 import org.ratelog.tvshow.rating.addseason.AddSeasonRatingHandlerError
 import org.ratelog.tvshow.rating.deleteseason.DeleteSeasonRating
 import org.ratelog.tvshow.rating.deleteseason.DeleteSeasonRatingHandler
+import org.ratelog.tvshow.rating.show.DeleteShowRating
+import org.ratelog.tvshow.rating.show.DeleteShowRatingHandler
+import org.ratelog.tvshow.rating.show.RateShow
+import org.ratelog.tvshow.rating.show.RateShowHandler
+import org.ratelog.tvshow.rating.show.RateShowHandlerError
+import org.ratelog.tvshow.rating.show.RateShowOutcome
 import org.ratelog.tvshow.rating.updateseason.UpdateSeasonRating
 import org.ratelog.tvshow.rating.updateseason.UpdateSeasonRatingHandler
 import org.ratelog.tvshow.rating.updateseason.UpdateSeasonRatingHandlerError
@@ -112,10 +119,19 @@ data class TvRatingDto(
     val title: String,
     val year: Int?,
     val posterUrl: String?,
-    /** Average of the rated seasons. */
+    /** The show's score: the average of the rated seasons, or the whole-show score when no season is rated. */
     val score: Double?,
+    /** `seasons` (average of the rated seasons) or `show` (the whole-show score). */
+    val scoreSource: String,
+    /** Fork: the whole-show score, kept (unused) while seasons are rated; null when not given. */
+    val showScore: Double?,
     val seasons: List<SeasonRatingDto>,
     val url: String,
+)
+
+/** Body of `PUT /api/v1/ratings/tv/{tmdbId}`: one 0-10 score for the whole show. */
+data class ShowRatingRequest(
+    val score: Double? = null,
 )
 
 /** A list left out by the `type` filter is omitted. */
@@ -139,6 +155,8 @@ class ApiRatingController(
     private val addSeasonRatingHandler: AddSeasonRatingHandler,
     private val updateSeasonRatingHandler: UpdateSeasonRatingHandler,
     private val deleteSeasonRatingHandler: DeleteSeasonRatingHandler,
+    private val rateShowHandler: RateShowHandler,
+    private val deleteShowRatingHandler: DeleteShowRatingHandler,
 ) {
     /** The user's ratings, highest score first. */
     @GetMapping
@@ -220,6 +238,35 @@ class ApiRatingController(
         return rating.toDto(media)
     }
 
+    /**
+     * Fork: one score for the whole show, without rating seasons. 201 when the show had no whole-show score, 200 when it
+     * was changed. While seasons are rated it is stored but the show's `score` stays their average (`scoreSource`).
+     */
+    @PutMapping("/tv/{tmdbId}")
+    fun rateShow(@CurrentUser user: User, @PathVariable tmdbId: Int, @RequestBody body: ShowRatingRequest): ResponseEntity<TvRatingDto> {
+        val score = body.score ?: throw badRequest("invalid_score", "score is required (0 to 10)")
+        if (score !in 0.0..10.0) throw invalidScore()
+        val media = ensureLocal(tmdbId, MediaType.tvshow, user)
+        val result = rateShowHandler.handle(RateShow(TvShow.Id(media.id), user.id!!, score)).getOrElse { error ->
+            throw when (error) {
+                RateShowHandlerError.InvalidScore -> invalidScore()
+                RateShowHandlerError.TvShowNotFound -> notFound("TMDB has no tv with id $tmdbId")
+            }
+        }
+        val saved = tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(media.id), user.id) ?: result.rating
+        return ResponseEntity.status(if (result.outcome == RateShowOutcome.RATED) HttpStatus.CREATED else HttpStatus.OK)
+            .body(saved.toDto(media))
+    }
+
+    /** Fork: deletes the whole-show score only; season ratings stay. 404 when there is none. */
+    @DeleteMapping("/tv/{tmdbId}")
+    fun deleteShowRating(@CurrentUser user: User, @PathVariable tmdbId: Int): ResponseEntity<Unit> {
+        val media = localOrNotRated(tmdbId, MediaType.tvshow, user)
+        deleteShowRatingHandler.handle(DeleteShowRating(TvShow.Id(media.id), user.id!!))
+            .onLeft { throw notFound("You have not rated tv $tmdbId as a whole") }
+        return ResponseEntity.noContent().build()
+    }
+
     /** Creates or replaces one season's rating; returns the whole show. 201 when the season is new, 200 otherwise. */
     @PutMapping("/tv/{tmdbId}/seasons/{season}")
     fun rateSeason(
@@ -276,7 +323,7 @@ class ApiRatingController(
         return ResponseEntity.status(if (existing == null) HttpStatus.CREATED else HttpStatus.OK).body(saved.toDto(media))
     }
 
-    /** Deleting the last rated season removes the show's rating too. */
+    /** Deleting the last rated season removes the show's rating too, unless it has a whole-show score (fork). */
     @DeleteMapping("/tv/{tmdbId}/seasons/{season}")
     fun deleteSeason(@CurrentUser user: User, @PathVariable tmdbId: Int, @PathVariable season: Int): ResponseEntity<Unit> {
         checkSeason(season)
@@ -403,6 +450,8 @@ private fun TvRating.toDto(media: LocalMedia) = TvRatingDto(
     year = media.year,
     posterUrl = media.posterPath?.let(::posterUrl),
     score = score?.value?.round2(),
+    scoreSource = if (ratedBySeason) "seasons" else "show",
+    showScore = showScore?.value?.round2(),
     seasons = seasonRatings.sortedBy { it.seasonNumber.value }.map { it.toDto() },
     url = "/tv/${media.tmdbId}",
 )

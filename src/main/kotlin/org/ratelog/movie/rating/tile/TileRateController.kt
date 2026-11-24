@@ -6,6 +6,8 @@ import org.ratelog.annotations.CurrentUser
 import org.ratelog.api.media.LocalMedia
 import org.ratelog.api.media.MediaImporter
 import org.ratelog.movie.Movie
+import org.ratelog.tvshow.TvShow
+import org.ratelog.tvshow.rating.show.TvTileRateHandler
 import org.ratelog.user.User
 import org.ratelog.watchlist.seen.BackPath
 import org.ratelog.watchlist.seen.SeenState
@@ -38,6 +40,8 @@ data class TileRateResponse(
     val scoreLabel: String?,
     /** A detailed rating (only on a refusal): the picker switches to "Edit rating" on the title page. */
     val detailed: Boolean,
+    /** Fork: a show rated by season (only on a refusal): the picker shows the average and "Rate seasons". */
+    val seasons: Boolean = false,
     /** Localized, for the toast. */
     val message: String?,
 )
@@ -48,13 +52,15 @@ data class TileRateResponse(
  * - POST /movie/rate/tile (`tmdbId`, `score`, optional `back`): rate, or change a quick rating.
  * - POST /movie/rate/tile/delete (`tmdbId`, optional `back`): delete a quick rating.
  * With the header `X-Requested-With: fetch` they answer [TileRateResponse]; a plain form post (the picker's fallback)
- * redirects back with a flash message. Shows are rated per season on their page, so `type` must be `movie`.
+ * redirects back with a flash message.
+ * Fork (2026-11-23): `type=tv` rates a show as a whole ([TvTileRateHandler]), unless it has rated seasons.
  */
 @Controller
 class TileRateController(
     private val mediaImporter: MediaImporter,
     private val rateHandler: TileRateHandler,
     private val deleteHandler: TileDeleteRatingHandler,
+    private val tvHandler: TvTileRateHandler,
     private val messages: MessageSource,
 ) {
     @PostMapping("/movie/rate/tile")
@@ -66,7 +72,7 @@ class TileRateController(
         @RequestParam("back", required = false) back: String?,
         request: HttpServletRequest,
         redirectAttributes: RedirectAttributes,
-    ): String = plain(run(user, tmdbId, type) { rateHandler.handle(TileRate(user.id!!, Movie.Id(it.id), score)) }, back, tmdbId, request, redirectAttributes)
+    ): String = plain(rateOutcome(user, tmdbId, type, score), back, titlePath(type, tmdbId), request, redirectAttributes)
 
     @PostMapping("/movie/rate/tile", headers = ["X-Requested-With=fetch"])
     @ResponseBody
@@ -75,8 +81,7 @@ class TileRateController(
         @RequestParam("tmdbId") tmdbId: Int,
         @RequestParam("type", required = false) type: String?,
         @RequestParam("score", required = false) score: Double?,
-    ): ResponseEntity<TileRateResponse> =
-        json(run(user, tmdbId, type) { rateHandler.handle(TileRate(user.id!!, Movie.Id(it.id), score)) })
+    ): ResponseEntity<TileRateResponse> = json(rateOutcome(user, tmdbId, type, score))
 
     @PostMapping("/movie/rate/tile/delete")
     fun delete(
@@ -86,7 +91,7 @@ class TileRateController(
         @RequestParam("back", required = false) back: String?,
         request: HttpServletRequest,
         redirectAttributes: RedirectAttributes,
-    ): String = plain(run(user, tmdbId, type) { deleteHandler.handle(TileDeleteRating(user.id!!, Movie.Id(it.id))) }, back, tmdbId, request, redirectAttributes)
+    ): String = plain(deleteOutcome(user, tmdbId, type), back, titlePath(type, tmdbId), request, redirectAttributes)
 
     @PostMapping("/movie/rate/tile/delete", headers = ["X-Requested-With=fetch"])
     @ResponseBody
@@ -94,8 +99,29 @@ class TileRateController(
         @CurrentUser user: User,
         @RequestParam("tmdbId") tmdbId: Int,
         @RequestParam("type", required = false) type: String?,
-    ): ResponseEntity<TileRateResponse> =
-        json(run(user, tmdbId, type) { deleteHandler.handle(TileDeleteRating(user.id!!, Movie.Id(it.id))) })
+    ): ResponseEntity<TileRateResponse> = json(deleteOutcome(user, tmdbId, type))
+
+    private fun rateOutcome(user: User, tmdbId: Int, type: String?, score: Double?): Outcome =
+        run(user, tmdbId, type) { media, mediaType ->
+            if (mediaType == MediaType.tvshow) tvHandler.rate(user.id!!, TvShow.Id(media.id), score)
+            else rateHandler.handle(TileRate(user.id!!, Movie.Id(media.id), score))
+        }
+
+    private fun deleteOutcome(user: User, tmdbId: Int, type: String?): Outcome =
+        run(user, tmdbId, type) { media, mediaType ->
+            if (mediaType == MediaType.tvshow) tvHandler.delete(user.id!!, TvShow.Id(media.id))
+            else deleteHandler.handle(TileDeleteRating(user.id!!, Movie.Id(media.id)))
+        }
+
+    /** `movie` (or no type: the endpoint's name) or `tv` (fork: a whole-show score); anything else is refused. */
+    private fun mediaTypeOf(type: String?): MediaType? = when (type?.trim()?.lowercase()) {
+        null, "movie" -> MediaType.movie
+        "tv", "tvshow" -> MediaType.tvshow
+        else -> null
+    }
+
+    private fun titlePath(type: String?, tmdbId: Int): String =
+        if (mediaTypeOf(type) == MediaType.tvshow) "/tv/$tmdbId" else "/movie/$tmdbId"
 
     private sealed interface Outcome {
         data class Done(val result: TileRateResult, val title: String) : Outcome
@@ -106,19 +132,19 @@ class TileRateController(
         user: User,
         tmdbId: Int,
         type: String?,
-        action: (LocalMedia) -> arrow.core.Either<TileRateHandlerError, TileRateResult>,
+        action: (LocalMedia, MediaType) -> arrow.core.Either<TileRateHandlerError, TileRateResult>,
     ): Outcome {
-        // Only movies: a show's seasons are rated on its page. A missing type means movie (the endpoint's name).
-        if (tmdbId <= 0 || (type != null && type.trim().lowercase() != "movie")) return Outcome.Failed(null, "status.error.invalid", null)
-        val media = mediaImporter.ensure(tmdbId, MediaType.movie, user.metadataLang).getOrNull()
+        val mediaType = mediaTypeOf(type)
+        if (tmdbId <= 0 || mediaType == null) return Outcome.Failed(null, "status.error.invalid", null)
+        val media = mediaImporter.ensure(tmdbId, mediaType, user.metadataLang).getOrNull()
             ?: return Outcome.Failed(null, "status.error.media.not.found", null)
-        return action(media).fold(
+        return action(media, mediaType).fold(
             { Outcome.Failed(it, errorKey(it), media.title) },
             { Outcome.Done(it, media.title) },
         )
     }
 
-    private fun plain(outcome: Outcome, back: String?, tmdbId: Int, request: HttpServletRequest, redirectAttributes: RedirectAttributes): String {
+    private fun plain(outcome: Outcome, back: String?, titlePath: String, request: HttpServletRequest, redirectAttributes: RedirectAttributes): String {
         when (outcome) {
             is Outcome.Done -> redirectAttributes.addFlashAttribute(
                 "success",
@@ -134,7 +160,7 @@ class TileRateController(
                 if (outcome.messageKey.startsWith("tile.rate.")) outcome.messageKey + ".plain" else outcome.messageKey,
             )
         }
-        return "redirect:" + BackPath.resolve(back, request.getHeader("Referer"), "/movie/$tmdbId")
+        return "redirect:" + BackPath.resolve(back, request.getHeader("Referer"), titlePath)
     }
 
     private fun json(outcome: Outcome): ResponseEntity<TileRateResponse> = when (outcome) {
@@ -149,23 +175,24 @@ class TileRateController(
         }
         is Outcome.Failed -> {
             val detailed = outcome.error as? TileRateHandlerError.DetailedRating
+            val bySeason = outcome.error as? TileRateHandlerError.RatedBySeason
             val status = when (outcome.error) {
                 null -> if (outcome.messageKey == "status.error.invalid") HttpStatus.BAD_REQUEST else HttpStatus.NOT_FOUND
                 TileRateHandlerError.InvalidScore -> HttpStatus.BAD_REQUEST
                 TileRateHandlerError.MovieNotFound, TileRateHandlerError.RatingNotFound -> HttpStatus.NOT_FOUND
-                is TileRateHandlerError.DetailedRating -> HttpStatus.CONFLICT
+                is TileRateHandlerError.DetailedRating, is TileRateHandlerError.RatedBySeason -> HttpStatus.CONFLICT
                 // 200: nothing to fall back to; the tile keeps its state and the toast says why.
                 TileRateHandlerError.NotReleased, TileRateHandlerError.SaveFailed -> HttpStatus.OK
             }
             ResponseEntity.status(status).body(
                 response(
-                    state = SeenState(null, rated = detailed != null),
+                    state = SeenState(null, rated = detailed != null || bySeason != null, isTv = bySeason != null),
                     previous = null,
                     seenDelta = 0,
-                    score = detailed?.score?.value,
-                    detailed = detailed != null,
+                    score = detailed?.score?.value ?: bySeason?.score?.value,
+                    detailed = detailed != null || bySeason != null,
                     message = if (outcome.messageKey.startsWith("tile.rate.")) message(outcome.messageKey, outcome.title ?: "") else message(outcome.messageKey),
-                ).copy(ok = false),
+                ).copy(ok = false, seasons = bySeason != null),
             )
         }
     }
@@ -191,6 +218,7 @@ class TileRateController(
         TileRateHandlerError.NotReleased -> "tile.rate.error.not.released"
         TileRateHandlerError.InvalidScore -> "tile.rate.error.invalid"
         is TileRateHandlerError.DetailedRating -> "tile.rate.error.detailed"
+        is TileRateHandlerError.RatedBySeason -> "tile.rate.error.seasons"
         TileRateHandlerError.RatingNotFound -> "tile.rate.error.not.found"
         TileRateHandlerError.SaveFailed -> "tile.rate.error.failed"
     }

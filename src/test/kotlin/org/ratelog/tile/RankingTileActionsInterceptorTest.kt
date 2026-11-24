@@ -56,14 +56,14 @@ class RankingTileActionsInterceptorTest {
     }
 
     @Test
-    fun `ranked shows link their star to the seasons`() {
+    fun `ranked shows get the rating picker on their star`() {
         home.setMark(user.id!!, MediaType.tvshow, 1396, TitleMark(WatchStatus.WATCHING, 9.1))
 
         val a = actions(handle("tvshows", listOf(show(1, 1396, 9.1))))
 
         assertEquals("tv", a.getValue(1396).type)
-        assertEquals("/tv/1396#seasons", a.getValue(1396).rateHref)
-        assertEquals("tile.rate.on.tv", a.getValue(1396).rateLabelKey)
+        assertEquals("/tv/1396?rate=1", a.getValue(1396).rateHref)
+        assertEquals("tile.rate.on", a.getValue(1396).rateLabelKey)
         assertFalse(a.getValue(1396).seen, "a show you're watching isn't seen yet")
     }
 

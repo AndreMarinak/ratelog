@@ -4,7 +4,8 @@
 //   the page takes the new state: the "★ 8.5" chip, and the eye turns on (rating marks a movie seen). A quick rating
 //   is shown prefilled and can be changed or deleted (a second tap confirms); a detailed one is only shown, with
 //   "Edit rating" to the title page's rate modal (?rate=edit), so its five categories are never flattened.
-//   ★ on a show is a plain link to its seasons (shows are rated per season).
+//   Fork (2026-11-23): ★ on a show gives it one whole-show score the same way (`type=tv`). A show with rated seasons
+//   (data-seasons) only shows their average, with "Rate seasons" to its page: a whole-show score wouldn't be used.
 // - The list button loads the title page's add-to-list sheet for that title (GET /tile/lists) and opens it in place;
 //   its toggles are list-membership.js's own. Once the title is in any of your lists the button shows ticked.
 // - After Seen from a tile's eye (any tile, list tick-off mode too) on an unrated movie, the same picker asks
@@ -63,6 +64,7 @@
             star.classList.toggle('is-detailed', !!state.detailed);
             if (state.rated && state.score != null) star.dataset.score = String(state.score); else delete star.dataset.score;
             if (state.detailed) star.dataset.detailed = 'true'; else delete star.dataset.detailed;
+            if (state.seasons) star.dataset.seasons = 'true'; else delete star.dataset.seasons;
             let score = star.querySelector('.tile-rate-score');
             if (state.rated) {
                 if (!score) {
@@ -74,7 +76,8 @@
             } else if (score) {
                 score.remove();
             }
-            const text = state.rated ? fill(state.detailed ? d.labelOnDetailed : d.labelOn, state.scoreLabel) : d.labelMark;
+            const onLabel = state.seasons ? d.labelOnTv : (state.detailed ? d.labelOnDetailed : d.labelOn);
+            const text = state.rated ? fill(onLabel, state.scoreLabel) : d.labelMark;
             if (text) {
                 star.title = text;
                 star.setAttribute('aria-label', stack.dataset.title ? `${text}: ${stack.dataset.title}` : text);
@@ -189,6 +192,8 @@
         const score = star.dataset.score != null ? Number(star.dataset.score) : null;
         const rated = score != null && !Number.isNaN(score);
         const detailed = rated && star.dataset.detailed === 'true';
+        const tv = star.dataset.tileRate === 'tv';
+        const seasons = tv && detailed && star.dataset.seasons === 'true';
         const label = star.querySelector('.tile-rate-score');
         current = { star, stack, key, title, titleHref, prompt };
 
@@ -197,11 +202,13 @@
         pop.querySelector('[data-pop-sub-text]').textContent = prompt ? d.labelPrompt : (rated ? d.labelYours : d.labelNew);
         pop.querySelector('[data-pop-current]').hidden = !rated;
         pop.querySelector('[data-pop-current-score]').textContent = label ? label.textContent : (rated ? String(score) : '');
-        pop.querySelector('[data-pop-kind]').textContent = rated ? (detailed ? d.labelDetailed : d.labelQuick) : '';
+        const kind = tv ? (seasons ? d.labelSeasonsKind : d.labelWhole) : (detailed ? d.labelDetailed : d.labelQuick);
+        pop.querySelector('[data-pop-kind]').textContent = rated ? kind : '';
 
         const form = pop.querySelector('[data-pop-form]');
         form.hidden = detailed;
         form.querySelector('[data-pop-hint]').hidden = rated || prompt;
+        form.querySelector('[data-pop-hint]').textContent = (tv ? d.labelHintTv : d.labelHint) || '';
         form.querySelector('[data-pop-prompt-hint]').hidden = !prompt;
         pop.querySelector('[data-pop-skip]').hidden = !prompt;
         const ask = askAfterSeen();
@@ -213,10 +220,15 @@
             button.removeAttribute('aria-busy');
         });
         pop.querySelector('[data-pop-detailed]').hidden = !detailed;
-        pop.querySelector('[data-pop-edit]').href = `${titleHref}?rate=edit`;
+        pop.querySelector('[data-pop-detailed-hint]').textContent = (seasons ? d.labelSeasonsHint : d.labelDetailedHint) || '';
+        pop.querySelector('[data-pop-edit]').href = seasons ? `${titleHref}#seasons` : `${titleHref}?rate=edit`;
+        pop.querySelector('[data-pop-edit-text]').textContent = (seasons ? d.labelSeasonsEdit : d.labelEdit) || '';
+        // Movies: "Detailed rating…" (the five categories). Shows: "Rate seasons…" (their page).
         const more = pop.querySelector('[data-pop-more]');
         more.hidden = detailed;
-        more.href = `${titleHref}?rate=detailed`;
+        more.href = tv ? `${titleHref}#seasons` : `${titleHref}?rate=detailed`;
+        pop.querySelector('[data-pop-more-text]').textContent = `${(tv ? d.labelSeasonsEdit : d.labelMore) || ''}…`;
+        pop.querySelectorAll('input[name="type"]').forEach((input) => { input.value = tv ? 'tv' : 'movie'; });
 
         const remove = pop.querySelector('[data-pop-delete-form]');
         remove.hidden = !rated || detailed;
@@ -402,16 +414,20 @@
         const lists = params.get('lists');
         if (rate == null && lists == null) return;
         if (window.Modals) {
-            const rateTrigger = document.querySelector('.title-panel [data-open-modal="rateMovieModal"]');
+            // Fork: a show's page has "Rate show" (rateShowModal) while no season is rated, else its seasons.
+            const rateTrigger = document.querySelector('.title-panel [data-open-modal="rateMovieModal"], .title-panel [data-open-modal="rateShowModal"]');
             const listTrigger = document.querySelector('[data-list-button]');
+            const seasons = document.getElementById('seasons');
             if (rate != null && rateTrigger) {
-                window.Modals.open('rateMovieModal', rateTrigger);
+                window.Modals.open(rateTrigger.dataset.openModal, rateTrigger);
                 const modal = document.getElementById('rateMovieModal');
                 // "Detailed rating": the five categories, starting from the quick score if there is one.
                 if (rate === 'detailed' && modal && modal.dataset.ratingMode !== 'detailed') {
                     const option = modal.querySelector('[data-rating-mode-option="detailed"]');
                     if (option) option.click();
                 }
+            } else if (rate != null && seasons) {
+                seasons.scrollIntoView();
             } else if (lists != null && listTrigger) {
                 window.Modals.open('addToListModal', listTrigger);
             }

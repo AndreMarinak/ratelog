@@ -57,6 +57,26 @@ interface FeedDAO : Repository<FeedMarker, Long> {
         LEFT JOIN tv_descriptions td ON t.tmdb_id = td.tmdb_id AND td.lang = :lang
         WHERE u.id IN (:userIds)
 
+        UNION ALL
+
+        -- Fork: a show rated as a whole (no season rated; once one is, the seasons stand for it).
+        SELECT
+            t.tmdb_id AS tmdb_id,
+            COALESCE(td.name, t.original_name, '') AS title,
+            r.show_score AS score,
+            NULL AS review_title,
+            NULL AS review_text,
+            u.username AS username,
+            COALESCE(r.show_rated_at_epoch_ms, r.created_at_epoch_ms) AS date,
+            'tvshow' AS media_type,
+            NULL AS season_number
+        FROM tv_ratings r
+        JOIN tv t ON t.id = r.tv_show_id
+        JOIN users u ON u.id = r.user_id
+        LEFT JOIN tv_descriptions td ON t.tmdb_id = td.tmdb_id AND td.lang = :lang
+        WHERE u.id IN (:userIds) AND r.show_score IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM season_ratings sr2 WHERE sr2.tv_show_id = r.tv_show_id AND sr2.user_id = r.user_id)
+
         ORDER BY date DESC
         LIMIT :limit
         """
@@ -77,6 +97,13 @@ interface FeedDAO : Repository<FeedMarker, Long> {
             FROM season_ratings sr
             JOIN users u ON u.id = sr.user_id
             WHERE u.id IN (:userIds)
+
+            UNION ALL
+
+            SELECT r.id
+            FROM tv_ratings r
+            WHERE r.user_id IN (:userIds) AND r.show_score IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM season_ratings sr2 WHERE sr2.tv_show_id = r.tv_show_id AND sr2.user_id = r.user_id)
         ) AS combined
         """
     )

@@ -142,18 +142,30 @@ class TileRateTemplatesTest {
     }
 
     @Test
-    fun `shows link the star to their seasons, with the show's score once seasons are rated`() {
+    fun `shows open the picker for a whole-show score, a show rated by season links to its seasons`() {
+        // Fork (2026-11-23): like a movie, ★ opens the picker; without JS the show's page opens "Rate show".
         val unrated = actions(tile(tmdbId = 1396, type = MediaType.tvshow), title = "Breaking Bad")
         val star = tag(unrated, "tile-act tile-rate")
-        assertTrue(star.contains("href=\"/tv/1396#seasons\""), star)
-        assertFalse(star.contains("data-tile-rate"), "no picker: shows are rated per season")
-        assertFalse(star.contains("aria-haspopup"))
-        assertTrue(star.contains("aria-label=\"Rate seasons: Breaking Bad\""), star)
+        assertTrue(star.contains("href=\"/tv/1396?rate=1\""), star)
+        assertTrue(star.contains("data-tile-rate=\"tv\""), star)
+        assertTrue(star.contains("aria-haspopup=\"dialog\""))
+        assertTrue(star.contains("aria-label=\"Rate: Breaking Bad\""), star)
+        assertFalse(star.contains("data-seasons"))
         assertTrue(tag(unrated, "tile-act tile-list").contains("href=\"/tv/1396?lists=1\""))
 
-        val rated = actions(tile(tmdbId = 1396, type = MediaType.tvshow, score = 8.0, status = WatchStatus.WATCHING), title = "Breaking Bad")
-        assertTrue(tag(rated, "tile-act tile-rate").contains("Your score: 8.0, the average of your rated seasons. Rate seasons"), rated)
-        assertTrue(rated.contains(">8.0</span>"))
+        val whole = actions(tile(tmdbId = 1396, type = MediaType.tvshow, score = 8.0, status = WatchStatus.WATCHED), title = "Breaking Bad")
+        val wholeStar = tag(whole, "tile-act tile-rate")
+        assertTrue(wholeStar.contains("Your rating: 8.0. Tap to change it"), wholeStar)
+        assertFalse(wholeStar.contains("is-detailed"), wholeStar)
+        assertTrue(whole.contains(">8.0</span>"))
+
+        val marks = TileMarks(FakeTileMarksRepository(seasonRated = setOf(1396))) { user }
+        val bySeason = actions(tile(tmdbId = 1396, type = MediaType.tvshow, score = 7.5, status = WatchStatus.WATCHING), title = "Breaking Bad", marks = marks)
+        val seasonStar = tag(bySeason, "tile-act tile-rate")
+        assertTrue(seasonStar.contains("href=\"/tv/1396#seasons\""), seasonStar)
+        assertTrue(seasonStar.contains("data-seasons=\"true\""), seasonStar)
+        assertTrue(seasonStar.contains("data-detailed=\"true\""), "the picker shows it, never overwrites it")
+        assertTrue(seasonStar.contains("Your score: 7.5, the average of your rated seasons. Rate seasons"), seasonStar)
     }
 
     @Test
@@ -282,7 +294,7 @@ class TileRateTemplatesTest {
         assertEquals(2, Regex("""class="home-tile-wrap search-tile-wrap"""").findAll(html).count(), html)
         assertTrue(html.contains("data-key=\"movie:603\""))
         assertTrue(html.contains("href=\"/movie/603?rate=1\""))
-        assertTrue(html.contains("href=\"/tv/1396#seasons\""))
+        assertTrue(html.contains("href=\"/tv/1396?rate=1\""))
         assertTrue(html.contains("data-unrated-tab=\"movie\""))
         assertTrue(Regex("""data-unrated-empty[^>]*hidden""").containsMatchIn(html), "the empty note waits hidden")
         assertFalse(html.contains("??"))
