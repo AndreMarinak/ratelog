@@ -78,7 +78,8 @@ data class Rating(
 @Repository
 interface RatingRepository {
     fun findByMovieIdAndUserId(movieId: Movie.Id, userId: User.Id): Rating?
-    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id? = null): List<Pair<Rank, Rating>>
+    /** `offset`: ranked titles to skip (fork, ranking scroll: the Ratings tab loads a page at a time). */
+    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id? = null, offset: Int = 0): List<Pair<Rank, Rating>>
 
     fun save(rating: Rating)
     fun deleteById(ratingId: Rating.Id)

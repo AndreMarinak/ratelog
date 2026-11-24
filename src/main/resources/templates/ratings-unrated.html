@@ -16,10 +16,12 @@
     <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
 
     <!--/* Fork: "Seen, not rated" (UnratedSeenController). Every tile has the poster quick actions: ★ rates a movie in
-           place and the tile leaves this view (static/ratings-unrated.js); a show's ★ opens its seasons. */-->
-    <section th:fragment="view" class="unrated" data-unrated th:with="u=${unrated}">
+           place and the tile leaves this view (static/ratings-unrated.js); a show's ★ opens its seasons.
+           Fork (2026-11-23): the All / Movies / TV tabs switch in place (view-swap.js, loaded by the ratings switch:
+           data-view + data-view-links), replacing the URL, so they add no Back step. */-->
+    <section th:fragment="view" id="unratedView" class="unrated" data-unrated data-view data-view-fallback="type" th:with="u=${unrated}">
         <p class="unrated-intro" th:text="#{unrated.intro}">Titles you marked seen but haven't rated yet, newest first.</p>
-        <nav class="unrated-tabs" th:aria-label="#{unrated.tabs.aria}">
+        <nav class="unrated-tabs" data-view-links="type" th:aria-label="#{unrated.tabs.aria}">
             <a th:each="tab : ${u.tabs}" th:href="${tab.href}" class="unrated-tab" th:classappend="${tab.active} ? 'active' : ''"
                th:attr="aria-current=${tab.active} ? 'page' : null,data-unrated-tab=${tab.type}">
                 <span th:text="#{${tab.labelKey}}">All</span>

@@ -76,7 +76,8 @@ class RatingsFiltersAndLoaderTest {
             val switchAt = source.indexOf("fragments/ratings-switch :: ratingsSwitch")
             val formAt = source.indexOf("""<form th:action="@{$path}" class="filter" method="get">""")
             assertTrue(switchAt in 0 until formAt, "$template: the switch comes before the form (.ratings-switch ~ .grid form.filter)")
-            listOf("category", "ratingCategory", "name", "limit").forEach { name ->
+            // No "limit" since 2026-11-23: the ranking loads 30 more as you scroll (RankingScrollTemplatesTest).
+            listOf("category", "ratingCategory", "name").forEach { name ->
                 assertTrue(source.contains("""name="$name""""), "$template has $name")
             }
             assertTrue(source.contains("""<input id="name" name="name" type="text""""), "$template: the name field is a text input")
@@ -89,7 +90,7 @@ class RatingsFiltersAndLoaderTest {
         val js = resource("/static/ratings-filters.js")
 
         assertTrue(js.contains("const FORM = '.ratings-switch ~ .grid form.filter';"))
-        assertTrue(js.contains("DEFAULTS = { limit: '10' }"), "the server's default count is not a filter")
+        assertTrue(js.contains("const DEFAULTS = {};"), "no count select any more (ranking scroll)")
         assertTrue(js.contains("addEventListener('change'"))
         // Filters replace, navigation pushes (2026-11-23): one Back leaves Ratings, the URL still describes the view.
         assertTrue(js.contains("history.replaceState(Object.assign({}, keep, { ratingsFilters: true }), '', url)"),

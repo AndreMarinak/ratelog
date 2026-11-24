@@ -104,6 +104,10 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   rated or given a status. Classics and Popular TV left Home; Classics is a Discover Movies row (TV's Popular now already is
   Popular TV). API: `GET /api/v1/recommendations` ([docs/api.md](api.md#recommended-for-you)). No migration. Details in
   [design-decisions.md](design-decisions.md#home-vs-discover-recommended-for-you-2026-11-23).
+- [x] **30. Ratings load as you scroll** (requested 2026-11-23, "can we just have it load more as u scroll?"): the Movies and TV
+  rankings show 30, then the next 30 as you near the end (ranks continue, filters apply to every page, "That's all 45" at the
+  end), with a "Show more" link as the fallback (works without JS). No history entry per page; a reload or Back shows what you
+  had loaded. The count select is gone. The To rate tabs also switch in place now. No migration, no API change.
 
 ## Fixes and housekeeping done
 

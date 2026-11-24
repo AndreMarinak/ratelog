@@ -81,6 +81,13 @@ Problems found while building and running the fork: what happened, the cause, an
   was never fetched. The `<noscript>` now sits outside the row, on Home only (Home has no in-place swap); Discover's
   placeholder has none, like its other pending rows. `ForYouTemplatesTest` checks it.
 
+- **The To rate view's All / Movies / TV tabs added a Back step each** (found in the phone-Back work, 2026-11-23): they were
+  plain links, and `ratings-unrated.js` kept the section it found on load, so swapping the section in place would have left
+  its "rated, leave the view" handler working on a detached copy. The section is now a view-swap.js region (the tabs replace
+  the URL) and the script looks it up on each event. See design-decisions ("Ratings load as you scroll").
+- **Paged rankings could repeat or skip a title** (ranking scroll, 2026-11-23, caught before shipping):
+  `ROW_NUMBER() OVER (ORDER BY score DESC)` had no tiebreaker, so titles with the same score could come back in a different
+  order in the next page's query. Ties now rank by rating id in both ranking queries (and in the in-memory test fakes).
 - **Discover's TV mode showed movie lists in its Official lists row** (user, 2026-11-23): `DiscoverOfficialListsAdvice` loaded
   every official list whatever the mode, so `/discover?type=tv` showed "AFI 100" and the other film lists. It now passes Discover's
   `type` to the lists query, which keeps only lists with at least one title of that type (`findOfficialContaining`); none = no

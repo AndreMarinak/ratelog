@@ -56,25 +56,22 @@
                     <option value="screenplay" th:selected="${selectedRatingCategory == 'screenplay'}" th:text="#{tvshows.rating.category.screenplay}">Screenplay</option>
                 </select>
                 <input id="name" name="name" type="text" th:value="${selectedName}" th:placeholder="#{tvshows.search.placeholder}" th:aria-label="#{tvshows.search.placeholder}">
-                <select id="limit" name="limit" th:aria-label="#{tvshows.refresh.ranking}" style="width: auto; min-width: 0;">
-                    <option value="5" th:selected="${selectedLimit == 5}">5</option>
-                    <option value="10" th:selected="${selectedLimit == null || selectedLimit == 10}">10</option>
-                    <option value="25" th:selected="${selectedLimit == 25}">25</option>
-                    <option value="50" th:selected="${selectedLimit == 50}">50</option>
-                    <option value="100" th:selected="${selectedLimit == 100}">100</option>
-                </select>
+                <!--/* Fork (ranking scroll, 2026-11-23): no count select; the ranking loads 30 more as you scroll. */-->
                 <button class="primary" type="submit" th:aria-label="#{tvshows.refresh.ranking}">
                     <i data-lucide="search" aria-hidden="true"></i>
                 </button>
             </form>
 
-            <div th:if="${tops != null}">
+            <!--/* Fork (ranking scroll): `ranking` alone is the next page's cards (?offset=&partial=1, RankingScroll). */-->
+            <div th:if="${tops != null}" th:fragment="ranking">
                 <link rel="stylesheet" href="/tile-actions.css">
                 <script src="/tile-actions.js" defer></script>
+                <script src="/ranking-scroll.js" defer></script>
                 <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
                 <div th:text="#{tvshows.empty.filter}" th:if="${#lists.isEmpty(tops)}" class="empty-state"></div>
                 <!--/* Fork (tile rating): each card is wrapped so the poster quick actions (rankingActions, RankingTileActionsInterceptor) sit beside the link. */-->
                 <div th:each="s, iterStat : ${tops}" class="rank-item"
+                     th:id="${rankingPage != null} ? ${'rank-pos-' + rankingPage.position(iterStat.count)}"
                      th:with="actions=${rankingActions != null} ? ${rankingActions[s.tmdbId]} : null">
                 <a th:href="@{'/tv/' + ${s.tmdbId}}" class="card flex separate">
                     <div class="flex gap-lg">
@@ -96,6 +93,7 @@
                 </a>
                 <div th:replace="~{fragments/tile-actions :: actions(${actions}, ${s.name})}"></div>
                 </div>
+                <div th:replace="~{fragments/ranking-scroll :: more(${rankingPage})}"></div>
             </div>
         </div>
 

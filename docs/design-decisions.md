@@ -538,7 +538,7 @@ three filters took four swipes. Code: `static/view-swap.js` (new, generic), `lis
 - **Checked for other needless entries:** modals and sheets never touch history, the title page's `?rate=` already used
   `replaceState`, and the one in-page entry is the TV page's "Seasons" jump (`#seasons`), a real anchor kept as is. The pages
   that still load are explicit saves (Rate modal, bulk "add unseen") and real navigation. The "To rate" view's All / Movies / TV
-  tabs are still plain page loads (pushed); `ratings-unrated.js` holds on to its section, so it would need a small change first.
+  tabs were still plain page loads (pushed) here; they switch in place since the same day's "Ratings load as you scroll".
 
 ### Poster quick actions: one button on touch, hover with a mouse (2026-11-23)
 
@@ -775,6 +775,45 @@ is **no "Because you watched X" row**, and **one "Recommended for you" row, base
   (up to 60) covers "more" for Claude. The row's tiles show the TMDB star and year like Discover's; there is no film / TV type
   badge on Home's mixed row (the posters and the title page make it clear).
 
+### Ratings load as you scroll (2026-11-23)
+
+The user: *"the ratings page only natively loads 10 the default but can we just have it load more as u scroll?"*, then, offered
+infinite scroll with a fallback button: *"Infinite scroll sounds good"*. Code: `ratings/scroll/RankingScroll.kt` (new),
+`static/ranking-scroll.js` (new), `templates/fragments/ranking-scroll.html` (new); small edits to the two ranking controllers
+and templates, `RatingDAO` / `TvRatingDAO`, `ratings-filters.js` and `ratings.css`.
+
+- **30 first, then 30 more as you near the end.** `/movies` and `/tvshows` show 30 (was 10). A footer under the ranking is the
+  sentinel: when it comes within ~900px of the screen (IntersectionObserver) the next 30 are fetched and appended before it, so
+  on a phone the next page is usually there before you reach the bottom (360-420 ms from scrolling to the 45th card locally).
+  Ranks come from the query, so appended cards continue 31, 32... (with a filter, the overall ranks as before). A card already
+  shown is skipped.
+- **The next page is the same URL's ranking fragment:** `?offset=30&limit=30&partial=1` renders only `movies :: ranking`
+  (cards + footer; no filters, tag list or premieres). No new endpoint, and the cards can't drift from the page's markup. The
+  query fetches one row more than it shows, so the footer knows whether there is more without a count query.
+- **Paging in SQL:** `LIMIT :limit OFFSET :offset` after the ranking, and ties now rank by rating id (`ORDER BY score DESC
+  NULLS LAST, r.id`). Without the tiebreaker two titles with the same score could swap between two queries, and one would show
+  twice and the other never. OFFSET over keyset: the ranking is a window function over the user's whole list anyway (filters
+  apply after ranking), so a rank cursor saves nothing, and personal lists are hundreds of rows, not millions.
+- **"Show more" stays visible as the fallback** (it reads "Loading…" while a page comes in). Clicking it loads in place too,
+  and focus moves to the first new card. Without JS it is a plain link to the same view with one more page, opened at the first
+  new card (`?limit=60#rank-pos-31`). After the last title: a quiet "That's all 45". If a page fails, the footer says so, the
+  link reads "Try again" and nothing loads by itself until it is used (no retry loop); a 429 shows the server's message as a
+  toast; a login page (session expired) loads the link's URL.
+- **No history entry per page.** The URL is replaced (`?limit=45`, keeping other scripts' `history.state`), so one Back leaves
+  Ratings, and a reload or coming back shows everything you had loaded at once (the server renders `limit` titles; the browser
+  or back-nav.js puts the scroll back). Cheaper than Discover's re-fetch of each page (browse.js): one query, no
+  sessionStorage. A fresh visit (`/movies`, the nav tab) starts at 30.
+- **A filter shows the new ranking from its first page, in place:** ratings-filters.js builds its URL from the filters only (so
+  `limit` drops out), swaps the ranking as before and fires `ratings:swapped`, and ranking-scroll.js watches the new footer.
+- **The count select (5 / 10 / 25 / 50 / 100) is gone**: with the list loading as you scroll it only decided how soon the
+  first fetch happens. `?limit=` still works in URLs (it is what the reload uses). Phones: the filters are two rows, genre |
+  score type, then the name.
+- **Poster quick actions on appended cards** need nothing new: tile-actions.js and tile-rate.js are delegated from `document`,
+  and `RankingTileActionsInterceptor` now also fills `rankingActions` for the `:: ranking` fragment view.
+- **The To rate view's All / Movies / TV tabs switch in place** (same day, left over from the phone-Back work): the section is a
+  view-swap.js region (`data-view`, `data-view-links`), so the tabs replace the URL instead of adding a Back step, and
+  `ratings-unrated.js` looks the section up on each event instead of keeping the first one.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -832,7 +871,9 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Discover bar filters, chips ✕, Clear all, hide-seen switch, sort, Movies / TV | page load | in place, **URL replaced** (`view-swap.js`, 2026-11-23; was a page load): the whole view is swapped from the new URL |
 | Watchlist tabs and Movies / TV filter | page load | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
 | Ratings Movies / TV / To rate switch | page load | **page load kept** (a different page), but it **replaces the entry** (`data-view-replace`, 2026-11-23) |
-| Ratings filters (genre, score type, name, count) | page load on Search | in place, **URL replaced** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter. Pushed an entry per filter until the same day's "one Back leaves the page" change |
+| Ratings filters (genre, score type, name; a count select until the ranking scroll) | page load on Search | in place, **URL replaced** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter; the new ranking starts at its first page. Pushed an entry per filter until the same day's "one Back leaves the page" change |
+| Ratings ranking: the next 30 as you scroll, "Show more" | — (a count select, page load) | appends in place (`ranking-scroll.js`, 2026-11-23), **URL replaced** with the loaded count (`?limit=60`); no JS = the link loads the same view with one more page |
+| To rate view All / Movies / TV tabs | page load (pushed) | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
 | Title page back link ("← Discover", "› Toy Story 3") | — | **navigation**: `history.back()` when that page is the previous entry, else a page load of its URL with the scroll put back (`back-nav.js`) |
 
@@ -979,6 +1020,7 @@ The user asked for a hardening pass on 2026-11-23. The rules now:
   - **No-JS path unchanged:** the controls are wrapped and the ✕s added by the script; the Search button is only hidden once the
     script runs (`form.is-live`). Phones keep two rows: genre | score type, then name | count; the count is a fixed 96px
     (the no-JS grid gives it a quarter of the row, ~76px at 360px, which cut "25" / "100" off once the ✕ was in it).
+    *(The count select was removed the same day by "Ratings load as you scroll": the second row is the name alone.)*
 - **No full-screen loader** (user, 2026-11-23: "for the watchlist why does there need to be a loading animation that covers whole
   screen"). Upstream covered the page with a blurred overlay and a pulsing logo on every navigation (`beforeunload`), so even fast
   page loads flashed it. `fragments/loader.html` is now a 3px accent bar along the top edge (`.nav-progress`, `pointer-events:

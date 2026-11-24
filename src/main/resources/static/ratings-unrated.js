@@ -1,9 +1,9 @@
 // Fork: the Ratings tab's "To rate" view (templates/ratings-unrated.html). A title rated from its ★ (tile-rate.js), or
 // un-seen with its eye (tile-actions.js), no longer belongs here: its tile fades out and the counts (the tabs and the
 // switch's "To rate 12") go down by one. The toast comes from the action itself. Nothing reloads.
+// The All / Movies / TV tabs swap the section in place (view-swap.js), so it is looked up each time, never kept.
 (() => {
-    const section = document.querySelector('[data-unrated]');
-    if (!section) return;
+    if (!document.querySelector('[data-unrated]')) return;
 
     function bump(el, delta) {
         if (!el) return;
@@ -12,7 +12,7 @@
         return next;
     }
 
-    function leave(tile) {
+    function leave(section, tile) {
         if (!tile || tile.dataset.leaving) return;
         tile.dataset.leaving = '1';
         const type = tile.dataset.unratedType;
@@ -41,7 +41,8 @@
         if (!rated && !unseen) return;
         // Every copy of the title (there is one per title here).
         const key = event.target.dataset && event.target.dataset.key;
-        if (!key) return;
-        section.querySelectorAll(`[data-tile-actions][data-key="${CSS.escape(key)}"]`).forEach((stack) => leave(stack.closest('.home-tile-wrap')));
+        const section = document.querySelector('[data-unrated]');
+        if (!key || !section) return;
+        section.querySelectorAll(`[data-tile-actions][data-key="${CSS.escape(key)}"]`).forEach((stack) => leave(section, stack.closest('.home-tile-wrap')));
     });
 })();

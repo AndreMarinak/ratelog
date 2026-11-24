@@ -150,7 +150,8 @@ data class SeasonRating(
 @Repository
 interface TvRatingRepository {
     fun findByTvShowIdAndUserId(tvShowId: TvShow.Id, userId: User.Id): TvRating?
-    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id? = null): List<Pair<Rank, TvRating>>
+    /** `offset`: ranked titles to skip (fork, ranking scroll: the Ratings tab loads a page at a time). */
+    fun findRankedByUserIdWithFilters(userId: User.Id, genreId: String?, limit: Int, name: String?, ratingCategory: String?, tagId: Tag.Id? = null, offset: Int = 0): List<Pair<Rank, TvRating>>
 
     fun save(rating: TvRating)
     fun deleteById(tvRatingId: TvRating.Id)

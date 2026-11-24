@@ -96,3 +96,9 @@
     transform: scale(0.94);
   }
 }
+
+/* The tabs switch in place (view-swap.js, 2026-11-23): the grid dims while the other tab loads, after a short delay. */
+.unrated.is-loading .unrated-grid {
+  opacity: 0.55;
+  transition: opacity 0.15s ease 0.12s;
+}

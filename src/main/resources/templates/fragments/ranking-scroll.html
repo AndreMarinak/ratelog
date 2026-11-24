@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  Fork (ranking scroll, user request 2026-11-23: "can we just have it load more as u scroll?"): the footer under a
+  Ratings ranking page (movies.html, tvshows.html). `p` is an org.ratelog.ratings.scroll.RankingPage.
+    <div th:replace="~{fragments/ranking-scroll :: more(${rankingPage})}"></div>
+
+  - While there is more: a "Show more" link. Without JS it opens the same view with one more page, at the first new
+    card (#rank-pos-31). static/ranking-scroll.js loads `data-next` (the next cards only) when this footer scrolls
+    near the screen, or when the link is clicked, appends the cards before it and swaps in the new footer.
+  - After the last title: a quiet "That's all 45".
+  - `data-address`: the view with everything shown so far (?limit=60); the script replaces the URL with it (no
+    history entry), so a reload or Back shows as many again.
+*/-->
+<div th:fragment="more(p)" th:if="${p != null and p.shown > 0}" class="ranking-more" data-ranking-more
+     th:attr="data-next=${p.hasMore} ? ${p.nextHref} : null,data-address=${p.addressHref},data-shown=${p.shown},data-loading=#{ratings.scroll.loading},data-error=#{ratings.scroll.error},data-retry=#{ratings.scroll.retry}">
+    <a th:if="${p.hasMore}" class="ranking-more-link" th:href="${p.moreHref}" data-ranking-more-link>
+        <span th:text="#{ratings.scroll.more}">Show more</span>
+        <i data-lucide="chevron-down" aria-hidden="true"></i>
+    </a>
+    <p th:unless="${p.hasMore}" class="ranking-end" th:text="#{ratings.scroll.end(${p.shown})}">That's all 45</p>
+</div>
+</body>
+</html>

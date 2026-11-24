@@ -65,6 +65,7 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
      * left out of a category ranking.
      * Fork: shows rated only as a whole (`show_score`, no seasons) are ranked by that score (LEFT JOIN), and like
      * quick-only shows they have no categories.
+     * Fork (ranking scroll): ties rank by rating id so pages of `limit` from `offset` never repeat or skip a show.
      */
     @Query(
         """
@@ -92,7 +93,7 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
                            WHEN 'soundtrack' THEN sa.avg_soundtrack
                            WHEN 'screenplay' THEN sa.avg_screenplay
                            ELSE r.score
-                       END DESC NULLS LAST
+                       END DESC NULLS LAST, r.id
                    ) AS rank
             FROM tv_ratings r
             LEFT JOIN season_averages sa ON r.tv_show_id = sa.tv_show_id
@@ -115,10 +116,10 @@ interface TvRatingDAO : CrudRepository<TvRatingEntity, Long> {
           AND (:tagId IS NULL OR EXISTS (SELECT 1 FROM tag_assignments ta INNER JOIN tags tg ON tg.id = ta.tag_id
                WHERE ta.tag_id = :tagId AND tg.user_id = :userId AND ta.media_type = 'tvshow' AND ta.media_id = t.id))
         ORDER BY ranked.rank
-        LIMIT :limit
+        LIMIT :limit OFFSET :offset
         """
     )
-    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?, tagId: Long?): List<RatedTvRow>
+    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?, tagId: Long?, offset: Int): List<RatedTvRow>
 }
 
 @Repository

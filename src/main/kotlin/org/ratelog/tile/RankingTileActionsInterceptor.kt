@@ -33,7 +33,8 @@ class RankingTileActionsInterceptor(
     private val logger = LoggerFactory.getLogger(RankingTileActionsInterceptor::class.java)
 
     override fun postHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any, modelAndView: ModelAndView?) {
-        val type = when (modelAndView?.viewName) {
+        // Fork (ranking scroll): also the next page's cards alone ("movies :: ranking", `partial=1`).
+        val type = when (modelAndView?.viewName?.substringBefore("::")?.trim()) {
             "movies" -> MediaType.movie
             "tvshows" -> MediaType.tvshow
             else -> return

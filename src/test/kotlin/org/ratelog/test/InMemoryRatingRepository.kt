@@ -26,16 +26,20 @@ class InMemoryRatingRepository(private val tags: InMemoryTagRepository? = null) 
         name: String?,
         ratingCategory: String?,
         tagId: Tag.Id?,
+        offset: Int,
     ): List<Pair<Rank, Rating>> {
         // Mirrors the SQL: a category ranking skips quick ratings, nulls sort last; ranks are overall
         // ranks and the tag filter only narrows the list afterwards.
         val category = RatingCategory.parse(ratingCategory)
+        // Ties by rating id, as the SQL's ROW_NUMBER tiebreaker; then a page of `limit` from `offset`.
         return store.values
             .filter { it.userId == userId }
             .filter { category == null || it.rankingScore(category) != null }
+            .sortedBy { it.id?.value }
             .sortedByDescending { it.rankingScore(category)?.value ?: Double.NEGATIVE_INFINITY }
             .mapIndexed { index, rating -> Pair(Rank(index + 1), rating) }
             .filter { (_, rating) -> tagId == null || tags?.isTaggedForUser(tagId, userId, MediaType.movie, rating.movieId.value) == true }
+            .drop(offset.coerceAtLeast(0))
             .take(limit)
     }
 
