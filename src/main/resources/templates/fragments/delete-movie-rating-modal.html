@@ -9,7 +9,8 @@
 
         <p th:text="#{rating.delete.confirm}">Are you sure?</p>
 
-        <form th:action="@{'/movies/delete/' + ${movie.id}}" method="post">
+        <!--/* Fork: deletes in place (inplace.js), like the rate modal. */-->
+        <form th:action="@{'/movies/delete/' + ${movie.id}}" method="post" data-inplace="#your-rating, .title-panel">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 
             <div class="confirm-modal-actions">

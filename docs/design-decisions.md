@@ -92,7 +92,7 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Watchlist on an unrated Seen asks first.** One status can't be both Watched and Want to watch, so adding a seen-but-unrated title to the watchlist (a rewatch) would stop it counting as seen: the button confirms. A rated title stays seen through its rating, so it doesn't ask.
 - **Upcoming:** a title is upcoming when its release date (a show's first air date) is after today; released today is out. Tiles only know the date, so no date = not upcoming there; title pages also treat a dateless movie that TMDB lists as Rumored / Planned / In Production / Post Production (a show: Planned / In Production) as upcoming, shown as just "Upcoming". "Today" comes from an injected `Clock` (system zone). The badge date is short ("Dec 18") while it's under ten months away, so the year is never ambiguous, else "Sep 2027"; title pages show the full date. Upcoming titles get no Seen toggle anywhere (`POST /seen/toggle` refuses them too); the Watchlist toggle stays. Dates come from the TMDB payloads (home, Discover, search) or the stored title (lists, watchlist, personal rows, title pages; unreleased movies are refreshed by the daily sync).
 - **The follow bell only where it does something** (user, 2026-11-23: it "wouldn't do anything for most" titles). Following only adds release dates to the Premieres box on the Ratings page (no notifications), so the bell shows for movies whose release date is after today or unknown, and for shows that are Returning Series / In Production / Planned. A title already followed always keeps it (on) so a follow can't be stranded. Labelled "Notify me · Adds release dates to Premieres"; small and secondary, not a heart (a heart may later mean "like").
-- **"Rate it?" after Seen, never forced** (user decision 2026-11-23). After tapping Seen on a movie page with no rating, a small inline prompt offers 1-10 (one tap saves a quick rating through the Rate modal's own `POST /movie/rate`) or Skip. Not on tiles, the watchlist page or tick-off (bulk marking stays fast), not for shows (rated per season), and not without JS (Seen just saves). Saving reloads the page, like the Rate modal, because the rating card, the Rate button and Seen all change. *(Tiles and tick-off got their own optional prompt on 2026-11-23, see "Rate it? after Seen on tiles" below.)*
+- **"Rate it?" after Seen, never forced** (user decision 2026-11-23). After tapping Seen on a movie page with no rating, a small inline prompt offers 1-10 (one tap saves a quick rating through the Rate modal's own `POST /movie/rate`) or Skip. Not on tiles, the watchlist page or tick-off (bulk marking stays fast), not for shows (rated per season), and not without JS (Seen just saves). Saving reloads the page, because the rating card, the Rate button and Seen all change. *(The Rate modal itself saves in place since 2026-11-24, see "Movie ratings save in place"; this prompt still reloads.)* *(Tiles and tick-off got their own optional prompt on 2026-11-23, see "Rate it? after Seen on tiles" below.)*
 - **Poster quick actions:** a stack in the poster's top-right corner: the watchlist bookmark (or a Watching / Dropped badge where the bookmark can't toggle), then the Seen eye. The Watched badge became the eye. The bookmark is rendered hidden rather than left out when it can't toggle, so un-seeing can bring it back in place. With a mouse, controls that are off appear on hover / focus; on touch screens and at 900px and below they're always visible; anything on is always visible. Status icons changed so the eye means Seen everywhere: Watched = `eye`, Watching = `circle-play`. *(Since 2026-11-23 there is a second group bottom right: Add to list and ★, see "Rate and add to list from any poster" below.)*
 - **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). *(Layout and the Dropped order changed 2026-11-23, see "Watchlist buttons line up on every tile" below.)* Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter). *(Since 2026-11-23 the page opens on Movies and the filter is Movies | TV, no All: see "Watchlist opens on Movies".)*
 - **List tick-off mode** ("Mark what you've seen", `?mark=1`): tapping a poster toggles Seen instead of opening the title; seen posters get a green check and outline, unseen an empty ring; a bar fixed above the phone tab bar shows the live count and Done (the same view without `mark`). The mode lives in the URL and every tab link keeps it, so master's in-place tab switch (`list-filter.js`) re-renders the grid in the same mode; all handlers are delegated from `document`. Without JS the posters stay links and each poster's eye is the per-poster form. Rated movies stay checked (a tap explains), upcoming titles have no toggle.
@@ -538,7 +538,7 @@ three filters took four swipes. Code: `static/view-swap.js` (new, generic), `lis
   "Try again". A fresh visit to the same URL (a row's "More", typing it) starts at page 1.
 - **Checked for other needless entries:** modals and sheets never touch history, the title page's `?rate=` already used
   `replaceState`, and the one in-page entry is the TV page's "Seasons" jump (`#seasons`), a real anchor kept as is. The pages
-  that still load are explicit saves (Rate modal, bulk "add unseen") and real navigation. The "To rate" view's All / Movies / TV
+  that still load are explicit saves (Rate modal, bulk "add unseen"; both save in place now: bulk since the compact list header, the movie Rate modal since 2026-11-24) and real navigation. The "To rate" view's All / Movies / TV
   tabs were still plain page loads (pushed) here; they switch in place since the same day's "Ratings load as you scroll".
 
 ### Poster quick actions: one button on touch, hover with a mouse (2026-11-23)
@@ -869,6 +869,34 @@ on hold. Code: `org.ratelog.stats` (`StatsDAO`, `StatsRepository`, `StatsCalcula
   page in 47-62 ms (median of 10 per view), `GET /api/v1/stats` in 27-34 ms.
 - **API:** `GET /api/v1/stats?year=YYYY|all` returns the same numbers ([api.md](api.md#stats)).
 
+### Movie ratings save in place (2026-11-24)
+
+Asked by the user on 2026-11-24: "also does editing the rating when clicked on movie cause a refresh?" It did: the movie page's Rate modal (quick slider
+or the five categories, create and edit) and the delete confirmation were plain form posts that redirected back to
+`/movie/{id}`, so every save reloaded the whole page (and called TMDB again), unlike the TV seasons since 2026-11-23.
+
+- **Same mechanism as the TV seasons:** both forms carry `data-inplace="#your-rating, .title-panel"` (`static/inplace.js`).
+  The modal closes, the server's flash shows as a toast ("Rating saved / updated / deleted successfully."), and two regions
+  are swapped in from a fresh copy of the page: **"Your rating"** (the quick score or the category bars, which `breakdown.js`
+  redraws on `inplace:swapped`, the review, the card's edit / delete buttons with the new values) and the **action panel**
+  (Rate becomes "Edit rating 8.00" and back; Seen turns on and locks with a rating, which marks the movie Watched, and stays
+  on but unlocked after a delete, the existing rule; a visible "Rate it?" prompt goes away). The series row's "You're here" eye follows Seen on its own
+  (`title-related.js` watches the panel). No new endpoint and no JSON: the controllers already redirect to the title page with
+  a flash message, which is also the no-JS path, and 429 answers show their message as a toast (inplace.js).
+- **"Your rating" is always one element,** so the swap can't miss: when unrated the page renders an empty, `hidden`
+  `<section id="your-rating">` stand-in (inplace.js reloads the page when a region's count differs between the page and the
+  fresh copy). It has no classes, so `.title-rating` still means "the card is there" (the `seen` suite checks exactly that);
+  the card that replaces it brings its own classes and the phone / tablet `order` rules place it as before. A wrapper `<div>`
+  was not used: the layout's `display: contents` columns style the card as a direct child.
+- **Edit triggers keep working after a swap:** the modal reads its prefill from the button that opened it (`modal:open`), and
+  the swapped-in Edit rating / pencil buttons carry the new `data-*` values, so a second edit starts from what was just saved.
+  The modal's form switches to `/movie/rate/update` the same way.
+- **`?rate=edit` / `?rate=detailed`** (a poster's "Edit rating" / "Detailed rating…") still open the editor; `tile-rate.js`
+  already drops the parameter with `history.replaceState` as it opens, so after an in-place save the address has no `rate=`
+  and Back still leaves the page in one step (no entry is added).
+- **Not changed here:** the "Rate it?" prompt after Seen still saves with a page load (it lives in
+  `fragments/title-actions.html`, which another branch was editing; see bugs-and-issues Open).
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -910,7 +938,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
 | List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |
-| Rate / edit / delete rating (modals) | reload | **reload kept** for movies: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
+| Movie page: rate / edit / delete rating (modals, quick or detailed) | reload | in place (2026-11-24, user: "also does editing the rating when clicked on movie cause a refresh?"; was "reload kept"): `data-inplace="#your-rating, .title-panel"`, the modal closes, toast, "Your rating" (bars redrawn) and the panel (Rate / Edit rating + score, Seen, "Rate it?") are swapped in; also from `?rate=edit` / `?rate=detailed` (the parameter is replaced away). Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
 | TV page: rate / edit / delete a season (modals) | reload | in place (2026-11-23, user: "it reloads the page after each rating"): `data-inplace="#seasons, .title-panel"`, the modal closes, toast, the season cards and the panel's overall score and Seen are swapped in; rating several seasons in a row never leaves the page |
 | TV page: Rate show (whole-show score), edit, delete, "Delete whole-show score" | — | in place (2026-11-23): same regions as the seasons, toast |
 | Poster ★ / "⋯" Rate on a show: whole-show score, change, delete | — (★ went to the seasons) | in place, like movies (`tile-rate.js`, `type=tv`); a show rated by season shows its average and "Rate seasons", a **page load** (its seasons) |

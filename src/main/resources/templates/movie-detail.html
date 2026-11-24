@@ -44,7 +44,7 @@
                 </div>
                 <div th:replace="~{fragments/title-info :: titleTrailer(${titleInfo})}"></div>
 
-                <section th:if="${movie.hasRating}" class="card rating-detail-card title-rating">
+                <section th:if="${movie.hasRating}" id="your-rating" class="card rating-detail-card title-rating">
                     <h2 class="rating-detail-title" th:text="#{movie.detail.your.rating}">Your rating</h2>
                     <p th:replace="~{fragments/quick-rating :: quickRatingLabel(${movie.quickRating})}"></p>
                     <p th:if="${movie.quickRating and movie.score != null}" class="rating quick-score"
@@ -84,6 +84,9 @@
                         </button>
                     </div>
                 </section>
+                <!--/* Fork: an empty stand-in while unrated, so the rate modal's in-place save (inplace.js) can swap the card in.
+                       No classes: `.title-rating` keeps meaning "the card is there". */-->
+                <section th:unless="${movie.hasRating}" id="your-rating" hidden></section>
             </div>
 
             <div class="title-col title-col-side">
