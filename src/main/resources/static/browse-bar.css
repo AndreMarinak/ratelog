@@ -799,3 +799,67 @@
     background: var(--accent);
   }
 }
+
+/*
+ * Fork (2026-11-24): "Type a year" at the top of a Year menu (the search page's; BarYearBox). A label, the box and Go on
+ * one row, and the error under them when the text isn't a year.
+ */
+.bb-year-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bb-year-row {
+  display: flex;
+  gap: 6px;
+}
+
+.bb-year-input {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  font-variant-numeric: tabular-nums;
+
+  &[aria-invalid="true"] {
+    border-color: var(--danger);
+  }
+}
+
+.bb-year-go {
+  flex-shrink: 0;
+  min-width: 56px;
+  height: 40px;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-weight: 600;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.bb-year-error {
+  margin: 0 2px;
+  color: var(--danger);
+  font-size: 0.9rem;
+
+  &[hidden] {
+    display: none;
+  }
+}

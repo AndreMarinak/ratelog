@@ -1,6 +1,7 @@
 package org.ratelog.person.detail.web
 
 import org.ratelog.MediaType
+import org.ratelog.person.ACTING
 import org.ratelog.person.Filmography
 import org.ratelog.person.FilmographySort
 import org.ratelog.person.FilmographyType
@@ -22,6 +23,17 @@ data class PersonTab(
     val active: Boolean,
     /** `acting`, `movie`, `popular`...: a stable hook for tests and scripts. */
     val value: String,
+)
+
+/**
+ * Fork (2026-11-24): "Show 84 appearances as himself", a link that flips `appearances=1` (in place like the tabs).
+ * [labelKey] is chosen by TMDB gender and takes [count].
+ */
+data class PersonSwitch(
+    val href: String,
+    val on: Boolean,
+    val labelKey: String,
+    val count: Int,
 )
 
 data class PersonTile(
@@ -63,6 +75,8 @@ data class PersonView(
     val total: Int,
     val showAllHref: String?,
     val emptyKey: String?,
+    /** Fork (2026-11-24): null when this view has no appearances as oneself to show or hide. */
+    val appearancesSwitch: PersonSwitch? = null,
 )
 
 object PersonPageView {
@@ -83,13 +97,33 @@ object PersonPageView {
         val defaultDept = page.departments.let { Filmography.pick(it, null, person.knownForDepartment) }
         val dept = page.department
 
-        fun href(deptSlug: String? = dept?.slug, type: FilmographyType = page.type, sort: FilmographySort = page.sort, all: Boolean = false): String =
+        fun href(
+            deptSlug: String? = dept?.slug,
+            type: FilmographyType = page.type,
+            sort: FilmographySort = page.sort,
+            all: Boolean = false,
+            appearances: Boolean = page.appearances,
+        ): String =
             UriComponentsBuilder.fromPath(base).apply {
                 if (deptSlug != null && deptSlug != defaultDept?.slug) queryParam("dept", deptSlug)
                 type.param?.let { queryParam("type", it) }
                 sort.param?.let { queryParam("sort", it) }
+                if (appearances) queryParam("appearances", "1")
                 if (all) queryParam("all", "1")
             }.build().encode().toUriString()
+
+        // Fork (2026-11-24): the switch belongs to Acting; with no Acting tab (every acting credit an appearance) it shows
+        // on any tab and turning it on opens Acting.
+        val actingSlug = Filmography.slug(ACTING)
+        val hasActing = page.departments.any { it.slug == actingSlug }
+        val appearancesSwitch = if (page.appearanceCount > 0 && (dept?.slug == actingSlug || !hasActing)) {
+            PersonSwitch(
+                href = href(deptSlug = if (!hasActing) actingSlug else dept?.slug, appearances = !page.appearances),
+                on = page.appearances,
+                labelKey = Filmography.appearancesLabelKey(person.gender),
+                count = page.appearanceCount,
+            )
+        } else null
 
         val departmentTabs = page.departments.map { d ->
             PersonTab(href(deptSlug = d.slug), departmentKey(d.name), d.name, d.count, d.slug == dept?.slug, d.slug)
@@ -167,6 +201,7 @@ object PersonPageView {
                 page.entries.isEmpty() -> "person.empty.filter"
                 else -> null
             },
+            appearancesSwitch = appearancesSwitch,
         )
     }
 

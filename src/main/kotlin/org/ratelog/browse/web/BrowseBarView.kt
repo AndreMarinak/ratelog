@@ -26,9 +26,32 @@ data class BarMenu(
     val value: String?,
     val sections: List<BarSection>,
     val note: String? = null,
+    /** Fork (2026-11-24): a "Type a year" box at the top of the panel (the search page's Year menu). */
+    val yearBox: BarYearBox? = null,
 ) {
     val active: Boolean get() = value != null
 }
+
+/**
+ * Fork (2026-11-24): "Type a year" in a Year menu: a GET form to [action] carrying [hidden] (the page's other
+ * parameters) and `year`. Works without JS; search-type.js checks the year first and applies it in place.
+ */
+data class BarYearBox(
+    val action: String,
+    val hidden: List<BarHidden>,
+    /** The year typed, shown again (also when it wasn't a year). */
+    val value: String?,
+    val label: String,
+    val placeholder: String,
+    val submitLabel: String,
+    val min: Int,
+    val max: Int,
+    /** "Type a year from 1874 to 2036.": shown (and the menu rendered open) when [invalid]; search-type.js shows it too. */
+    val error: String,
+    val invalid: Boolean,
+)
+
+data class BarHidden(val name: String, val value: String)
 
 data class BarSection(
     val heading: String?,

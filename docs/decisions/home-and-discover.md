@@ -96,6 +96,9 @@ popup it kinda glitches real quick … I'd have to click back on year to then se
   the menu as before; Escape and an outside tap close it.
 - **"This year" / "Last year"** head the Year menu (with the year as a hint), then "Upcoming" (movies only), then the decades
   under a "Decades" heading. They are single-year filters and drop a decade they aren't in.
+- **The search page uses this Year menu too** (2026-11-24): same builder (`BrowseBarViews.yearMenu`, which now takes a link
+  builder), fragment (`browseMenu`), CSS and script, without Upcoming and with a "Type a year" box; see
+  [people-and-credits.md](people-and-credits.md#search-year-menu-2026-11-24).
 - **No unstyled flash after a swap:** the bar brings its own `<link rel="stylesheet">`, and static files are served `no-store`,
   so every swap re-downloaded `browse-bar.css` and showed the bar unstyled for ~0.5 s (also part of the "glitch"). Region
   stylesheets are now kept loaded in `<head>` (`view-swap.js`). On phones an open panel also ends above the fixed bottom nav

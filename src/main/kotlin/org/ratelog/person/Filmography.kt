@@ -37,6 +37,8 @@ data class FilmographyEntry(
     val roles: List<String>,
     val popularity: Double,
     val voteCount: Int,
+    /** Fork (2026-11-24): only appearances as oneself on this title (shown with the person page's switch on). */
+    val appearance: Boolean = false,
 ) {
     val year: Int? get() = releaseDate?.year
 }
@@ -86,8 +88,33 @@ object Filmography {
                 roles = group.mapNotNull { it.role }.distinctBy { it.lowercase() },
                 popularity = group.maxOf { it.popularity },
                 voteCount = group.maxOf { it.voteCount },
+                appearance = group.all { it.appearance },
             )
         }
+
+    /**
+     * Fork (2026-11-24): the credits a page works from: every credit with the appearances switch on, else all but the
+     * appearances as oneself.
+     */
+    fun visible(credits: List<PersonCredit>, appearances: Boolean): List<PersonCredit> =
+        if (appearances) credits else credits.filter { !it.appearance }
+
+    /**
+     * Fork (2026-11-24): how many titles the appearances switch adds to Acting for [type]: titles with an appearance
+     * and no role (a title with a role is already shown; its "Self" credit only joins the role text).
+     */
+    fun appearanceCount(credits: List<PersonCredit>, type: FilmographyType): Int {
+        val acting = credits.filter { it.department == ACTING && type.matches(it.type) }
+        val withRole = acting.filter { !it.appearance }.map { it.type to it.tmdbId }.toSet()
+        return acting.filter { it.appearance }.map { it.type to it.tmdbId }.distinct().count { it !in withRole }
+    }
+
+    /** Fork (2026-11-24): the switch's wording by TMDB gender: 1 herself, 2 himself, anything else themselves. */
+    fun appearancesLabelKey(gender: Int?): String = when (gender) {
+        1 -> "person.appearances.herself"
+        2 -> "person.appearances.himself"
+        else -> "person.appearances.themselves"
+    }
 
     /**
      * Newest: latest release first (so upcoming titles lead), titles without a date last (announced, no date yet),

@@ -75,7 +75,8 @@ with it. Code: `org.ratelog.person` (`TmdbPersonClient`, `Person.kt`, `Filmograp
 - **Appearances that aren't roles are left out of Acting**: on TV, talk, news and reality shows and any "Self" credit (Tom
   Hanks has 96 TV cast credits, ~70 of them talk shows, award shows and interviews); in movies, "Self" (or archive footage) in
   a documentary or in a title with no genre (making-ofs, award galas). Playing yourself in a comedy stays. Crew credits are
-  kept as TMDB lists them.
+  kept as TMDB lists them. Since 2026-11-24 a switch shows them on request: see
+  [Show appearances as himself / herself](#show-appearances-as-himself--herself-2026-11-24).
 - **Long filmographies show 60 tiles** and a "Show all N" link (in place, URL replaced): Tom Hanks' 180-odd acting credits
   would otherwise put ~600 KB of tiles on the page before you picked a filter.
 - **Back link like a title page**: a person counts as a title in the back-link chain (`BackNavPages.isTitle` matches
@@ -88,7 +89,7 @@ with it. Code: `org.ratelog.person` (`TmdbPersonClient`, `Person.kt`, `Filmograp
   chosen there is no row (the filter says what you want); no "People only" type was added. The people search runs in
   parallel with the title search (`SearchPeopleInterceptor`: started in `preHandle`, read in `postHandle`, at most 4 s), so
   the page waits for the slower of the two, not both; a TMDB failure only loses the row. Cached 30 minutes per query.
-- **Year box** next to Any / Movies / TV: TMDB's own year filters (`primary_release_year` for movies, `first_air_date_year`
+- *(Superseded by [Search Year menu](#search-year-menu-2026-11-24), 2026-11-24.)* **Year box** next to Any / Movies / TV: TMDB's own year filters (`primary_release_year` for movies, `first_air_date_year`
   for TV; both for Any). It applies like the type filter (on Enter, leaving the box or the arrows, after a short pause so a
   few arrow clicks make one search); an empty box leaves the URL; the URL keeps `year=`, later pages (infinite scroll) and the
   type filter keep it. A new header search starts without it (a new title usually means a different year). Anything that
@@ -107,3 +108,59 @@ character) opens the person page, on the desktop Cast card and the phone cast ro
 (`::after`, `title-credits.css`), so there is still one link per person for screen readers and the keyboard, with the focus
 ring around the whole entry. Hovering an entry underlines the name and rings the photo in the accent colour. Names in the
 Directed by / Written by lines were links already.
+
+### Show appearances as himself / herself (2026-11-24)
+
+The user chose to keep talk-show, award-show and "Self" appearances hidden by default (as above) **with a switch to show them**.
+Code: `person/Person.kt` (`PersonCredit.appearance`), `Filmography.kt` (`visible`, `appearanceCount`, `appearancesLabelKey`),
+`detail/GetPersonHandler.kt`, `detail/web/PersonPageView.kt` (`PersonSwitch`), `templates/person.html`, `static/person-page.css`,
+`person-page.js`.
+
+- **The same rule decides what an appearance is**; appearances are now kept, marked, in the cached person (one TMDB answer
+  still serves both states), instead of being dropped when TMDB's answer is read.
+- **A switch under the type / sort tabs, off by default:** "Show 141 appearances as himself" with "Talk shows, award shows and
+  interviews" under it, drawn like Discover's "Hide titles I've seen" switch, a size smaller. The count is the titles it would
+  add to Acting for the chosen type (All, Movies or TV): a title where the person also has a role is already shown, so it
+  isn't counted (its "Self" credit only joins the role text). No count in this view, no switch.
+- **Wording by TMDB gender:** 1 "as herself", 2 "as himself", anything else (not set, non-binary) "as themselves"; "1
+  appearance" in the singular.
+- **On:** appearances count everywhere (the Acting tab's number, All / Movies / TV, the tiles, Newest / Most popular) and keep
+  TMDB's role text ("Self", "Himself - Guest", "Self - Presenter"). `appearances=1` in the URL, kept by every tab and by "Show
+  all"; applied in place like the tabs (a link with `role="switch"` swapped by `view-swap.js`, URL replaced; Space flips it).
+- **The switch belongs to Acting:** it shows on the Acting tab, and on any tab when the person has no Acting tab at all (every
+  acting credit is an appearance, e.g. a TV host); then turning it on opens Acting (`dept=acting`).
+- **API:** `GET /api/v1/people/{id}?appearances=true`, with `appearances`, `appearanceCount` and each credit's `appearance`
+  in the answer ([api.md](../api.md#people)).
+
+## Search Year menu (2026-11-24)
+
+The user: "can the year under search allow you to type but also still [have the] same style of like 2020s but can click exact
+year if you want from [the] other filter". The number box became Discover's Year menu. Code: `search/SearchYearFilter.kt`,
+`SearchYearMenu.kt`, `SearchHandler.kt` (decades), `browse/web/BrowseBarViews.yearMenu` (shared), `fragments/browse-bar.html`
+(`browseMenu` fragment, "Type a year" box), `templates/search.html`, `static/search-type.js`, `search.js`, `view-swap.js`.
+
+- **Same menu as Discover**, next to Any / Movies / TV: Any year, This year, Last year, the decades newest first (2020s ...
+  1960s, then "1950s and earlier", which opens the older decades), and once a decade is chosen its exact years. Picking a
+  decade filters to it and keeps the menu open on its years (Discover's 2026-11-24 behaviour); picking a year closes it. No
+  "Upcoming" (search finds titles by name; Discover has it). The builder, the fragment, the CSS and browse-bar.js are
+  Discover's own, not copies: `BrowseBarViews.yearMenu` takes a link builder, and the menu is the bar's `browseMenu` fragment.
+  The trigger is drawn like the select beside it (a bordered 40px control); on phones the panel spans the filter row.
+- **"Type a year"** at the top of the panel: a box and **Go**; Enter or Go applies a year from 1874 to ten years ahead (the
+  same bounds as Discover's `year`). Anything else says "Type a year from 1874 to 2036." under the box and loads nothing. It is
+  a plain GET form, so it works without JS too (then the server shows the menu open with the same message).
+- **URL** like Discover: `year=2023` or `decade=2020s` (`decade=earlier`); a year wins over a decade. The filters apply in
+  place and replace the URL (`#searchView` swapped by `view-swap.js`, which now also applies GET forms inside a
+  `data-view-links` group; "One Back leaves the page"): the Year menu, Type a year and, since the same change, the Any /
+  Movies / TV select (it loaded a page). Later pages (infinite scroll) and the type filter keep the year or decade; a new
+  header search starts without it.
+- **A decade is filtered on our side**: TMDB's search only filters exact years (`primary_release_year`,
+  `first_air_date_year`), and 10 exact-year searches per page would cost 10-20 calls and break TMDB's relevance order. So a
+  decade reads the normal search's pages from the start and keeps the titles of that decade (by release / first air date;
+  titles without a date are left out), movies and TV page by page together for Any. **Trade-off (latency vs completeness):**
+  one results page reads TMDB pages until it has 9 titles of the decade, at most **5 TMDB pages per type** (up to 10 calls for
+  Any, ~1-2 s on a sparse decade; a dense one fills from page 1), and every match of the pages read is shown (none dropped).
+  The page number in the URL is then the TMDB page to start from, so infinite scroll continues after the last page read;
+  `search.js` takes the next page from the fresh page and loads again at once when a short page leaves the end in view. A
+  decade only looks through TMDB's **first 20 pages per type (400 titles, by relevance)**: a search with few titles of that
+  decade ends there instead of reading 500 pages. For anything further down, type the exact year (TMDB filters it, no limit).
+

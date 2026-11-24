@@ -9,7 +9,8 @@
     window.__ratelogBrowseBar = true;
 
     const MARGIN = 12;
-    const menus = () => document.querySelectorAll('.browse-bar details.bb-menu');
+    // Fork (2026-11-24): any bar menu, also the search page's Year menu (outside a .browse-bar).
+    const menus = () => document.querySelectorAll('details.bb-menu');
     const queries = {}; // search text per menu id, while that menu is open
 
     const fold = (text) => (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')

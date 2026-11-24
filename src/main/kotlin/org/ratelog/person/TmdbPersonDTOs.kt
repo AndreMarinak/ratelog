@@ -15,6 +15,8 @@ data class TmdbPersonResponse(
     @JsonProperty("profile_path") val profilePath: String? = null,
     @JsonProperty("known_for_department") val knownForDepartment: String? = null,
     @JsonProperty("adult") val adult: Boolean? = null,
+    /** Fork (2026-11-24): 0 not set, 1 female, 2 male, 3 non-binary: words the appearances switch ("as herself"). */
+    @JsonProperty("gender") val gender: Int? = null,
     @JsonProperty("combined_credits") val combinedCredits: TmdbCombinedCredits? = null,
 )
 

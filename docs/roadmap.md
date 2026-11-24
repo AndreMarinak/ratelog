@@ -161,6 +161,13 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 
 - [x] **API guide for AI assistants** (asked 2026-11-24, "make a documentation page under the key thing so someone could copy and paste it into Claude or chat or whatnot"):
   `/settings/api` has a copy-paste guide box (Copy, Download .md) and `GET /settings/api/guide.md`; text in `src/main/resources/api-guide.md`.
+- [x] **Person pages: "Show appearances as himself / herself"** (user's choice 2026-11-24: hidden by default, with a switch):
+  talk-show, award-show and "Self" credits come back with a switch under the tabs (count, pronoun by TMDB gender, in place,
+  `appearances=1`); `GET /api/v1/people/{id}?appearances=true`. [people-and-credits.md](decisions/people-and-credits.md#show-appearances-as-himself--herself-2026-11-24).
+- [x] **Search Year menu** (asked 2026-11-24, "can the year under search allow you to type but also still [have the] same
+  style of like 2020s"): Discover's Year menu on search results (Any year, This year, Last year, decades, a decade's years)
+  with a "Type a year" box; a decade is filtered on our side (up to 5 TMDB pages per results page, TMDB's first 400 titles
+  per type). The type select and the menu apply in place. [people-and-credits.md](decisions/people-and-credits.md#search-year-menu-2026-11-24).
 - [x] **Account backup** (asked 2026-11-24, "make a copy of all my data so far and keep it git ignored in repo"):
   `tools/export-account.py` saves an account's ratings, statuses, lists, saved lists, tags and stats through the API into
   git-ignored `backups/`. No server change. How to run it: [deploy-railway.md](deploy-railway.md#back-up-an-account).

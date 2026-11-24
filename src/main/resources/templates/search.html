@@ -14,26 +14,36 @@
         th:text="${query != null and !#strings.isEmpty(query)} ? #{search.results.for(${query})} : #{search.hero}">Find movies and TV shows.</h1>
 
     <section class="panel">
+        <p th:if="${!tmdbConfigured}" class="warning-text">
+            <i data-lucide="alert-triangle" aria-hidden="true"></i>
+            <span th:text="#{search.tmdb.not.configured}">A TMDB API key must be configured for Ratelog to work.</span>
+        </p>
+
+        <!--/* Fork (2026-11-24): the filters and results are one region that view-swap.js swaps in place (the URL is replaced,
+               "One Back leaves the page"): the type select and "Type a year" are GET forms, the Year menu's options links. */-->
+        <div th:if="${results != null or param.q != null}" id="searchView" data-view data-view-fallback="type">
+        <link rel="stylesheet" href="/browse-bar.css">
+        <div class="search-filters">
         <!--/* Fork: the query lives in the header search (one search box, user 2026-11-23); this is only the type filter. */-->
-        <form th:if="${results != null or param.q != null}" th:action="@{/}" class="filter search-type-filter" method="get">
+        <form th:action="@{/}" class="filter search-type-filter" method="get" data-view-links="type">
             <input name="q" type="hidden" th:value="${query}">
             <select id="mediaType" name="mediaType" class="type-filter" th:aria-label="#{search.filter.type}">
                 <option value="" th:selected="${mediaType == null}" th:text="#{search.filter.any}">Any</option>
                 <option value="movie" th:selected="${mediaType == 'movie'}" th:text="#{search.type.movie}">Movies</option>
                 <option value="tvshow" th:selected="${mediaType == 'tvshow'}" th:text="#{search.type.tv}">TV Shows</option>
             </select>
-            <!--/* Fork (2026-11-24): Year narrows the TMDB search (movies by release year, TV by first air year). */-->
-            <input id="searchYear" name="year" type="number" class="year-filter" inputmode="numeric" min="1870" max="2100" step="1"
-                   th:value="${searchYear}" th:placeholder="#{search.filter.year}" th:aria-label="#{search.filter.year.aria}">
+            <!--/* The Year menu's choice, kept when the type changes. */-->
+            <input th:if="${searchYear != null}" type="hidden" name="year" th:value="${searchYear}">
+            <input th:if="${searchDecade != null}" type="hidden" name="decade" th:value="${searchDecade}">
             <button class="primary" type="submit" th:aria-label="#{search.btn}" th:title="#{search.btn}">
                 <i data-lucide="search" aria-hidden="true"></i>
             </button>
         </form>
-
-        <p th:if="${!tmdbConfigured}" class="warning-text">
-            <i data-lucide="alert-triangle" aria-hidden="true"></i>
-            <span th:text="#{search.tmdb.not.configured}">A TMDB API key must be configured for Ratelog to work.</span>
-        </p>
+        <!--/* Fork (2026-11-24): the Year menu, Discover's (fragments/browse-bar.html) with a "Type a year" box (SearchYearMenu). */-->
+        <div th:if="${yearMenu != null}" class="search-year" data-view-links="year">
+            <details th:replace="~{fragments/browse-bar :: browseMenu(${yearMenu})}"></details>
+        </div>
+        </div>
 
         <!--/* Fork: results are the home rows' poster tiles (home.css) in a grid (search-results.css). search.js builds the same markup for later pages. */-->
         <th:block th:if="${results != null}"><link rel="stylesheet" href="/home.css"><link rel="stylesheet" href="/search-results.css"><link rel="stylesheet" href="/tile-actions.css"></th:block>
@@ -68,10 +78,12 @@
              th:data-query="${query}"
              th:data-media-type="${mediaType}"
              th:data-year="${searchYear}"
+             th:data-decade="${searchDecade}"
              th:data-page="${currentPage}">
         </div>
 
         <div th:if="${results != null}" class="separator"></div>
+        </div>
 
         <!--/* Fork: home dashboard rows instead of the trending grid. */-->
         <th:block th:if="${results == null and home != null}">
@@ -79,8 +91,10 @@
         </th:block>
     </section>
 </div>
-<script th:if="${hasMore}" th:src="@{/search.js}"></script>
+<!--/* Fork: search.js runs on every results page: an in-place filter change can bring a next page (view:swapped). */-->
+<script th:if="${results != null}" th:src="@{/search.js}"></script>
 <script src="/search-type.js" defer></script>
+<th:block th:if="${results != null or param.q != null}"><script src="/browse-bar.js" defer></script><script src="/view-swap.js" defer></script></th:block>
 <script th:if="${results != null}" src="/tile-actions.js" defer></script>
 <th:block th:if="${results != null}"><th:block th:replace="~{fragments/tile-rate :: assets}"></th:block></th:block>
 </body>

@@ -31,17 +31,7 @@
         <span class="bb-label" aria-hidden="true" th:text="#{browse.by}">Browse by</span>
 
         <div class="bb-menus" role="group" th:aria-label="#{browse.menus.aria}">
-            <details th:each="menu : ${bar.menus}" class="bb-menu"
-                     th:classappend="${menu.active} ? 'is-set' : ''"
-                     th:attr="data-menu=${menu.id}">
-                <summary class="bb-trigger">
-                    <i th:data-lucide="${menu.icon}" aria-hidden="true"></i>
-                    <span class="bb-trigger-label" th:text="${menu.label}">Year</span>
-                    <span class="bb-trigger-value" th:if="${menu.value != null}" th:text="${menu.value}">2010s</span>
-                    <i data-lucide="chevron-down" class="bb-chevron" aria-hidden="true"></i>
-                </summary>
-                <div class="bb-panel" th:insert="~{fragments/browse-bar :: browsePanel(${menu})}"></div>
-            </details>
+            <th:block th:each="menu : ${bar.menus}"><details th:replace="~{fragments/browse-bar :: browseMenu(${menu})}"></details></th:block>
         </div>
 
         <!--/* No "Find a title" field here: the header's search is on every page (two search boxes on Home, user 2026-11-23). */-->
@@ -72,8 +62,38 @@
     </div>
 </section>
 
+<!--/* One menu: its trigger and panel. Fork (2026-11-24): also the search page's Year menu (needs /browse-bar.css + .js). */-->
+<details th:fragment="browseMenu(menu)" class="bb-menu"
+         th:classappend="${menu.active} ? 'is-set' : ''"
+         th:attr="data-menu=${menu.id}"
+         th:open="${menu.yearBox != null and menu.yearBox.invalid}">
+    <summary class="bb-trigger">
+        <i th:data-lucide="${menu.icon}" aria-hidden="true"></i>
+        <span class="bb-trigger-label" th:text="${menu.label}">Year</span>
+        <span class="bb-trigger-value" th:if="${menu.value != null}" th:text="${menu.value}">2010s</span>
+        <i data-lucide="chevron-down" class="bb-chevron" aria-hidden="true"></i>
+    </summary>
+    <div class="bb-panel" th:insert="~{fragments/browse-bar :: browsePanel(${menu})}"></div>
+</details>
+
 <th:block th:fragment="browsePanel(menu)">
     <p class="bb-note" th:if="${menu.note != null}" th:text="${menu.note}">Couldn't load streaming services.</p>
+    <!--/* Fork (2026-11-24): "Type a year" (search's Year menu). A GET form, so it works without JS; search-type.js
+           checks the year before view-swap.js applies it in place. */-->
+    <form th:if="${menu.yearBox != null}" th:with="box=${menu.yearBox}" class="bb-year-box" th:action="${box.action}"
+          method="get" data-year-box novalidate>
+        <input th:each="field : ${box.hidden}" type="hidden" th:name="${field.name}" th:value="${field.value}">
+        <label class="bb-section-heading" th:for="|bbYear-${menu.id}|" th:text="${box.label}">Type a year</label>
+        <div class="bb-year-row">
+            <input th:id="|bbYear-${menu.id}|" class="bb-year-input" type="text" name="year" inputmode="numeric"
+                   maxlength="4" autocomplete="off" enterkeyhint="go" th:value="${box.value}"
+                   th:placeholder="${box.placeholder}"
+                   th:attr="data-min=${box.min}, data-max=${box.max}, aria-describedby=|bbYearError-${menu.id}|, aria-invalid=${box.invalid} ? 'true' : null">
+            <button class="bb-year-go" type="submit" th:text="${box.submitLabel}">Go</button>
+        </div>
+        <p class="bb-year-error" th:id="|bbYearError-${menu.id}|" role="alert" th:hidden="${!box.invalid}" th:text="${box.error}">
+            Type a year from 1874 to 2036.</p>
+    </form>
     <div th:each="section : ${menu.sections}" class="bb-section" th:classappend="'bb-' + ${section.layout}"
          th:attr="data-reveal=${section.reveal} ? 'true' : null">
         <h3 class="bb-section-heading" th:if="${section.heading != null}" th:text="${section.heading}">Heading</h3>

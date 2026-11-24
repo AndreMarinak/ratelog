@@ -69,7 +69,7 @@ Every suite must pass on a fresh database, on a database full of leftover data, 
 
 | Suite | Covers | Seeds |
 |---|---|---|
-| `home` | home rows, poster sharpness, row scroll, bookmark in place, header search (`/`), Discover rows / grid / load more / `/browse` redirect, title page actions + rate modal, add / remove from a list in place, official list mark / Lists tab / Discover row / unmark, Lists tab, list page back link + progress + tabs in place, phone bottom nav + menu sheet, nav links, Ratings tab switch + filters, tags hidden | two lists (Toy Story rated, Inside Out + WALL-E unseen; one public for the official step) |
+| `home` | home rows, poster sharpness, row scroll, bookmark in place, header search (`/`), search Year menu (a decade keeps the menu open and filters the results, an exact year, "Type a year" with an invalid then a valid year, in place, one Back leaves), person page "Show appearances" switch (in place, Acting count grows, "Self" roles, tabs keep it), Discover rows / grid / load more / `/browse` redirect, title page actions + rate modal, add / remove from a list in place, official list mark / Lists tab / Discover row / unmark, Lists tab, list page back link + progress + tabs in place, phone bottom nav + menu sheet, nav links, Ratings tab switch + filters, tags hidden | two lists (Toy Story rated, Inside Out + WALL-E unseen; one public for the official step) |
 | `seen` | Upcoming badge (home, search, title page, list), home / Discover / search tiles Seen + Watchlist in place, Lion King's four actions, Seen -> "Rate it?" -> Skip, Watchlist on a seen title (no confirm, stays seen; 2026-11-24), quick rating from the nudge + locked Seen, Rate / Add to list sheets, follow bell (upcoming movie, returning vs ended show), TV Watching / Seen, /watchlist Remove + Undo, Seen / Watching move tiles, a seen title on To watch tagged Rewatch + Remove keeps it seen (2026-11-24), list tick-off mode across tab swaps | watchlist (Up, Dune: Part Two, The Bear, The Last of Us, the upcoming movie), show statuses, two lists |
 | `tilerate` | tile star picker (sheet on phones), every copy updates, tiles fit their actions, Coming soon tiles have no star, add to list from a tile, edit / delete a quick rating from search, detailed rating -> title page edit modal, `?rate=detailed`, TV tile score links to seasons, Discover grid, watchlist rows + rating from the star, list page rate in place + progress, tick-off "Rate it?" prompt moving, ranking cards, To rate view, no-JS star link | Matrix 8.5, Interstellar 9, Heat detailed, Toy Story + Inception seen unrated, The Bear S1 8, watchlist titles, a 10-title list and a one-title list |
 | `title` | trailer thumbnail size on a movie and a show (fills the column on desktop, HD image or fallback; compact on phones), trailer modal, movie Rate modal in place (quick create, quick edit, detailed edit with bars, delete; panel score, Seen, toast, no reload), `?rate=edit` saving in place with the URL replaced, Delete rating in the movie editor in place (confirmation, API says gone, create mode has no delete), Delete rating for a TV season, 404 pages instead of a JSON 500 | The Incredibles rated 7.5, Breaking Bad season 1 rated 9, Parasite unrated with no status |
@@ -85,6 +85,10 @@ user) and `secfix` (security headers / rate-limit / lockout checks). Several of 
 does not create yet.
 
 ## Status
+
+Updated for the searchyear branch (2026-11-24, `feat/searchyear`): `home` gains "search Year menu" and "person page: Show
+appearances switch" (64 steps). Run on a fresh `ratelog_searchyear` database, port 8121, desktop / 390 / 360: **280/280**
+(home 64, seen 53, tilerate 54, title 27, recs 25, backnav 39, savedlists 18).
 
 Updated for master `5a03f3d` (2026-11-23): Classics is checked on Discover (it left Home), the Ratings step no longer expects the
 count select (rankings load as you scroll), and the phone menu sheet has 5 items (Stats added). Run against the main session's

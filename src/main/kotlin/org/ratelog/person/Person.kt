@@ -22,6 +22,8 @@ data class PersonDetails(
     val profilePath: String?,
     val knownForDepartment: String?,
     val credits: List<PersonCredit>,
+    /** TMDB's gender (1 female, 2 male, else not set / non-binary), for "as herself / himself / themselves". */
+    val gender: Int? = null,
 )
 
 /** One credit: [department] is [ACTING] for cast, else the crew department; [role] is the character or the job. */
@@ -35,6 +37,11 @@ data class PersonCredit(
     val role: String?,
     val popularity: Double,
     val voteCount: Int,
+    /**
+     * Fork (2026-11-24): a cast credit that isn't a role (talk shows, award shows, "Self"; see [PersonParsing.castCredit]).
+     * Kept so the person page can show them on request; left out of Acting by default.
+     */
+    val appearance: Boolean = false,
 )
 
 /** A People result in search: the known-for line is the department and up to three of their best-known titles. */
@@ -69,24 +76,26 @@ object PersonParsing {
             profilePath = response.profilePath?.takeIf { it.isNotBlank() },
             knownForDepartment = response.knownForDepartment?.trim()?.takeIf { it.isNotEmpty() },
             credits = cast + crew,
+            gender = response.gender,
         )
     }
 
     /**
-     * A cast credit, or null for one that isn't a role: on TV, talk / news / reality shows and appearing as oneself
-     * (Tom Hanks has 96 TV cast credits, ~70 of them talk shows, award shows and "Self" interviews); in movies,
-     * appearing as oneself in a documentary (or archive footage in one) or in a film with no genre at all (TMDB's
-     * making-ofs, award galas). Playing yourself in a comedy is kept.
+     * A cast credit (null only for unusable data), marked [PersonCredit.appearance] when it isn't a role: on TV, talk /
+     * news / reality shows and appearing as oneself (Tom Hanks has 96 TV cast credits, ~70 of them talk shows, award
+     * shows and "Self" interviews); in movies, appearing as oneself in a documentary (or archive footage in one) or in a
+     * film with no genre at all (TMDB's making-ofs, award galas). Playing yourself in a comedy is a role.
+     * Fork (2026-11-24): appearances were dropped here; they are kept, marked, for the person page's switch.
      */
     fun castCredit(credit: TmdbPersonCredit): PersonCredit? {
         val base = credit(credit, ACTING, credit.character) ?: return null
         val genres = credit.genreIds.orEmpty()
         val asSelf = base.role != null && SELF_ROLE.matches(base.role)
-        when (base.type) {
-            MediaType.tvshow -> if (asSelf || genres.any { it in APPEARANCE_TV_GENRES }) return null
-            MediaType.movie -> if (asSelf && (genres.isEmpty() || DOCUMENTARY in genres)) return null
+        val appearance = when (base.type) {
+            MediaType.tvshow -> asSelf || genres.any { it in APPEARANCE_TV_GENRES }
+            MediaType.movie -> asSelf && (genres.isEmpty() || DOCUMENTARY in genres)
         }
-        return base
+        return if (appearance) base.copy(appearance = true) else base
     }
 
     private const val DOCUMENTARY = 99

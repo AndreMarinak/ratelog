@@ -130,39 +130,64 @@ class BrowseBarViews(
      * keeps the menu open on its years (fork, user 2026-11-24: the menu used to close on the swap, so the years
      * were never seen).
      */
-    private fun yearMenu(f: BrowseFilters, today: LocalDate, m: Messages): BarMenu {
+    private fun yearMenu(f: BrowseFilters, today: LocalDate, m: Messages): BarMenu =
+        yearMenu(f.decade, f.year, f.isMovie, today, m, yearBox = null) { decade, year -> f.copy(decade = decade, year = year).href() }
+
+    /**
+     * Fork (2026-11-24): the same Year menu for another page (the search page's, `search/SearchYearMenu.kt`), which
+     * writes its own links: [href] gets the decade and year a link chooses (a year inside a decade gets both).
+     * [yearBox] adds a "Type a year" box at the top. No Upcoming entry unless [withUpcoming].
+     */
+    fun yearMenu(
+        decade: BrowseDecade?,
+        year: BrowseYear?,
+        withUpcoming: Boolean,
+        yearBox: BarYearBox? = null,
+        locale: Locale = LocaleContextHolder.getLocale(),
+        href: (BrowseDecade?, BrowseYear?) -> String,
+    ): BarMenu = yearMenu(decade, year, withUpcoming, LocalDate.now(clock), Messages(messages, locale), yearBox, href)
+
+    private fun yearMenu(
+        decade: BrowseDecade?,
+        year: BrowseYear?,
+        withUpcoming: Boolean,
+        today: LocalDate,
+        m: Messages,
+        yearBox: BarYearBox?,
+        href: (BrowseDecade?, BrowseYear?) -> String,
+    ): BarMenu {
         val currentDecade = BrowseFilters.decadeOf(today.year).startYear
-        val effective = f.effectiveDecade
-        val earlierActive = f.year != BrowseYear.Upcoming && when (effective) {
+        val effective = BrowseFilters.effectiveDecade(decade, year)
+        val earlierActive = year != BrowseYear.Upcoming && when (effective) {
             BrowseDecade.Earlier -> true
             is BrowseDecade.Of -> effective.startYear <= BrowseDecade.Earlier.LAST_YEAR
             null -> false
         }
-        fun single(year: Int) = f.copy(decade = null, year = BrowseYear.Of(year))
+        fun single(y: Int) = href(null, BrowseYear.Of(y))
         val shortcuts = buildList {
-            add(BarLink(m("browse.year.any"), f.withDecade(null).href(), active = f.decade == null && f.year == null))
-            add(BarLink(m("browse.year.this"), single(today.year).href(), active = f.year == BrowseYear.Of(today.year), hint = today.year.toString(), option = "this-year"))
-            add(BarLink(m("browse.year.last"), single(today.year - 1).href(), active = f.year == BrowseYear.Of(today.year - 1), hint = (today.year - 1).toString(), option = "last-year"))
-            if (f.isMovie) add(BarLink(m("browse.year.upcoming"), f.withYear(BrowseYear.Upcoming).href(), active = f.year == BrowseYear.Upcoming))
+            add(BarLink(m("browse.year.any"), href(null, null), active = decade == null && year == null))
+            add(BarLink(m("browse.year.this"), single(today.year), active = year == BrowseYear.Of(today.year), hint = today.year.toString(), option = "this-year"))
+            add(BarLink(m("browse.year.last"), single(today.year - 1), active = year == BrowseYear.Of(today.year - 1), hint = (today.year - 1).toString(), option = "last-year"))
+            if (withUpcoming) add(BarLink(m("browse.year.upcoming"), href(null, BrowseYear.Upcoming), active = year == BrowseYear.Upcoming))
         }
         val decades = buildList {
             for (start in currentDecade downTo 1960 step 10) {
                 add(
                     BarLink(
-                        decadeLabel(start), f.withDecade(BrowseDecade.Of(start)).href(),
+                        decadeLabel(start), href(BrowseDecade.Of(start), null),
                         active = (effective as? BrowseDecade.Of)?.startYear == start,
                         keepOpen = true, option = "decade-$start",
                     ),
                 )
             }
-            add(BarLink(m("browse.year.earlier"), f.withDecade(BrowseDecade.Earlier).href(), active = earlierActive, keepOpen = true, option = "decade-earlier"))
+            add(BarLink(m("browse.year.earlier"), href(BrowseDecade.Earlier, null), active = earlierActive, keepOpen = true, option = "decade-earlier"))
         }
         val sub: BarSection? = when {
-            f.year == BrowseYear.Upcoming -> null
+            year == BrowseYear.Upcoming -> null
             effective == BrowseDecade.Earlier -> BarSection(
                 heading = m("browse.year.older.decades"),
                 links = (1950 downTo 1900 step 10).map { start ->
-                    BarLink(decadeLabel(start), f.withDecade(BrowseDecade.Of(start)).href(), active = false, keepOpen = true, option = "decade-$start")
+                    BarLink(decadeLabel(start), href(BrowseDecade.Of(start), null), active = false, keepOpen = true, option = "decade-$start")
                 },
                 layout = "grid",
                 reveal = true,
@@ -172,7 +197,7 @@ class BrowseBarViews(
                 BarSection(
                     heading = m("browse.year.in.decade", decadeLabel(effective.startYear)),
                     links = (effective.startYear..last).map { y ->
-                        BarLink(y.toString(), f.copy(decade = effective, year = BrowseYear.Of(y)).href(), active = f.year == BrowseYear.Of(y), option = "year-$y")
+                        BarLink(y.toString(), href(effective, BrowseYear.Of(y)), active = year == BrowseYear.Of(y), option = "year-$y")
                     },
                     layout = "years",
                     reveal = true,
@@ -184,12 +209,13 @@ class BrowseBarViews(
             id = "year",
             label = m("browse.menu.year"),
             icon = "calendar-days",
-            value = yearValue(f, m),
+            value = yearValue(decade, year, m),
             sections = listOfNotNull(
                 BarSection(null, shortcuts, "grid"),
                 BarSection(m("browse.year.decades"), decades, "grid"),
                 sub,
             ),
+            yearBox = yearBox,
         )
     }
 
@@ -441,10 +467,10 @@ class BrowseBarViews(
 
     // --- labels ---
 
-    private fun yearValue(f: BrowseFilters, m: Messages): String? = when (val year = f.year) {
+    private fun yearValue(decade: BrowseDecade?, year: BrowseYear?, m: Messages): String? = when (year) {
         is BrowseYear.Of -> year.year.toString()
         BrowseYear.Upcoming -> m("browse.year.upcoming")
-        null -> f.decade?.let { decadeValue(it, m) }
+        null -> decade?.let { decadeValue(it, m) }
     }
 
     private fun decadeValue(decade: BrowseDecade, m: Messages) = when (decade) {

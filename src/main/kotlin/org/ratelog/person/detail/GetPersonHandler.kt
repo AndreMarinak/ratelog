@@ -26,6 +26,8 @@ data class GetPersonQuery(
     val department: String? = null,
     val type: FilmographyType = FilmographyType.ALL,
     val sort: FilmographySort = FilmographySort.NEWEST,
+    /** Fork (2026-11-24): also show appearances as oneself (talk shows, award shows, "Self") in Acting. */
+    val appearances: Boolean = false,
 )
 
 sealed interface GetPersonError {
@@ -47,6 +49,10 @@ data class PersonPage(
     val entries: List<FilmographyEntry>,
     /** The viewer's status / score per title (titles without either are left out). */
     val marks: Map<Pair<MediaType, Int>, TitleMark>,
+    /** Fork (2026-11-24): the appearances switch is on. */
+    val appearances: Boolean = false,
+    /** Fork (2026-11-24): titles the switch adds to Acting for this type (0: no switch). */
+    val appearanceCount: Int = 0,
 )
 
 @Service
@@ -64,13 +70,15 @@ class GetPersonHandler(
                 else -> GetPersonError.TmdbFailed
             }
         }.bind()
-        val departments = Filmography.departments(person.credits)
+        // Fork (2026-11-24): appearances as oneself only count (tabs, types, tiles) with the switch on.
+        val credits = Filmography.visible(person.credits, query.appearances)
+        val departments = Filmography.departments(credits)
         val department = Filmography.pick(departments, query.department, person.knownForDepartment)
-        val inDepartment = department?.let { d -> person.credits.filter { it.department == d.name } }.orEmpty()
+        val inDepartment = department?.let { d -> credits.filter { it.department == d.name } }.orEmpty()
         val typeCounts = FilmographyType.entries.associateWith { type ->
             inDepartment.filter { type.matches(it.type) }.distinctBy { it.type to it.tmdbId }.size
         }
-        val entries = department?.let { Filmography.entries(person.credits, it.name, query.type, query.sort) }.orEmpty()
+        val entries = department?.let { Filmography.entries(credits, it.name, query.type, query.sort) }.orEmpty()
         PersonPage(
             person = person,
             departments = departments,
@@ -80,6 +88,8 @@ class GetPersonHandler(
             typeCounts = typeCounts,
             entries = entries,
             marks = query.userId?.let { marks(it, entries) }.orEmpty(),
+            appearances = query.appearances,
+            appearanceCount = Filmography.appearanceCount(person.credits, query.type),
         )
     }
 
