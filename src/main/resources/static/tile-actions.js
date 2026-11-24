@@ -181,13 +181,15 @@
             const rated = star.classList.contains('is-on');
             const scoreEl = star.querySelector('.tile-rate-score');
             const score = rated && scoreEl ? scoreEl.textContent.trim() : '';
-            const movie = star.hasAttribute('data-tile-rate');
+            // Fork: shows open the same picker (a whole-show score); one rated by season shows its average there.
+            const tv = star.dataset.tileRate === 'tv';
+            const seasons = tv && star.dataset.seasons === 'true';
             const detailed = star.dataset.detailed === 'true';
             let label = d.labelRate;
-            let hint = d.labelRateHint;
-            if (!movie) { label = d.labelRateSeasons; hint = d.labelRateSeasonsHint; } else if (detailed) { label = d.labelRateDetailed; hint = d.labelRateDetailedHint; } else if (rated) { label = d.labelRateYours; hint = d.labelRateYoursHint; }
+            let hint = tv ? d.labelRateShowHint : d.labelRateHint;
+            if (seasons) { label = d.labelRateSeasons; hint = d.labelRateSeasonsAvgHint; } else if (detailed) { label = d.labelRateDetailed; hint = d.labelRateDetailedHint; } else if (rated) { label = d.labelRateYours; hint = d.labelRateYoursHint; }
             const end = score ? scoreEnd(score) : [];
-            if (!movie || !score) end.push(icon('chevron-right'));
+            if (seasons || !score) end.push(icon('chevron-right'));
             row('rate', { on: rated, icon: 'star', label, hint, end });
         } else {
             row('rate', null);

@@ -7,7 +7,12 @@ import org.junit.jupiter.api.Test
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.context.support.StaticApplicationContext
-import org.thymeleaf.context.Context
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
+import org.springframework.security.web.csrf.DefaultCsrfToken
+import org.thymeleaf.context.WebContext
+import org.thymeleaf.web.servlet.JakartaServletWebApplication
 import org.thymeleaf.spring6.SpringTemplateEngine
 import org.thymeleaf.spring6.expression.ThymeleafEvaluationContext
 import org.thymeleaf.templatemode.TemplateMode
@@ -19,8 +24,6 @@ import java.util.Locale
  * (user, 2026-11-23: "it reloads the page after each rating"), and still be plain posts without JS.
  */
 class TvRatingTemplatesTest {
-
-    data class Csrf(val parameterName: String = "_csrf", val token: String = "t0k3n")
 
     data class Show(val id: Long, val tmdbId: Int, val name: String)
 
@@ -49,9 +52,11 @@ class TvRatingTemplatesTest {
     fun tearDown() = LocaleContextHolder.resetLocaleContext()
 
     private fun render(template: String, fragment: String, vars: Map<String, Any?>): String {
-        val context = Context(Locale.ENGLISH).apply {
+        // The modals use @{...} links, which need a web context.
+        val application = JakartaServletWebApplication.buildApplication(MockServletContext())
+        val context = WebContext(application.buildExchange(MockHttpServletRequest(), MockHttpServletResponse()), Locale.ENGLISH).apply {
             setVariable(ThymeleafEvaluationContext.THYMELEAF_EVALUATION_CONTEXT_CONTEXT_VARIABLE_NAME, ThymeleafEvaluationContext(appContext, null))
-            setVariable("_csrf", Csrf())
+            setVariable("_csrf", DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "t0k3n"))
             vars.forEach { (k, v) -> setVariable(k, v) }
         }
         return engine.process(template, setOf(fragment), context)
@@ -76,5 +81,20 @@ class TvRatingTemplatesTest {
 
         assertTrue(html.contains("""action="/tvshows/delete/7""""), html)
         assertTrue(html.contains("""data-inplace="#seasons, .title-panel""""), html)
+    }
+
+    @Test
+    fun `Rate show gives the whole show one score, in place, with a delete form for edit mode`() {
+        val html = render("fragments/rate-show-modal", "rateShowModal(show)", mapOf("show" to show))
+
+        assertTrue(html.contains("""id="rateShowModal""""), html)
+        assertTrue(html.contains("""action="/tv/rate/show""""), html)
+        assertTrue(html.contains("""action="/tv/rate/show/delete""""), html)
+        assertTrue(Regex("""<form[^>]*action="/tv/rate/show"[^>]*data-inplace="#seasons, .title-panel"""").containsMatchIn(html), html)
+        assertTrue(Regex("""<form[^>]*action="/tv/rate/show/delete"[^>]*hidden""").containsMatchIn(html), "delete only shows in edit mode")
+        assertTrue(html.contains("""data-confirm="Delete your whole-show score?""""), html)
+        assertTrue(html.contains("""data-name="score""""), "the quick-rating slider")
+        assertTrue(html.contains("""name="tvShowId" value="7""""), html)
+        assertTrue(html.contains("If you rate any season, your score becomes the average of your rated seasons"), html)
     }
 }

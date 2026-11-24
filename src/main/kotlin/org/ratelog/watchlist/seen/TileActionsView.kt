@@ -33,7 +33,10 @@ data class TileActionsView(
     /** Watching / Dropped (or Watched on a title with no Seen toggle): shown where the bookmark would be. */
     val badgeIcon: String?,
     val badgeKey: String?,
-    /** The viewer's score: a movie's rating, a show's average over its rated seasons. Null when unrated. */
+    /**
+     * The viewer's score: a movie's rating; a show's average over its rated seasons, or (fork) its whole-show score when
+     * no season is rated. Null when unrated.
+     */
     val score: Double? = null,
     /**
      * A detailed (five-category) movie rating, when the page already knows it (the Ratings tab). Elsewhere the
@@ -43,7 +46,10 @@ data class TileActionsView(
 ) {
     val canToggleSeen: Boolean get() = !upcoming
 
-    /** ★ on every released title: movies open the quick-rating picker (tile-rate.js), shows link to their seasons. */
+    /**
+     * ★ on every released title: opens the quick-rating picker (tile-rate.js). Fork (2026-11-23): a show gets a
+     * whole-show score there; one rated by season shows its average and links to its seasons.
+     */
     val canRate: Boolean get() = !upcoming
 
     val isMovie: Boolean get() = type == "movie"
@@ -57,18 +63,17 @@ data class TileActionsView(
     val titleHref: String get() = if (isMovie) "/movie/$tmdbId" else "/tv/$tmdbId"
 
     /**
-     * Where ★ goes without JS (and on a middle-click): a movie's page opens its Rate / Edit rating modal (`?rate=1`,
-     * tile-rate.js), a show's page scrolls to its seasons (shows are rated per season).
+     * Where ★ goes without JS (and on a middle-click): the title page opens its Rate / Edit rating modal (`?rate=1`,
+     * tile-rate.js); a show rated by season scrolls to its seasons there instead.
      */
-    val rateHref: String get() = if (isMovie) "$titleHref?rate=1" else "$titleHref#seasons"
+    val rateHref: String get() = "$titleHref?rate=1"
 
     /** Where the list button goes without JS: the title page, which opens its add-to-list sheet (`?lists=1`). */
     val listsHref: String get() = "$titleHref?lists=1"
 
     /** Tooltip / label key for ★ (`{0}` is [scoreLabel]). */
     val rateLabelKey: String get() = when {
-        !isMovie && score != null -> "tile.rate.on.tv"
-        !isMovie -> "tile.rate.seasons"
+        // Fork: a show's ★ rates it as a whole, like a movie (a show rated by season: the template's `seasons` label).
         score != null -> "tile.rate.on"
         else -> "tile.rate.mark"
     }

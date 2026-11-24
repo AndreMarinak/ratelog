@@ -32,7 +32,7 @@ class InMemoryBrowseLibraryRepository(
                 }
                 MediaType.tvshow -> shows.findByTmdbId(TmdbId(tmdbId))?.let { show ->
                     val rating = tvRatings.findByTvShowIdAndUserId(show.id!!, userId)
-                    val rated = rating != null && rating.seasonRatings.isNotEmpty()
+                    val rated = rating != null && rating.isRated
                     LibraryMark(
                         score = rating?.score?.value?.takeIf { rated },
                         rated = rated,

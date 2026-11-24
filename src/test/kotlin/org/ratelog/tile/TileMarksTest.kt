@@ -16,6 +16,7 @@ class FakeTileMarksRepository(
     var listed: Set<TileKey> = emptySet(),
     var detailed: Set<Int> = emptySet(),
     var failure: RuntimeException? = null,
+    var seasonRated: Set<Int> = emptySet(),
 ) : TileMarksRepository {
     var listQueries = 0
     var detailedQueries = 0
@@ -33,6 +34,11 @@ class FakeTileMarksRepository(
         lastUser = userId
         failure?.let { throw it }
         return detailed
+    }
+
+    override fun findSeasonRatedShows(userId: User.Id): Set<Int> {
+        failure?.let { throw it }
+        return seasonRated
     }
 }
 

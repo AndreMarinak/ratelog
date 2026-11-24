@@ -40,6 +40,10 @@ data class GetTvShowDetailResult(
     val nextSeasonAirDate: String?,
     val seasons: List<SeasonInfo>,
     val overallScore: Double?,
+    /** Fork: the whole-show score (used as [overallScore] only while no season is rated). */
+    val showScore: Double?,
+    /** Fork: how many seasons are rated; with any, [overallScore] is their average. */
+    val ratedSeasonCount: Int,
     val isRated: Boolean,
     val isFollowed: Boolean,
     val userLists: List<CustomList>,
@@ -141,7 +145,9 @@ class DetailTvShowHandler(
             nextSeasonAirDate = savedShow.nextSeasonAirDate?.toString(),
             seasons = seasons,
             overallScore = rating?.score?.value,
-            isRated = rating != null,
+            showScore = rating?.showScore?.value,
+            ratedSeasonCount = rating?.seasonRatings?.size ?: 0,
+            isRated = rating?.isRated == true,
             isFollowed = isFollowed,
             userLists = userLists,
             watchProviders = watchProviders,

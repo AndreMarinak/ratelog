@@ -28,6 +28,9 @@ import org.ratelog.test.MovieFactory
 import org.ratelog.test.MutableClock
 import org.ratelog.test.RatingFactory
 import org.ratelog.test.UserFactory
+import org.ratelog.tvshow.rating.show.DeleteShowRatingHandler
+import org.ratelog.tvshow.rating.show.RateShowHandler
+import org.ratelog.tvshow.rating.show.TvTileRateHandler
 import org.ratelog.watchlist.MediaStatus
 import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.autowatched.AutoWatchedRatingRepository
@@ -46,12 +49,15 @@ class TileRateControllerTest {
     private val statuses = InMemoryMediaStatusRepository()
     private val movies = InMemoryMovieRepository()
     private val ratings = AutoWatchedRatingRepository(InMemoryRatingRepository(), MarkWatchedOnRatingHandler(statuses, InMemoryTvShowRepository(), clock))
-    private val reader = SeenStateReader(statuses, ratings, InMemoryTvRatingRepository())
+    private val tvRatings = InMemoryTvRatingRepository()
+    private val shows = InMemoryTvShowRepository()
+    private val reader = SeenStateReader(statuses, ratings, tvRatings)
     private val importer: MediaImporter = mock()
     private val controller = TileRateController(
         importer,
         TileRateHandler(movies, ratings, AddRatingHandler(ratings), UpdateRatingHandler(ratings), reader, clock),
         TileDeleteRatingHandler(ratings, DeleteRatingHandler(movies, ratings), reader),
+        TvTileRateHandler(shows, tvRatings, RateShowHandler(shows, tvRatings, clock), DeleteShowRatingHandler(tvRatings), reader, clock),
         BrowseBarViewsTest.testMessageSource(),
     )
 
@@ -143,7 +149,8 @@ class TileRateControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, invalid.statusCode)
         assertEquals("Pick a score from 1 to 10.", invalid.body!!.message)
 
-        val tv = controller.rateJson(user, 949, "tv", 8.0)
+        // Fork: `tv` rates a show as a whole (TvTileRateTest); other types are refused before any lookup.
+        val tv = controller.rateJson(user, 949, "book", 8.0)
         assertEquals(HttpStatus.BAD_REQUEST, tv.statusCode)
         verify(importer, never()).ensure(eq(949), eq(MediaType.tvshow), any())
 

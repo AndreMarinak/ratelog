@@ -59,7 +59,7 @@ interface UnratedSeenDAO : Repository<UnratedSeenMarker, Long> {
         FROM media_statuses ms
         JOIN tv t ON t.id = ms.media_id
         WHERE ms.user_id = :userId AND ms.media_type = 'tvshow' AND ms.status = 'WATCHED'
-          AND NOT EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = ms.user_id AND sr.tv_show_id = t.id)
+          AND NOT (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = ms.user_id) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = t.id AND tr.user_id = ms.user_id AND tr.show_score IS NOT NULL))
         ORDER BY ms.updated_at_epoch_ms DESC, t.tmdb_id DESC
         LIMIT :limit
         """
@@ -73,7 +73,7 @@ interface UnratedSeenDAO : Repository<UnratedSeenMarker, Long> {
                    AND NOT EXISTS (SELECT 1 FROM movie_ratings r WHERE r.user_id = ms.user_id AND r.movie_id = ms.media_id))
              + (SELECT COUNT(*) FROM media_statuses ms
                  WHERE ms.user_id = :userId AND ms.media_type = 'tvshow' AND ms.status = 'WATCHED'
-                   AND NOT EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = ms.user_id AND sr.tv_show_id = ms.media_id))
+                   AND NOT (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = ms.media_id AND sr.user_id = ms.user_id) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = ms.media_id AND tr.user_id = ms.user_id AND tr.show_score IS NOT NULL)))
         """
     )
     fun count(userId: Long): Long

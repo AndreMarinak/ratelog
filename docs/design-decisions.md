@@ -264,7 +264,9 @@ buttons as well, aka anywhere I see a movie tile".
   (passing the stored review back, so changing the score keeps it) and `DeleteRatingHandler`, so validation, the DB rules and the
   auto-Watched repository decorator apply unchanged. Upcoming movies are refused, like Seen. `fetch` gets JSON, a plain post
   (the picker's fallback) redirects back with a flash message.
-- **Shows: ★ goes to the show's seasons** (`/tv/{id}#seasons`, the same as the title page's "Rate seasons") and the chip shows
+- *(Superseded 2026-11-23 by "TV: rate a show as a whole, or by season" below: ★ on a show now opens the picker for a
+  whole-show score, and only a show rated by season links to its seasons.)*
+  **Shows: ★ goes to the show's seasons** (`/tv/{id}#seasons`, the same as the title page's "Rate seasons") and the chip shows
   the show's score, the average of your rated seasons. Shows are rated per season, so the tile can't rate "the show"; a season
   picker on the tile was left out because TMDB rows don't carry the season list and the title page already shows it with each
   season's rating.
@@ -306,6 +308,7 @@ Requested by the user on 2026-11-23: "there's a mass mark what you've seen but i
   in a try/catch so blocked storage just means "on"). While it's off the switch also shows in the ★ picker, so it can be turned
   back on.
 - **Movies only:** shows are rated per season, and a "Rate seasons" link after every ticked show would only slow tick-off down.
+  *(Since 2026-11-23 a show can be rated as a whole from the same picker, so the prompt covers unrated shows too.)*
   Not after the watchlist page's Seen button either: that tile leaves the tab at once.
 
 ### To rate: seen but not rated (2026-11-23)
@@ -576,6 +579,49 @@ the movie already" / "also the green eye is a bit bright/stands out little too m
 - This replaces the visibility rule of "Rate and add to list from any poster" above ("off controls ... always visible on touch
   and at 900px and below", the bright green eye).
 
+### TV: rate a show as a whole, or by season; seasons save in place (2026-11-23)
+
+Requested by the user on 2026-11-23: "on a tv show rating when im rating mult seasons it reloads the page after each rating"
+and "for tv shows I should be able to rate show as a whole and then if u rate any season at all then the overall rating
+becomes the average".
+
+- **Season ratings save in place.** The season rate modal and the delete confirmation post through inplace.js
+  (`data-inplace="#seasons, .title-panel"`): the modal closes, a toast confirms, the season cards and the action panel (your
+  overall score, Seen) are swapped in from the page. Rating several seasons in a row never leaves or scrolls the page. Card
+  clicks are delegated (`static/tv-seasons.js`, an open card stays open) and `breakdown.js` redraws category bars in
+  swapped-in regions (`inplace:swapped`, fired by inplace.js after a swap). Without JS: a post and a redirect, as before.
+- **One score for the whole show.** A show can get one 0-10 score (the quick-rating slider on the page, 1-10 on a poster's
+  picker), without rating any season. Stored in `tv_ratings.show_score` (`V1140`, with `show_rated_at_epoch_ms` for the feed and
+  "Recently rated"), not as a fake season 0: TMDB uses season 0 for Specials.
+- **The rule: rated seasons win.** A show's score is the average of its rated seasons (quick and detailed alike, as before)
+  when at least one is rated, else its whole-show score. `tv_ratings.score` keeps holding the show's score under this rule
+  (`TvRating.updateScore`), so every reader that already used it (Ratings TV ranking and its filters, home rows, poster chips,
+  watchlist, tags, list progress, the API) gets the rule without a second code path. Category rankings only use detailed
+  seasons, so a whole-show-only show is left out of them, like a show rated only quickly.
+- **The whole-show score is kept, not dropped, once a season is rated** (unused while any season is rated). Deleting every
+  season rating brings it back as the show's score; the page says so ("Your whole-show score (8.00) is replaced by the season
+  average. It comes back if you delete every season rating.") and offers "Delete whole-show score" there. Dropping it silently
+  would lose a score the user gave on purpose; a rating row is only deleted when it has neither seasons nor a whole-show score.
+- **TV page:** the panel's fourth button is "Rate" / "Edit rating" with your whole-show score while no season is rated (it
+  opens the Rate show modal, like a movie), and "Rate seasons" with the season average once any is rated (it jumps to them).
+  The season list starts with a "Whole show" card: Rate show / Edit and a hint that rating a season replaces it, or
+  "Average of N seasons" with the average and the explanation above. Edit mode of the modal has "Delete rating" (asks first).
+  `?rate=1` opens the modal (or scrolls to the seasons of a show rated by season): that is where a poster's ★ goes without JS.
+- **Posters:** a show's ★ (and the "⋯" chooser's Rate row) opens the same picker as movies: one tap sets the whole-show score,
+  "Delete rating" removes it (`POST /movie/rate/tile` with `type=tv`, `TvTileRateHandler`). A show rated by season shows its
+  average in the picker ("Average of your seasons") with "Rate seasons" to its page instead of score buttons, like a movie's
+  detailed rating; the server refuses a whole-show score there too (`409`, `seasons: true`). `TileMarks.ratedBySeason` (one
+  query per page) tells the tile which shows those are. The "Rate it?" prompt after Seen now covers shows too.
+- **Rated means seen, like movies:** a whole-show score marks the show Watched (from no status, Want to watch or Watching;
+  Dropped and Watched are left alone, `MarkWatchedOnRating.wholeShow`). Rating a season still only makes it Watching until
+  every aired season is rated. "Rated" everywhere (Seen state, To rate / "Seen, not rated", list progress, Discover's
+  hide-rated) means a rated season or a whole-show score. Deleting never touches the status.
+- **Feed / profile:** a whole-show rating appears as one entry without a season label, only while no season is rated (once one
+  is, the season entries stand for the show).
+- **API:** `PUT` / `DELETE /api/v1/ratings/tv/{tmdbId}` set and delete the whole-show score; `TvRating` gains `scoreSource`
+  (`seasons` / `show`) and `showScore` ([api.md](api.md#ratings)).
+*(This replaces "Shows: ★ goes to the show's seasons" in "Rate and add to list from any poster" above.)*
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -618,11 +664,13 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |
 | Rate / edit / delete rating (modals) | reload | **reload kept** for movies: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
 | TV page: rate / edit / delete a season (modals) | reload | in place (2026-11-23, user: "it reloads the page after each rating"): `data-inplace="#seasons, .title-panel"`, the modal closes, toast, the season cards and the panel's overall score and Seen are swapped in; rating several seasons in a row never leaves the page |
+| TV page: Rate show (whole-show score), edit, delete, "Delete whole-show score" | — | in place (2026-11-23): same regions as the seasons, toast |
+| Poster ★ / "⋯" Rate on a show: whole-show score, change, delete | — (★ went to the seasons) | in place, like movies (`tile-rate.js`, `type=tv`); a show rated by season shows its average and "Rate seasons", a **page load** (its seasons) |
 | Poster ★: rate, change or delete a quick rating (every poster) | — (title page only) | in place (`tile-rate.js`, `POST /movie/rate/tile`, JSON): every copy's chip and eye update, list progress counts, toast |
 | Poster ★ on a detailed rating, "Detailed rating…" | — | **page load**: the title page opens its rate modal (`?rate=edit` / `?rate=detailed`); five categories need the full form |
 | Poster Add to list (every poster) | — (title page only) | in place: the title page's sheet loads on the page (`GET /tile/lists`), ticks save in place, the poster's button ticks; New list stays on the page |
 | "Rate it?" after Seen on a poster / in tick-off | — | in place, optional prompt on that tile; Skip or the next tap closes it |
-| Poster "⋯" chooser on touch screens: Watchlist, Seen, Rate, Add to list | — | in place: opening it is local (no request); each row saves exactly like the poster button it stands for (toast, every copy updates); Rate and Add to list open the same picker / sheet; a show's Rate seasons is a **page load** (its seasons) |
+| Poster "⋯" chooser on touch screens: Watchlist, Seen, Rate, Add to list | — | in place: opening it is local (no request); each row saves exactly like the poster button it stands for (toast, every copy updates); Rate and Add to list open the same picker / sheet (since 2026-11-23 shows too; only a show rated by season links to its seasons, a **page load**) |
 | To rate view: rate a title | — | in place: the tile leaves, counts drop |
 | Watchlist poster ★ | — | in place: the tile leaves To watch (rating marks it seen), tab counts move |
 | Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |

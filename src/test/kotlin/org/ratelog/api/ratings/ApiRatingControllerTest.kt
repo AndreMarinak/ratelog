@@ -26,6 +26,8 @@ import org.ratelog.test.InMemoryTvShowRepository
 import org.ratelog.test.MovieFactory
 import org.ratelog.test.TvShowFactory
 import org.ratelog.test.UserFactory
+import org.ratelog.tvshow.rating.show.DeleteShowRatingHandler
+import org.ratelog.tvshow.rating.show.RateShowHandler
 import org.ratelog.tmdb.TmdbClient
 import org.ratelog.tmdb.TmdbError
 import org.ratelog.tvshow.TvDescription
@@ -57,6 +59,8 @@ class ApiRatingControllerTest {
         addSeasonRatingHandler = AddSeasonRatingHandler(tvRatings),
         updateSeasonRatingHandler = UpdateSeasonRatingHandler(tvRatings),
         deleteSeasonRatingHandler = DeleteSeasonRatingHandler(shows, tvRatings),
+        rateShowHandler = RateShowHandler(shows, tvRatings),
+        deleteShowRatingHandler = DeleteShowRatingHandler(tvRatings),
     )
 
     private fun givenLocalMovie(tmdbId: Int = 949, title: String = "Heat") {
@@ -264,5 +268,68 @@ class ApiRatingControllerTest {
     fun `invalid tmdb ids are rejected`() {
         assertApiError(HttpStatus.BAD_REQUEST, "invalid_parameter") { controller.rateMovie(user, 0, RatingRequest(score = 5.0)) }
         assertApiError(HttpStatus.BAD_REQUEST, "invalid_parameter") { controller.deleteMovie(user, -3) }
+    }
+
+    // --- Fork (2026-11-23): a whole-show score ---
+
+    @Test
+    fun `PUT tv rates the show as a whole, GET returns it as the show's score`() {
+        givenLocalShow()
+
+        val created = controller.rateShow(user, 1396, ShowRatingRequest(score = 8.0))
+
+        assertEquals(HttpStatus.CREATED, created.statusCode)
+        assertEquals(8.0, created.body!!.score)
+        assertEquals("show", created.body!!.scoreSource)
+        assertEquals(8.0, created.body!!.showScore)
+        assertTrue(created.body!!.seasons.isEmpty())
+        assertEquals(HttpStatus.OK, controller.rateShow(user, 1396, ShowRatingRequest(score = 7.5)).statusCode)
+        val shown = controller.show(user, 1396)
+        assertEquals(7.5, shown.score)
+        assertEquals("show", shown.scoreSource)
+        assertEquals(1, controller.list(user, "tv").tv!!.size, "listed with the other rated shows")
+    }
+
+    @Test
+    fun `rated seasons replace the whole-show score with their average, and deleting them brings it back`() {
+        givenLocalShow()
+        controller.rateShow(user, 1396, ShowRatingRequest(score = 8.0))
+
+        controller.rateSeason(user, 1396, 1, RatingRequest(score = 6.0))
+        val averaged = controller.rateSeason(user, 1396, 2, RatingRequest(score = 7.0)).body!!
+        assertEquals(6.5, averaged.score)
+        assertEquals("seasons", averaged.scoreSource)
+        assertEquals(8.0, averaged.showScore, "kept, unused")
+
+        controller.deleteSeason(user, 1396, 1)
+        controller.deleteSeason(user, 1396, 2)
+        val back = controller.show(user, 1396)
+        assertEquals(8.0, back.score)
+        assertEquals("show", back.scoreSource)
+    }
+
+    @Test
+    fun `DELETE tv removes only the whole-show score, 404 when there is none`() {
+        givenLocalShow()
+        controller.rateShow(user, 1396, ShowRatingRequest(score = 8.0))
+        controller.rateSeason(user, 1396, 1, RatingRequest(score = 6.0))
+
+        assertEquals(HttpStatus.NO_CONTENT, controller.deleteShowRating(user, 1396).statusCode)
+        val left = controller.show(user, 1396)
+        assertEquals(6.0, left.score)
+        assertNull(left.showScore)
+        assertApiError(HttpStatus.NOT_FOUND, "not_found") { controller.deleteShowRating(user, 1396) }
+
+        controller.deleteSeason(user, 1396, 1)
+        assertNull(tvRatings.findByTvShowIdAndUserId(showId(1396), user.id!!), "nothing left: the rating is gone")
+    }
+
+    @Test
+    fun `PUT tv without a score or out of range is rejected`() {
+        givenLocalShow()
+
+        assertApiError(HttpStatus.BAD_REQUEST, "invalid_score") { controller.rateShow(user, 1396, ShowRatingRequest()) }
+        assertApiError(HttpStatus.BAD_REQUEST, "invalid_score") { controller.rateShow(user, 1396, ShowRatingRequest(score = 11.0)) }
+        assertNull(tvRatings.findByTvShowIdAndUserId(showId(1396), user.id!!))
     }
 }

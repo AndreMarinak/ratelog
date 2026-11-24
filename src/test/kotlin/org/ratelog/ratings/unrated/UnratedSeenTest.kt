@@ -77,7 +77,7 @@ class UnratedSeenTest {
         assertFalse(movie.actions.seenLocked)
         assertNull(movie.actions.score)
         assertEquals("tile.rate.mark", movie.actions.rateLabelKey)
-        assertEquals("/tv/1396#seasons", view.tiles.first { !it.isMovie }.actions.rateHref)
+        assertEquals("/tv/1396?rate=1", view.tiles.first { !it.isMovie }.actions.rateHref)
     }
 
     @Test

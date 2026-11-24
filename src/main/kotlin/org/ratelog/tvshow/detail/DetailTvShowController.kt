@@ -21,7 +21,14 @@ data class TvShowDetailResponse(
     val overallScore: Double?,
     val isFollowed: Boolean,
     val hasRating: Boolean,
-)
+    /** Fork: the whole-show score, kept but unused while seasons are rated. */
+    val showScore: Double? = null,
+    /** Fork: rated seasons; with any, [overallScore] is "Average of N seasons". */
+    val ratedSeasonCount: Int = 0,
+) {
+    /** Fork: at least one season is rated, so the overall score is their average. */
+    val ratedBySeason: Boolean get() = ratedSeasonCount > 0
+}
 
 data class SeasonResponse(
     val seasonNumber: Int,
@@ -95,5 +102,7 @@ class DetailTvShowController(
             overallScore = result.overallScore,
             isFollowed = result.isFollowed,
             hasRating = result.isRated,
+            showScore = result.showScore,
+            ratedSeasonCount = result.ratedSeasonCount,
         )
 }

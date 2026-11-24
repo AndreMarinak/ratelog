@@ -65,12 +65,14 @@ data class ExternalScoresDto(
 )
 
 data class UserRatingDto(
-    /** Movies: the rating's score. TV: the average over rated seasons. 0-10. */
+    /** Movies: the rating's score. TV: the average over rated seasons, or the whole-show score when none is rated. 0-10. */
     val score: Double?,
     val reviewTitle: String?,
     val reviewText: String?,
     /** TV only. */
     val seasons: List<SeasonRatingDto>?,
+    /** TV only (fork): the whole-show score; it is [score] only while no season is rated. */
+    val showScore: Double? = null,
 )
 
 data class SeasonRatingDto(
@@ -145,7 +147,7 @@ class ApiTitleController(
             )
         }
         MediaType.tvshow -> tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(local.id), user.id!!)
-            ?.takeIf { it.seasonRatings.isNotEmpty() }
+            ?.takeIf { it.isRated }
             ?.let { rating ->
                 UserRatingDto(
                     score = rating.score?.value,
@@ -154,6 +156,7 @@ class ApiTitleController(
                     seasons = rating.seasonRatings.sortedBy { it.seasonNumber.value }.map { s ->
                         SeasonRatingDto(s.seasonNumber.value, s.score.value, s.review?.title?.value, s.review?.text?.value)
                     },
+                    showScore = rating.showScore?.value,
                 )
             }
     }

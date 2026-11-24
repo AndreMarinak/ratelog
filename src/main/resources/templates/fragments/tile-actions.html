@@ -23,7 +23,7 @@
 */-->
 <div th:fragment="actions(a, title)" th:if="${a != null}" class="tile-actions" data-tile-actions
      th:classappend="${a.upcoming} ? 'is-upcoming' : ''"
-     th:with="inList=${tileMarks != null and tileMarks.inList(a)}, detailed=${a.ratingDetailed or (tileMarks != null and tileMarks.detailed(a))}"
+     th:with="inList=${tileMarks != null and tileMarks.inList(a)}, seasons=${tileMarks != null and tileMarks.ratedBySeason(a)}, detailed=${a.ratingDetailed or (tileMarks != null and tileMarks.detailed(a)) or seasons}"
      th:attr="data-label-seen-off=#{tile.seen.mark},data-label-seen-on=#{tile.seen.on},data-label-seen-locked=#{tile.seen.locked},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove},data-title=${title},data-key=${a.type + ':' + a.tmdbId}">
     <!--/* Fork (tile menu): touch screens get this one button instead of the four (tile-actions.css hides it with a
            mouse). It opens the chooser (Watchlist / Seen / Rate / Add to list, tile-actions.js), whose rows use the
@@ -71,14 +71,15 @@
                 <i data-lucide="check" aria-hidden="true"></i>
             </button>
         </form>
-        <!--/* Rate: a movie opens the quick-rating picker (tile-rate.js; data-tile-rate), a show its seasons (rated per
-               season). Rated: "★ 8.5", always visible; a detailed rating is marked so the picker won't flatten it. */-->
+        <!--/* Rate: opens the quick-rating picker (tile-rate.js; data-tile-rate). Rated: "★ 8.5", always visible; a
+               detailed rating is marked so the picker won't flatten it. Fork (2026-11-23): a show gets a whole-show
+               score there; one rated by season (data-seasons) shows its season average and links to its seasons. */-->
         <a class="tile-act tile-rate" th:classappend="(${a.score != null} ? 'is-on' : '') + (${detailed} ? ' is-detailed' : '')"
-           th:href="${a.rateHref}"
-           th:with="label=#{${a.rateLabelKey}(${a.scoreLabel})}, labelDetailed=#{tile.rate.on.detailed(${a.scoreLabel})}"
+           th:href="${seasons} ? ${a.titleHref + '#seasons'} : ${a.rateHref}"
+           th:with="label=#{${a.rateLabelKey}(${a.scoreLabel})}, labelDetailed=${seasons} ? #{tile.rate.on.tv(${a.scoreLabel})} : #{tile.rate.on.detailed(${a.scoreLabel})}"
            th:title="${detailed} ? ${labelDetailed} : ${label}"
            th:aria-label="(${detailed} ? ${labelDetailed} : ${label}) + ': ' + ${title}"
-           th:attr="data-tile-rate=${a.isMovie} ? 'movie' : null,aria-haspopup=${a.isMovie} ? 'dialog' : null,data-score=${a.score},data-detailed=${detailed} ? 'true' : null,data-title-href=${a.titleHref}">
+           th:attr="data-tile-rate=${a.isMovie} ? 'movie' : 'tv',aria-haspopup='dialog',data-score=${a.score},data-detailed=${detailed} ? 'true' : null,data-seasons=${seasons} ? 'true' : null,data-title-href=${a.titleHref}">
             <i data-lucide="star" aria-hidden="true"></i>
             <span th:if="${a.scoreLabel != null}" class="tile-rate-score" th:text="${a.scoreLabel}">8.5</span>
         </a>

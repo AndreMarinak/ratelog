@@ -29,8 +29,9 @@ class SeenStateReader(
         status = mediaStatusRepository.find(userId, mediaType, mediaId)?.status,
         rated = when (mediaType) {
             MediaType.movie -> ratingRepository.findByMovieIdAndUserId(Movie.Id(mediaId), userId) != null
+            // Fork: a rated season or a whole-show score.
             MediaType.tvshow -> tvRatingRepository.findByTvShowIdAndUserId(TvShow.Id(mediaId), userId)
-                ?.seasonRatings?.isNotEmpty() == true
+                ?.isRated == true
         },
         isTv = mediaType == MediaType.tvshow,
     )

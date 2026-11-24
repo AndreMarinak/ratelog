@@ -64,7 +64,7 @@ class InMemoryListProgressRepository(
             MediaType.movie -> ratings.findByMovieIdAndUserId(Movie.Id(mediaId), userId)
                 .let { ViewerMark(status, it?.score?.value, rated = it != null) }
             MediaType.tvshow -> tvRatings.findByTvShowIdAndUserId(TvShow.Id(mediaId), userId)
-                .let { ViewerMark(status, it?.score?.value, rated = it?.seasonRatings?.isNotEmpty() == true) }
+                .let { ViewerMark(status, it?.score?.value, rated = it?.isRated == true) }
         }
     }
 }

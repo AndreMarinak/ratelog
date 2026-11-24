@@ -17,6 +17,12 @@ sealed interface TileRateHandlerError {
      */
     data class DetailedRating(val score: Score?) : TileRateHandlerError
 
+    /**
+     * Fork: a show with rated seasons. Its score is their average, so a whole-show score would not be used: the picker
+     * shows the average and links to the seasons instead. Carries the current score.
+     */
+    data class RatedBySeason(val score: Score?) : TileRateHandlerError
+
     /** Delete: there is no rating. */
     data object RatingNotFound : TileRateHandlerError
 

@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="/title-info.css">
         <link rel="stylesheet" href="/tile-actions.css">
         <link rel="stylesheet" href="/list-membership.css">
+        <link rel="stylesheet" href="/tv-rating.css">
 
         <div th:if="${error}" class="feedback error" th:text="#{${error}}"></div>
         <div th:if="${success}" class="feedback success" th:text="#{${success}}"></div>
@@ -51,14 +52,23 @@
                     <div class="title-actions">
                         <th:block th:replace="~{fragments/title-actions :: seen(${titleActions})}"></th:block>
                         <th:block th:replace="~{fragments/title-actions :: watchlist(${titleActions})}"></th:block>
-                        <!--/* Shows are rated per season: this jumps to the season list. */-->
-                        <a th:if="${!#lists.isEmpty(show.seasons)}" href="#seasons" class="title-action"
-                           th:classappend="${show.overallScore != null} ? 'is-rated' : ''">
+                        <!--/* Fork (2026-11-23): rated by season, the score is their average and this jumps to the season list.
+                               Otherwise "Rate" gives the whole show one score (rateShowModal), like a movie's quick rating. */-->
+                        <a th:if="${show.ratedBySeason}" href="#seasons" class="title-action is-rated">
                             <i data-lucide="star" aria-hidden="true"></i>
                             <span th:text="#{title.panel.rate.seasons}">Rate seasons</span>
                             <span th:if="${show.overallScore != null}" class="title-action-score" th:title="#{title.panel.your.score}"
                                   th:text="${#strings.replace(#numbers.formatDecimal(show.overallScore, 1, 2), ',', '.')}">8.50</span>
                         </a>
+                        <button th:unless="${show.ratedBySeason}" type="button" class="title-action" data-rate-show
+                                th:classappend="${show.showScore != null} ? 'is-rated' : ''"
+                                data-open-modal="rateShowModal" th:data-modal-mode="${show.showScore != null} ? 'edit' : 'create'"
+                                th:data-score="${show.showScore}">
+                            <i th:data-lucide="${show.showScore != null} ? 'pencil' : 'star'" aria-hidden="true"></i>
+                            <span th:text="${show.showScore != null} ? #{movie.detail.edit.rating} : #{title.panel.rate}">Rate</span>
+                            <span th:if="${show.showScore != null}" class="title-action-score" th:title="#{tv.show.panel.score}"
+                                  th:text="${#strings.replace(#numbers.formatDecimal(show.showScore, 1, 2), ',', '.')}">8.00</span>
+                        </button>
                         <button th:replace="~{fragments/add-to-list-modal :: addToListButton(${listMembership})}"></button>
                     </div>
                     <div th:replace="~{fragments/title-actions :: extras(${titleActions})}"></div>
@@ -70,6 +80,38 @@
 
         <section th:if="${show != null && !#lists.isEmpty(show.seasons)}" id="seasons" class="title-seasons">
             <h2 class="title-section-heading" th:text="#{title.layout.seasons}">Seasons</h2>
+            <!--/* Fork (2026-11-23): the show as a whole. No season rated: rate it with one score (or edit it). Any season
+                   rated: the score is their average; a stored whole-show score is kept, unused, and the card says so. */-->
+            <div id="showRating" class="card show-rating-card" th:classappend="${show.ratedBySeason} ? 'is-average' : ''">
+                <div class="show-rating-row">
+                    <th:block th:if="${show.ratedBySeason}">
+                        <span class="show-rating-label" th:text="#{tv.show.card.average(${show.ratedSeasonCount})}">Average of 3 seasons</span>
+                        <span class="rating sm" th:text="${#strings.replace(#numbers.formatDecimal(show.overallScore, 1, 2), ',', '.')}">8.30</span>
+                    </th:block>
+                    <th:block th:unless="${show.ratedBySeason}">
+                        <span class="show-rating-label" th:text="#{tv.show.card.title}">Whole show</span>
+                        <span th:if="${show.showScore != null}" class="rating sm"
+                              th:text="${#strings.replace(#numbers.formatDecimal(show.showScore, 1, 2), ',', '.')}">8.00</span>
+                        <button type="button" class="show-rating-btn" data-open-modal="rateShowModal"
+                                th:data-modal-mode="${show.showScore != null} ? 'edit' : 'create'" th:data-score="${show.showScore}">
+                            <i th:data-lucide="${show.showScore != null} ? 'pencil' : 'star'" aria-hidden="true"></i>
+                            <span th:text="${show.showScore != null} ? #{tv.show.card.edit} : #{tv.show.card.rate}">Rate show</span>
+                        </button>
+                    </th:block>
+                </div>
+                <p class="show-rating-hint"
+                   th:text="${show.ratedBySeason} ? (${show.showScore != null} ? #{tv.show.card.replaced(${#strings.replace(#numbers.formatDecimal(show.showScore, 1, 2), ',', '.')})} : #{tv.show.card.average.hint}) : (${show.showScore != null} ? #{tv.show.card.yours} : #{tv.show.card.none})">Rate the show as a whole, or rate seasons below.</p>
+                <form th:if="${show.ratedBySeason and show.showScore != null}" th:action="@{/tv/rate/show/delete}" method="post"
+                      class="show-rating-forget" data-inplace="#seasons, .title-panel" th:data-confirm="#{tv.show.rate.delete.confirm}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="tvShowId" th:value="${show.id}">
+                    <input type="hidden" name="tmdbId" th:value="${show.tmdbId}">
+                    <button type="submit" class="show-rating-link">
+                        <i data-lucide="trash-2" aria-hidden="true"></i>
+                        <span th:text="#{tv.show.card.delete}">Delete whole-show score</span>
+                    </button>
+                </form>
+            </div>
             <div th:each="season : ${show.seasons}" class="card season-card"
                  th:classappend="${season.hasRating} ? 'clickable expandable' : ''">
                 <div class="season-card-header flex separate">
@@ -122,6 +164,7 @@
 
         <th:block th:if="${show != null}">
             <div th:replace="~{fragments/rate-tvshow-modal :: rateTvShowModal(${show})}"></div>
+            <div th:replace="~{fragments/rate-show-modal :: rateShowModal(${show})}"></div>
             <div th:replace="~{fragments/delete-tvshow-rating-modal :: deleteTvShowRatingModal(${show})}"></div>
             <div th:replace="~{fragments/add-to-list-modal :: addToListModal(${show.id}, 'tvshow')}"></div>
             <div th:replace="~{fragments/title-info :: trailerModal(${titleInfo})}"></div>
