@@ -39,6 +39,7 @@ agent branches). Before every commit and push, check each file below and update 
 | [docs/api.md](docs/api.md) | any `/api/v1` endpoint, field or error code changes |
 | [docs/deploy-railway.md](docs/deploy-railway.md) | env vars, Railway setup or recovery steps change |
 | [docs/competitor-gaps.md](docs/competitor-gaps.md) | a researched gap is built or re-ranked |
+| [docs/testing.md](docs/testing.md) | a browser suite, step or the way the app is run for tests changes |
 
 - Edit statements that are no longer true; don't leave stale text. A replaced decision stays, marked *(Superseded by ...)*.
 - Record the user's own requests and preferences as decisions, with the date (they explain the "why" later).
@@ -58,6 +59,8 @@ agent branches). Before every commit and push, check each file below and update 
 1. Full test suite on a clean build, 0 failures (count from `target/surefire-reports`).
 2. Browser check of every changed page in the real app, desktop (1440px) and phone (390px and 360px), with screenshots: no console
    errors, layout fits, the change works end to end.
+   Run the walkthrough suite: `node tools/uitest/run.js --base http://localhost:PORT` (all suites, 1440 / 390 / 360; it seeds and cleans up
+   its own data, `--suite home,seen` to narrow it). Setup and what each suite covers: [docs/testing.md](docs/testing.md).
 3. Docs updated (see above). Then push `master` and confirm the Railway deploy came up (`/api/health`).
 
 ## Code conventions (follow upstream's style)
