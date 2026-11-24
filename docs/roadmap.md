@@ -9,7 +9,7 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
 accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`), watchlist entries `V1141`
 (`watchlist_entries`, the watchlist independent of the status), saved lists `V1142` (`saved_lists`), title credits `V1143`
-(`title_extras.credits_json`).
+(`title_extras.credits_json`), rewatch log `V1144–1145` (`V1144` `rewatches`).
 
 ## Build now (in suggested order)
 
@@ -156,6 +156,11 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   request per person. API: `GET /api/v1/people/{id}`, `people=true` on `GET /api/v1/search`
   ([docs/api.md](api.md#people)). No migration. Title-page credits link here when `ratelog.features.people` is on. Details in
   [decisions/people-and-credits.md](decisions/people-and-credits.md#people-person-pages-and-people-in-search-2026-11-24).
+- [ ] **37. Rewatch log: "Watched again"** (requested 2026-11-24: the To watch "Rewatch" tag "isn't clickable, maybe if I've
+  seen it already it should be a watched again button?", "how should it work with stats? maybe some ability to mark a movie
+  as rewatched?", and logging must not take "two clicks to add to watchlist then click watched again"). *In progress:* one
+  row per rewatch (`rewatches`, migration `V1144`); the watch count is 1 + rewatches while the title is seen. Phase 1: title
+  page and the watchlist's To watch button; phase 2: Stats, API, poster chooser.
 
 ## Fixes and housekeeping done
 

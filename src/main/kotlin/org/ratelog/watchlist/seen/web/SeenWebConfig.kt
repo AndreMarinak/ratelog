@@ -2,6 +2,7 @@ package org.ratelog.watchlist.seen.web
 
 import org.ratelog.home.HomeRepository
 import org.ratelog.movie.MovieRepository
+import org.ratelog.rewatch.RewatchRepository
 import org.ratelog.tvshow.TvShowRepository
 import org.ratelog.user.UserDetailsService
 import org.springframework.context.annotation.Configuration
@@ -15,11 +16,12 @@ class SeenWebConfig(
     private val movieRepository: MovieRepository,
     private val tvShowRepository: TvShowRepository,
     private val homeRepository: HomeRepository,
+    private val rewatchRepository: RewatchRepository,
 ) : WebMvcConfigurer {
     private val clock: Clock = Clock.systemDefaultZone()
 
     override fun addInterceptors(registry: InterceptorRegistry) {
-        registry.addInterceptor(TitleActionsInterceptor(movieRepository, tvShowRepository, clock))
+        registry.addInterceptor(TitleActionsInterceptor(movieRepository, tvShowRepository, clock, rewatchRepository) { UserDetailsService.getCurrentUser() })
             .addPathPatterns("/movie/*", "/tv/*")
         registry.addInterceptor(SearchTileActionsInterceptor(homeRepository, { UserDetailsService.getCurrentUser() }, clock))
             .addPathPatterns("/")

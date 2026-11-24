@@ -1,8 +1,11 @@
 package org.ratelog.watchlist.seen
 
 import org.ratelog.MediaType
+import org.ratelog.rewatch.RewatchSummary
 import org.ratelog.watchlist.WatchStatus
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -41,8 +44,21 @@ data class TitleActionsView(
     val movieExtraStatus: WatchStatus?,
     val showFollow: Boolean,
     val followed: Boolean,
+    /**
+     * Fork (2026-11-24, rewatch log): rows in the log for this title. They count only while it is seen (the block is
+     * hidden otherwise); kept when it is un-seen, so seeing it again brings the count back.
+     */
+    val rewatches: Int = 0,
+    /** "Nov 24, 2026": the latest rewatch, or null with none. */
+    val lastRewatch: String? = null,
 ) {
     val canToggleSeen: Boolean get() = !upcoming
+
+    /** "Watched again" is rendered on every released title and shown while it is seen (title-actions.js follows Seen). */
+    val canRewatch: Boolean get() = !upcoming
+
+    /** The first watch plus the rewatches: "Seen 2×". */
+    val watchCount: Int get() = 1 + rewatches
 
     companion object {
         fun of(
@@ -57,6 +73,8 @@ data class TitleActionsView(
             today: LocalDate,
             locale: Locale,
             onWatchlist: Boolean,
+            rewatch: RewatchSummary = RewatchSummary.NONE,
+            zone: ZoneId = ZoneId.systemDefault(),
         ): TitleActionsView {
             val state = SeenState(status, rated, isTv = type == MediaType.tvshow, onWatchlist = onWatchlist)
             val upcoming = ReleaseRules.isUpcoming(type, releaseDate, tmdbStatus, today)
@@ -80,6 +98,10 @@ data class TitleActionsView(
                 movieExtraStatus = status?.takeIf { !isTv && (it == WatchStatus.WATCHING || it == WatchStatus.DROPPED) },
                 showFollow = ReleaseRules.showFollow(type, releaseDate, tmdbStatus, today, followed),
                 followed = followed,
+                rewatches = rewatch.rewatches,
+                lastRewatch = rewatch.lastAtEpochMs?.let {
+                    ReleaseRules.longDate(LocalDate.ofInstant(Instant.ofEpochMilli(it), zone), locale)
+                },
             )
         }
     }

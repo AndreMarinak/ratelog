@@ -51,7 +51,8 @@ class WatchlistQuickActionsTest {
     private val shows = InMemoryTvShowRepository()
     private val ratings = InMemoryRatingRepository()
     private val importer: MediaImporter = mock()
-    private val handler = MoveWatchlistItemHandler(WatchlistHandlers.setStatus(statuses, movies, shows, ratings), WatchlistHandlers.setWatchlist(statuses, movies, shows, ratings), statuses)
+    private val rewatches = org.ratelog.test.InMemoryRewatchRepository()
+    private val handler = WatchlistHandlers.move(statuses, movies, shows, ratings, rewatches = rewatches)
     private val controller = MoveWatchlistItemController(handler, importer, BrowseBarViewsTest.testMessageSource())
     private val page = WatchlistController(
         GetWatchlistHandler(statuses, movies, InMemoryMovieDescriptionRepository(), ratings, shows, InMemoryTvDescriptionRepository(), InMemoryTvRatingRepository()),
@@ -153,6 +154,74 @@ class WatchlistQuickActionsTest {
         val missing = RedirectAttributesModelMap()
         controller.move(user, "movie", 999, "seen", "/watchlist", null, request(), missing)
         assertEquals("status.error.media.not.found", missing.flashAttributes["error"])
+    }
+
+    // --- Fork (2026-11-24, rewatch log): Watched again on a rewatch ---
+
+    private fun rewatchOnWatchlist() {
+        statuses.save(MediaStatus(user.id!!, MediaType.movie, dune.id!!.value, WatchStatus.WATCHED, 1))
+        statuses.addToWatchlist(org.ratelog.watchlist.WatchlistEntry(user.id!!, MediaType.movie, dune.id!!.value, 2, rewatch = true))
+    }
+
+    @Test
+    fun `Watched again logs a rewatch, takes it off the watchlist and keeps it seen, Undo reverses both`() {
+        rewatchOnWatchlist()
+        val flash = RedirectAttributesModelMap()
+
+        controller.move(user, "movie", dune.id!!.value, "rewatched", "/watchlist?status=want_to_watch&type=movie", null, request(), flash)
+
+        assertNull(statuses.findWatchlistEntry(user.id!!, MediaType.movie, dune.id!!.value), "off the watchlist")
+        assertEquals(WatchStatus.WATCHED, statuses.find(user.id!!, MediaType.movie, dune.id!!.value)?.status, "still seen")
+        val row = rewatches.all().single()
+        val notice = flash.flashAttributes["watchlistNotice"] as WatchlistNotice
+        assertEquals("watchlist.notice.rewatched", notice.messageKey)
+        assertEquals("unrewatch", notice.undoMove)
+        assertEquals(row.id, notice.rewatchId)
+
+        val undo = RedirectAttributesModelMap()
+        controller.move(user, "movie", dune.id!!.value, "unrewatch", "/watchlist", "1", request(), undo, rewatchId = row.id)
+        assertTrue(rewatches.all().isEmpty(), "the logged row is gone")
+        val entry = statuses.findWatchlistEntry(user.id!!, MediaType.movie, dune.id!!.value)!!
+        assertTrue(entry.rewatch, "back on To watch as a rewatch")
+        assertEquals("watchlist.notice.restored", (undo.flashAttributes["watchlistNotice"] as WatchlistNotice).messageKey)
+    }
+
+    @Test
+    fun `Watched again by fetch moves the To watch count only, and undo deletes only that title's row`() {
+        rewatchOnWatchlist()
+        val response = controller.moveJson(user, "movie", dune.id!!.value, "rewatched", null).body!!
+        assertTrue(response.ok)
+        assertEquals("want_to_watch", response.previous)
+        assertNull(response.current, "it was already on the Seen tab")
+        assertEquals("Logged a rewatch of \"Dune: Part Two\" and took it off your watchlist.", response.message)
+        assertEquals("unrewatch", response.undoMove)
+        val id = response.rewatchId!!
+
+        // Another title's id is ignored: only Dune's rows can be undone from Dune's tile.
+        controller.moveJson(user, "tvshow", bear.id!!.value, "unrewatch", "1", rewatchId = id)
+        assertEquals(1, rewatches.all().size)
+
+        val undo = controller.moveJson(user, "movie", dune.id!!.value, "unrewatch", "1", rewatchId = id).body!!
+        assertTrue(undo.ok)
+        assertEquals("want_to_watch", undo.current)
+        assertNull(undo.undoMove)
+        assertNull(undo.rewatchId)
+        assertTrue(rewatches.all().isEmpty())
+    }
+
+    @Test
+    fun `Watched again on a title you have not seen is refused and changes nothing`() {
+        want(dune.id!!.value)
+        val response = controller.moveJson(user, "movie", dune.id!!.value, "rewatched", null)
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertFalse(response.body!!.ok)
+        assertEquals("Mark it seen first: Watched again logs the times after the first.", response.body!!.message)
+        assertTrue(rewatches.all().isEmpty())
+        assertEquals(WatchStatus.WANT_TO_WATCH, status(dune.id!!.value), "still on the watchlist")
+
+        val flash = RedirectAttributesModelMap()
+        controller.move(user, "movie", dune.id!!.value, "rewatched", "/watchlist", null, request(), flash)
+        assertEquals("rewatch.error.not.seen", flash.flashAttributes["error"])
     }
 
     // --- POST /watchlist/item (fetch) ---
@@ -328,6 +397,12 @@ class WatchlistQuickActionsTest {
         assertEquals("watchlist.note.rated", WatchlistController.noteFor(WatchStatus.WATCHED, upcoming = false, rated = true, hasDate = true))
         assertEquals(null, WatchlistController.noteFor(WatchStatus.WATCHED, upcoming = false, rated = false, hasDate = true))
         assertEquals("watchlist.action.remove.aria.watched", WatchlistController.actionsFor(WatchStatus.WATCHED, false, false, false).single().ariaKey)
+        // Fork (2026-11-24, rewatch log): a rewatch on To watch gets Watched again, then Remove; not while it isn't out.
+        listOf(false, true).forEach { tv ->
+            assertEquals(listOf("rewatched", "unlist"), WatchlistController.actionsFor(WatchStatus.WANT_TO_WATCH, tv, false, false, rewatch = true).map { it.to })
+            assertEquals(listOf("unlist"), WatchlistController.actionsFor(WatchStatus.WANT_TO_WATCH, tv, true, false, rewatch = true).map { it.to })
+        }
+        assertEquals("is-rewatch", WatchlistController.actionsFor(WatchStatus.WANT_TO_WATCH, false, false, true, rewatch = true).first().kind)
     }
 
     @Test

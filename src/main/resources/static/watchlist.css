@@ -202,6 +202,17 @@
     background: hsl(140 16% 70% / 0.14);
   }
 
+  /* Fork (2026-11-24, rewatch log): "Watched again" on a title you've seen, in the seen green like the old tag. */
+  &.is-rewatch {
+    border-color: hsl(140 18% 33% / 0.55);
+    background: hsl(140 18% 33% / 0.18);
+    color: hsl(140 20% 74%);
+  }
+
+  &.is-rewatch:hover {
+    background: hsl(140 18% 33% / 0.3);
+  }
+
   &.is-remove {
     color: var(--text-soft);
   }
@@ -323,7 +334,8 @@ button.watchlist-toast-undo {
   }
 }
 
-/* Fork (2026-11-24): a title you've already seen, on To watch to rewatch. Solid, in the seen green, so it reads as a tag. */
+/* Fork (2026-11-24): a title you've already seen, on To watch to rewatch. Solid, in the seen green, so it reads as a tag.
+   (Unused since the rewatch log: the tag became the "Watched again" button, .watchlist-act.is-rewatch.) */
 .watchlist-note.is-rewatch {
   border-style: solid;
   border-color: hsl(140 18% 33% / 0.55);

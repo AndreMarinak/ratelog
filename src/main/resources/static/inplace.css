@@ -26,6 +26,63 @@
   }
 }
 
+/* Fork (2026-11-24, rewatch log): a toast with actions (Undo, "Update your rating?") takes clicks and lines them up. */
+.inplace-toast.has-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 8px 8px 8px 18px;
+  border-radius: 14px;
+
+  &.visible {
+    pointer-events: auto;
+  }
+
+  .inplace-toast-text {
+    min-width: 0;
+    margin-right: auto;
+  }
+
+  form {
+    display: inline-flex;
+    margin: 0;
+  }
+
+  form button,
+  a {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 1px solid hsl(var(--_brand-clay) / 0.5);
+    border-radius: 999px;
+    background: none;
+    color: var(--accent);
+    font-family: var(--font);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--accent-soft);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  a {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+}
+
 form[aria-busy='true'] button,
 a[aria-busy='true'] {
   opacity: 0.6;

@@ -9,6 +9,8 @@
   In the panel's four toggles (with Rate and Add to list, which stay in the page templates):
     <th:block th:replace="~{fragments/title-actions :: seen(${titleActions})}"></th:block>
     <th:block th:replace="~{fragments/title-actions :: watchlist(${titleActions})}"></th:block>
+  Right under them (fork, 2026-11-24), "Watched again" and the watch count, shown while the title is seen:
+    <div th:replace="~{fragments/title-actions :: rewatch(${titleActions})}"></div>
   Under them (movies only), the "Rate it?" nudge shown after Seen:
     <div th:replace="~{fragments/title-actions :: rateNudge(${titleActions})}"></div>
   Then the small extras (Watching / Dropped for shows, the follow bell):
@@ -57,6 +59,41 @@
         <span class="title-toggle-label" th:text="${a.onWatchlist} ? #{title.watchlist.on} : #{title.watchlist.off}">Watchlist</span>
     </button>
 </form>
+
+<!--/* Fork (2026-11-24, rewatch log): "Watched again" right under the toggles, on every released title, shown while it is
+       seen (title-actions.js hides / shows it with Seen). One click logs a rewatch (POST /rewatch) in place: inplace.js
+       swaps the panel and shows the notice below as a toast with Undo and "Update your rating?". Without JS the notice
+       shows here after the redirect. The quiet line counts the first watch plus the rewatches, once there is one. */-->
+<div th:fragment="rewatch(a)" th:if="${a != null and a.canRewatch}" class="title-rewatch" data-rewatch th:hidden="${!a.seen}">
+    <form action="/rewatch" method="post" class="title-rewatch-form" data-inplace=".title-panel">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+        <input type="hidden" name="type" th:value="${a.tileType}" />
+        <input type="hidden" name="back" th:value="${a.back}" />
+        <button type="submit" class="title-chip title-rewatch-btn" th:title="#{title.rewatch.title}">
+            <i data-lucide="rotate-cw" aria-hidden="true"></i>
+            <span th:text="#{title.rewatch.action}">Watched again</span>
+        </button>
+    </form>
+    <span th:if="${a.rewatches > 0}" class="title-rewatch-count" th:text="#{title.rewatch.count(${a.watchCount}, ${a.lastRewatch})}">Seen 2× · last Nov 24, 2026</span>
+    <div th:replace="~{fragments/title-actions :: rewatchNotice}"></div>
+</div>
+
+<!--/* After "Watched again" / its Undo (flash `rewatchNotice`, LogRewatchController). inplace.js copies the text
+       ([data-toast-text]) and the [data-toast-action] controls into its toast. */-->
+<div th:fragment="rewatchNotice" th:if="${rewatchNotice != null}" class="feedback success rewatch-notice" role="status">
+    <span data-toast-text th:text="#{${rewatchNotice.messageKey}(${rewatchNotice.title})}">Logged a rewatch of Dune.</span>
+    <form th:if="${rewatchNotice.rewatchId != null}" action="/rewatch/delete" method="post" class="rewatch-notice-undo"
+          data-toast-action data-inplace=".title-panel">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="id" th:value="${rewatchNotice.rewatchId}" />
+        <input type="hidden" name="back" th:value="${titleActions != null} ? ${titleActions.back} : ''" />
+        <button type="submit" th:text="#{rewatch.notice.undo}">Undo</button>
+    </form>
+    <a th:if="${rewatchNotice.rateHref != null}" th:href="${rewatchNotice.rateHref}" class="rewatch-notice-rate" data-toast-action
+       data-toast-click=".title-panel [data-open-modal='rateMovieModal'], .title-panel [data-open-modal='rateShowModal'], .title-panel a[href='#seasons']"
+       th:text="#{${rewatchNotice.rateKey}}">Update your rating?</a>
+</div>
 
 <!--/* "Rate it?": movies with no rating, shown by title-actions.js right after Seen (never without JS, never for shows,
        which are rated per season). One tap on a score saves a quick rating through the Rate modal's own POST /movie/rate. */-->

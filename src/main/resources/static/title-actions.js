@@ -64,6 +64,10 @@
         if (extra && state.status !== 'watching' && state.status !== 'dropped') extra.remove();
 
         if (nudge && !state.seen) nudge.hidden = true;
+        // Fork (2026-11-24, rewatch log): "Watched again" only while it is seen. Its count stays as rendered: the log
+        // is kept when a title is un-seen, so seeing it again shows the same count.
+        const rewatch = panel.querySelector('[data-rewatch]');
+        if (rewatch) rewatch.hidden = !state.seen;
         if (window.lucide) window.lucide.createIcons();
     }
 
