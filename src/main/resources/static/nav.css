@@ -455,3 +455,66 @@ html {
     display: none;
   }
 }
+
+/* Fork (user, 2026-11-24: "doesn't make it easily able to click the x on that search at the top"): a clear button inside the
+   header search while it has text (nav.js). It replaces the "/" hint; the browser's own tiny cancel glyph is hidden so there's
+   one ✕. 32px round target inside the 38px box, 40px tap area on phones via the pseudo-element. */
+.nav-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.nav-search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft);
+  transform: translateY(-50%);
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 999px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  /* The search icon rule above targets every svg in the form; undo it for this one. */
+  svg {
+    position: static;
+    width: 16px;
+    height: 16px;
+    transform: none;
+    color: inherit;
+    pointer-events: none;
+  }
+}
+
+.nav-search.has-text {
+  .nav-search-key {
+    display: none;
+  }
+
+  input {
+    padding-right: 38px;
+  }
+}

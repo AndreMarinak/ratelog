@@ -498,6 +498,12 @@ item 20. Code: `org.ratelog.customlist.suggest`, `fragments/list-suggest.html`, 
   just the Any / Movies / TV filter, which applies as soon as it changes (`search-type.js`; the search button stays for no-JS),
   and the heading reads "Results for "…"".
 
+- **An ✕ in the header search** (user, 2026-11-24: "doesn't make it easily able to click the x on that search at the top in
+  the searchbar maybe an x could go there?"). While the box has text, a 30px round ✕ sits at its right end (it replaces the "/"
+  hint); tapping it empties the box and keeps the cursor there, without leaving the page. The browser's own small cancel glyph
+  is hidden so there is only one ✕ (`nav.js`, `nav.css`). Searching stays name-only: Discover's genre / rating / service filters
+  don't carry into search, because a name search should find the title whatever the filters say and TMDB's search can't filter
+  by those anyway (a Year box for search is queued).
 ### One Back leaves the page: filters replace, navigation pushes (2026-11-23)
 
 The user: "also the back button thing is REAL annoying on the phone, as well as refreshes for filtered list when it shouldn't

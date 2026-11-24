@@ -37,6 +37,11 @@
         <input th:if="${active == 'search' and param.mediaType != null and !#strings.isEmpty(param.mediaType[0])}"
                type="hidden" name="mediaType" th:value="${param.mediaType[0]}">
         <kbd class="nav-search-key" aria-hidden="true">/</kbd>
+        <!--/* Fork: clears the box (user, 2026-11-24); shown by nav.js while there is text. */-->
+        <button type="button" class="nav-search-clear" hidden
+                th:aria-label="#{nav.search.clear}" th:title="#{nav.search.clear}" aria-label="Clear search">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
     </form>
 
     <div class="nav-auth" th:if="${signedIn}">

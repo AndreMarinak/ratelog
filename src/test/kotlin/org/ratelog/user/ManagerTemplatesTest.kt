@@ -87,6 +87,14 @@ class ManagerTemplatesTest {
     }
 
     @Test
+    fun `the header search has a clear button that starts hidden (nav js shows it while there is text)`() {
+        val html = nav(Role.USER)
+
+        assertTrue(html.contains("""<button type="button" class="nav-search-clear" hidden"""), html)
+        assertTrue(html.contains("""aria-label="Clear search""""), html)
+    }
+
+    @Test
     fun `users see no Add account entry, admins keep their admin page instead`() {
         assertFalse(nav(Role.USER).contains("/accounts/new"))
         assertFalse(nav(Role.USER).contains("/admin/configuration"))

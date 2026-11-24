@@ -63,4 +63,21 @@
   input.form.addEventListener('submit', (e) => {
     if (!input.value.trim()) e.preventDefault();
   });
+
+  // Fork (user, 2026-11-24): an ✕ inside the box while it has text; it empties the box and keeps the focus there.
+  const clear = input.form.querySelector('.nav-search-clear');
+  if (clear) {
+    const sync = () => {
+      const has = input.value.length > 0;
+      clear.hidden = !has;
+      input.form.classList.toggle('has-text', has);
+    };
+    input.addEventListener('input', sync);
+    clear.addEventListener('click', () => {
+      input.value = '';
+      sync();
+      input.focus();
+    });
+    sync();
+  }
 })();
