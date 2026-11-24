@@ -48,6 +48,9 @@ Feature quality and the test rules below are never traded for tokens. These cut 
     screenshot folder path (no per-file lists).
 14. **Clean up before reporting:** stop every app, browser and background job the agent started and drop its database. An agent
     that leaves a job running stays alive and keeps using tokens (one did: 723k tokens over 13 hours, mostly idle).
+    **Only ever stop processes you started** (by the PID you launched, or `browser.close()`); never kill Chrome / java / node
+    by name or command-line pattern: on 2026-11-24 one agent force-stopped every test Chrome on the machine and crashed the
+    other agents' and the main session's suite runs.
 15. **Fresh main session per day:** start from a short handoff (what's live, what's queued, open questions) instead of carrying
     a whole long conversation forward.
 
