@@ -117,6 +117,34 @@ class ApiTitleControllerTest {
     }
 
     @Test
+    fun `seen, watchCount and lastWatchedAt (fork, rewatch log)`() {
+        val statuses = org.ratelog.test.InMemoryMediaStatusRepository()
+        val rewatches = org.ratelog.test.InMemoryRewatchRepository()
+        val withRewatches = ApiTitleController(
+            MediaImporter(tmdbClient, movies, InMemoryMovieDescriptionRepository(), shows, InMemoryTvDescriptionRepository()),
+            getTitleInfoHandler, ratings, tvRatings, InMemoryListMembershipRepository(lists),
+            org.ratelog.test.InMemoryOfficialTitleListsRepository(lists, org.ratelog.test.InMemoryOfficialListRepository(lists), org.ratelog.test.InMemorySavedListRepository(lists)),
+            org.ratelog.watchlist.seen.SeenStateReader(statuses, ratings, tvRatings),
+            rewatches,
+        )
+        whenever(getTitleInfoHandler.handle(GetTitleInfo(MediaType.movie, TmdbId(603)))).thenReturn(
+            org.ratelog.extras.gettitleinfo.GetTitleInfoError.NotAvailable.left()
+        )
+        val unseen = withRewatches.title(user, "movie", 603)
+        assertEquals(false, unseen.seen)
+        assertEquals(0, unseen.watchCount)
+
+        val movie = movies.findByTmdbId(TmdbId(603))!!
+        ratings.save(RatingFactory.aQuickRating(movieId = movie.id!!, userId = user.id!!, score = 8.0))
+        assertEquals(1, withRewatches.title(user, "movie", 603).watchCount)
+        rewatches.add(org.ratelog.rewatch.Rewatch(null, user.id!!, MediaType.movie, movie.id!!.value, Instant.parse("2026-11-20T21:00:00Z").toEpochMilli()))
+        val dto = withRewatches.title(user, "movie", 603)
+        assertEquals(true, dto.seen)
+        assertEquals(2, dto.watchCount)
+        assertEquals("2026-11-20T21:00:00Z", dto.lastWatchedAt)
+    }
+
+    @Test
     fun `given a show then reports episode runtime, seasons and season ratings`() {
         // Given
         whenever(getTitleInfoHandler.handle(GetTitleInfo(MediaType.tvshow, TmdbId(1399)))).thenReturn(

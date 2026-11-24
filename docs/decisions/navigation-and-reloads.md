@@ -101,6 +101,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Title page Seen menu: Mark as not seen | — (Seen toggled) | in place (`title-actions.js`, JSON answer), as the old toggle |
 | "Rate it?" score after Seen | — | **reload**: an explicit save that changes the rating card, Rate button and Seen |
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
+| Poster "⋯" chooser: Watched again on a seen title (2026-11-24) | — | in place (`tile-actions.js`, JSON answer): the chooser closes, toast with Undo (deletes the row) and "Update your rating?" (the poster's ★ picker; a show rated by season: its seasons, a **page load**) |
 | Watchlist To watch "Watched again" on a rewatch (2026-11-24) | — (a tag that did nothing) | in place (`watchlist.js`, move `rewatched`): logs a rewatch, the tile leaves To watch (Seen count unchanged), toast with Undo (`unrewatch`: deletes the row, back on To watch) |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
 | List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |

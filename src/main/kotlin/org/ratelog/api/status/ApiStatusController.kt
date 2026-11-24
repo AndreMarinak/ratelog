@@ -1,11 +1,13 @@
 package org.ratelog.api.status
 
+import org.ratelog.MediaType
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.api.ApiException
 import org.ratelog.api.badRequest
 import org.ratelog.api.media.MediaImporter
 import org.ratelog.api.notFound
 import org.ratelog.api.parseMediaType
+import org.ratelog.rewatch.RewatchRepository
 import org.ratelog.user.User
 import org.ratelog.watchlist.getwatchlist.GetWatchlist
 import org.ratelog.watchlist.getwatchlist.GetWatchlistHandler
@@ -31,6 +33,8 @@ class ApiStatusController(
     private val setWatchStatusHandler: SetWatchStatusHandler,
     private val bulkStatusService: BulkStatusService,
     private val mediaImporter: MediaImporter,
+    /** Fork (2026-11-24, rewatch log): `watchCount` / `lastWatchedAt` per title. */
+    private val rewatchRepository: RewatchRepository? = null,
 ) {
     /** Optional filters: `status` (want_to_watch | watching | watched | dropped) and `type` (movie | tv). */
     @GetMapping
@@ -41,8 +45,13 @@ class ApiStatusController(
     ): StatusListResponse {
         val statusFilter = status?.takeIf { it.isNotBlank() }?.let(::parseStatus)
         val watchlist = getWatchlistHandler.handle(GetWatchlist(user.id!!, statusFilter, parseMediaType(type), user.metadataLang))
+        // Two queries at most (one per type), only for the seen titles.
+        val rewatches = MediaType.entries.associateWith { t ->
+            val ids = watchlist.items.filter { it.mediaType == t && it.seen }.map { it.mediaId }
+            rewatchRepository?.summaries(user.id, t, ids).orEmpty()
+        }
         return StatusListResponse(
-            items = watchlist.items.map { it.toDto() },
+            items = watchlist.items.map { it.toDto(rewatches[it.mediaType]?.get(it.mediaId)) },
             counts = watchlist.counts.entries.associate { it.key.apiName to it.value },
         )
     }

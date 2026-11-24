@@ -25,11 +25,15 @@ sealed interface GetStatsError {
 /** A "Highest rated" tile: the counted entry plus its title and poster. */
 data class StatsTopTitle(val entry: StatsEntry, val title: StatsTitle)
 
+/** Fork (2026-11-24): a "Most rewatched" row (All time): the title's rewatches plus its title and poster. */
+data class StatsRewatchedTitle(val rewatched: RewatchedTitle, val title: StatsTitle)
+
 data class StatsResult(
     val stats: Stats,
     val top: List<StatsTopTitle>,
     val currentYear: Int,
     val zone: ZoneId,
+    val mostRewatched: List<StatsRewatchedTitle> = emptyList(),
 )
 
 /**
@@ -58,7 +62,11 @@ class GetStatsHandler(
         val source = repository.load(query.userId, clock.millis())
         val stats = StatsCalculator.calculate(source, period, zone)
 
-        val pending = source.movies.filter { it.runtimeMinutes == null && it.runtimePending }.map { it.tmdbId }
+        // Fork (2026-11-24): a rewatched movie needs its runtime too (each rewatch adds its hours).
+        val pending = (
+            source.movies.filter { it.runtimeMinutes == null && it.runtimePending }.map { it.tmdbId } +
+                source.rewatches.filter { it.type == MediaType.movie && it.runtimeMinutes == null && it.runtimePending }.map { it.tmdbId }
+            ).distinct()
         if (pending.isNotEmpty()) {
             try {
                 runtimeFiller.fill(pending)
@@ -67,7 +75,15 @@ class GetStatsHandler(
             }
         }
 
-        StatsResult(stats, topTitles(query, stats.top), currentYear, zone)
+        StatsResult(stats, topTitles(query, stats.top), currentYear, zone, rewatchedTitles(query, stats.mostRewatched))
+    }
+
+    private fun rewatchedTitles(query: GetStats, rewatched: List<RewatchedTitle>): List<StatsRewatchedTitle> {
+        if (rewatched.isEmpty()) return emptyList()
+        val titles = MediaType.entries.flatMap { type ->
+            repository.titles(query.userId, type, rewatched.filter { it.type == type }.map { it.tmdbId }, query.lang)
+        }.associateBy { it.type to it.tmdbId }
+        return rewatched.mapNotNull { r -> titles[r.type to r.tmdbId]?.let { StatsRewatchedTitle(r, it) } }
     }
 
     private fun topTitles(query: GetStats, top: List<StatsEntry>): List<StatsTopTitle> {

@@ -8,10 +8,13 @@
 // home.js's key first, so it comes back after the reload.
 (() => {
     // --- Toast: Discover's own (#browseToast) when there is one, else a small one of our own ---
+    // Fork (2026-11-24, rewatch log): `actions` ([{label, run}]) adds buttons (Undo, "Update your rating?"); such a toast
+    // is always our own one, stays 7 s and takes clicks.
     let toastTimer = null;
-    function toast(text) {
+    function toast(text, actions) {
         if (!text) return;
-        let el = document.getElementById('browseToast') || document.getElementById('tileToast');
+        const extra = actions || [];
+        let el = (!extra.length && document.getElementById('browseToast')) || document.getElementById('tileToast');
         if (!el) {
             el = document.createElement('div');
             el.id = 'tileToast';
@@ -20,11 +23,27 @@
             el.setAttribute('aria-live', 'polite');
             document.body.appendChild(el);
         }
-        el.textContent = text;
+        if (extra.length) {
+            const message = document.createElement('span');
+            message.className = 'tile-toast-text';
+            message.textContent = text;
+            el.replaceChildren(message, ...extra.map((a) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'tile-toast-action';
+                button.textContent = a.label;
+                button.addEventListener('click', () => { button.disabled = true; a.run(); });
+                return button;
+            }));
+        } else {
+            el.textContent = text;
+        }
+        el.classList.toggle('has-actions', extra.length > 0);
         el.classList.add('visible');
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => el.classList.remove('visible'), 3200);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), extra.length ? 7000 : 3200);
     }
+    const hideToast = () => { const el = document.getElementById('tileToast'); if (el) el.classList.remove('visible'); };
     window.ratelogToast = window.ratelogToast || toast;
 
     if (!window.fetch || !window.URLSearchParams) return;
@@ -169,12 +188,18 @@
         const seen = stack.querySelector('form.tile-seen');
         const seenOn = !!seen && seen.classList.contains('is-on');
         const locked = !!seen && seen.classList.contains('is-locked');
-        row('seen', !ownButtons && seen ? {
-            on: seenOn, pressed: seenOn, icon: 'eye',
-            label: seenOn ? d.labelSeenOn : d.labelSeenMark,
-            hint: locked ? d.labelSeenLockedHint : (seenOn ? d.labelSeenOnHint : ''),
-            end: seenOn ? [icon('check')] : [],
+        // Fork (2026-11-24, rewatch log): on a seen title, like the title page's Seen menu: Watched again, then Mark as
+        // not seen (or, rated, why it stays seen).
+        row('rewatch', !ownButtons && seenOn ? {
+            icon: 'rotate-cw', label: d.labelRewatch, hint: d.labelRewatchHint,
         } : null);
+        let seenRow = null;
+        if (!ownButtons && seen) {
+            if (!seenOn) seenRow = { on: false, pressed: false, icon: 'eye', label: d.labelSeenMark };
+            else if (locked) seenRow = { on: true, pressed: true, icon: 'eye', label: d.labelSeenOn, hint: d.labelSeenLockedHint, end: [icon('check')] };
+            else seenRow = { on: false, icon: 'eye-off', label: d.labelSeenUnmark };
+        }
+        row('seen', seenRow);
 
         const star = stack.querySelector('a.tile-rate');
         if (star) {
@@ -250,9 +275,55 @@
         if (restoreFocus && button.isConnected) button.focus({ preventScroll: true });
     }
 
+    // Fork (2026-11-24, rewatch log): "Watched again" from the chooser: POST /rewatch (JSON), toast with Undo (deletes that
+    // row) and "Update your rating?" (the poster's own ★: the picker, or a show's seasons / a detailed rating's page).
+    async function postJson(url, fields) {
+        const response = await fetch(url, {
+            method: 'POST',
+            body: new URLSearchParams(fields),
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'fetch', Accept: 'application/json' },
+        });
+        const type = response.headers.get('content-type') || '';
+        if (!type.includes('application/json') || response.status >= 500) throw new Error('not json');
+        return response.json();
+    }
+
+    async function logRewatch(stack) {
+        const form = stack.querySelector('form.tile-seen');
+        if (!form) return;
+        const csrf = form.querySelector('input[type="hidden"]:not([name="tmdbId"]):not([name="type"])');
+        const token = csrf ? { [csrf.name]: csrf.value } : {};
+        const fields = { ...token, tmdbId: form.querySelector('[name="tmdbId"]').value, type: form.querySelector('[name="type"]').value };
+        try {
+            const result = await postJson('/rewatch', fields);
+            if (!result.ok) { toast(result.message); return; }
+            const actions = [];
+            if (result.rewatchId != null) {
+                actions.push({
+                    label: result.undoLabel,
+                    run: async () => {
+                        try {
+                            const undone = await postJson('/rewatch/delete', { ...token, id: String(result.rewatchId) });
+                            toast(undone.message);
+                        } catch (error) { hideToast(); }
+                    },
+                });
+            }
+            const star = stack.querySelector('a.tile-rate');
+            if (star && result.rateLabel) actions.push({ label: result.rateLabel, run: () => { hideToast(); handingOver = true; try { star.click(); } finally { handingOver = false; } } });
+            toast(result.message, actions);
+        } catch (error) {
+            // Logged out or a server error: the title page has the same action.
+            const link = stack.closest('[data-tile-actions]')?.parentElement?.querySelector('a[href]');
+            if (link) window.location.href = link.href;
+        }
+    }
+
     function handOver(act) {
         const { stack } = menuFor;
         closeMenu();
+        if (act === 'rewatch') { logRewatch(stack); return; }
         handingOver = true;
         try {
             if (act === 'watchlist' || act === 'seen') {

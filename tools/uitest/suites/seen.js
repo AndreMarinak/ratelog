@@ -239,15 +239,20 @@ module.exports = {
       assert(/is-on/.test(r.seen) && /is-locked/.test(r.seen), `seen: ${r.seen}`);
       assert(!r.nudge, 'nudge rendered for a rated movie');
       const token = await t.mark();
-      // Since "Rate it?" saves in place, the earlier "Marked as seen." toast can still be showing: let it clear first.
-      await t.waitFor(() => !document.querySelector('.tile-toast.visible'), undefined, 10000).catch(() => {});
+      // Since 2026-11-24 (rewatch log) Seen on a seen title opens its menu: rated, it offers Watched again and says why
+      // there is no "Mark as not seen".
       await t.pressSel('[data-title-seen]');
-      await t.waitFor(() => document.querySelector('.tile-toast.visible'));
-      const msg = await page.evaluate(() => document.querySelector('.tile-toast.visible').innerText);
-      assert(/rated/i.test(msg), `locked message: ${msg}`);
+      await t.waitFor(() => document.querySelector('#seenMenu:not([hidden])'));
+      const menu = await page.evaluate(() => ({
+        items: [...document.querySelectorAll('#seenMenu [role="menuitem"]')].map((i) => i.innerText.split('\n')[0].trim()),
+        note: document.querySelector('#seenMenu .seen-menu-note')?.innerText.trim(),
+      }));
+      assert(menu.items.join('|') === 'Watched again' && /rated/i.test(menu.note || ''), `locked menu: ${JSON.stringify(menu)}`);
+      await page.keyboard.press('Escape');
+      await t.waitFor(() => !document.querySelector('#seenMenu'));
       await t.stillHere(token);
       await setTitle(t.api, 'movie', M.lionKing, { score: null, status: null });
-      return `"${r.card.slice(0, 40)}"; locked tap says "${msg}"`;
+      return `"${r.card.slice(0, 40)}"; locked Seen's menu says "${menu.note}"`;
     });
 
     await t.step('movie page: Rate and Add to list open their sheets', async () => {
@@ -303,7 +308,10 @@ module.exports = {
       await t.shot('severance-watching');
       await t.pressSel('[data-title-seen]');
       await t.waitFor(() => document.querySelector('[data-title-seen].is-on') && !document.querySelector('[data-progress-value="watching"].is-on'));
+      // Seen on a seen title opens its menu (rewatch log, 2026-11-24): "Mark as not seen" un-sees it.
       await t.pressSel('[data-title-seen]');
+      await t.waitFor(() => document.querySelector('#seenMenu [data-seen-unmark]'));
+      await t.pressSel('#seenMenu [data-seen-unmark]');
       await t.waitFor(() => document.querySelector('[data-title-seen]:not(.is-on)'));
       await t.stillHere(token);
       const n = await page.evaluate(() => [...document.querySelectorAll('.title-actions > *')].filter((a) => a.offsetParent).length);
@@ -379,31 +387,79 @@ module.exports = {
       return `${titles.dune2} -> Seen, ${titles.tlou} -> Watching`;
     });
 
-    await t.step('watchlist: a seen title on To watch is tagged Rewatch; Remove keeps it seen', async () => {
+    // Rewatch log (2026-11-24): every count is read before and compared after (leftover rows from a failed run don't matter).
+    const watchCount = async (type, id) => (await t.api.must('GET', `/titles/${type}/${id}`)).watchCount;
+
+    await t.step('movie page: on a seen title Seen opens a menu; Watched again logs it in place, toast Undo removes it', async () => {
+      // Coco is Watched (reset), not on the watchlist.
+      await t.api.must('DELETE', `/watchlist/movie/${M.coco}`, undefined, [200, 404]);
+      const before = await watchCount('movie', M.coco);
+      assert(before >= 1, `Coco not seen (watchCount ${before})`);
+      await t.go(`/movie/${M.coco}`);
+      const token = await t.mark();
+      await t.pressSel('[data-title-seen]');
+      await t.waitFor(() => document.querySelector('#seenMenu:not([hidden])'));
+      const menu = await page.evaluate(() => ({
+        items: [...document.querySelectorAll('#seenMenu [role="menuitem"]')].map((i) => i.querySelector('.tile-menu-label').innerText.trim()),
+        expanded: document.querySelector('[data-title-seen]').getAttribute('aria-expanded'),
+        focused: document.activeElement?.closest('#seenMenu') ? document.activeElement.querySelector('.tile-menu-label')?.innerText.trim() : null,
+      }));
+      assert(menu.items.join('|') === 'Watched again|Mark as not seen' && menu.expanded === 'true' && menu.focused === 'Watched again', JSON.stringify(menu));
+      await t.shot('coco-seen-menu');
+      await t.pressSel('#seenMenu [data-seen-rewatch] button');
+      await t.waitFor(() => /Logged a rewatch of/.test(document.querySelector('.inplace-toast.visible')?.innerText || ''));
+      await t.waitFor((n) => (document.querySelector('.title-rewatch-count')?.innerText || '').includes(`Seen ${n}×`), before + 1);
+      const toast = await page.evaluate(() => [...document.querySelectorAll('.inplace-toast.visible form button, .inplace-toast.visible a')].map((e) => e.innerText.trim()));
+      assert(toast.join('|') === 'Undo|Rate it?', `toast actions: ${toast.join('|')}`);
+      assert((await watchCount('movie', M.coco)) === before + 1, 'not logged');
+      await t.shot('coco-rewatch-toast');
+      await t.pressSel('.inplace-toast.visible form button');
+      await t.waitFor(() => /Removed the rewatch of/.test(document.querySelector('.inplace-toast.visible')?.innerText || ''));
+      assert((await watchCount('movie', M.coco)) === before, 'Undo did not remove it');
+      await t.stillHere(token);
+      await t.noOverflow();
+      return `${menu.items.join(', ')}; ${before}× -> ${before + 1}× -> Undo -> ${before}×`;
+    });
+
+    await t.step('watchlist: a seen title on To watch has Watched again; it logs a rewatch and leaves To watch, Undo puts both back', async () => {
       // Coco is Watched (reset); put it on the watchlist too.
       const added = await t.api.must('PUT', `/watchlist/movie/${M.coco}`);
       assert(added.onWatchlist && added.seen && added.status === 'watched', JSON.stringify(added));
+      const before = await watchCount('movie', M.coco);
       await t.go('/watchlist?status=want_to_watch&type=movie');
       const token = await t.mark();
+      const toWatch0 = await count('want_to_watch');
       const seen0 = await count('watched');
       const coco = await itemByKey(`movie:${M.coco}`, added.title);
       assert(await coco.evaluate((i) => !!i), `${added.title} not on To watch`);
       const card = await coco.evaluate((i) => ({
-        tag: i.querySelector('.watchlist-note.is-rewatch')?.innerText.trim(),
+        rewatch: i.querySelector('.watchlist-act.is-rewatch')?.getAttribute('aria-label'),
+        remove: !!i.querySelector('.watchlist-act.is-remove'),
         seenButton: !!i.querySelector('.watchlist-act.is-seen'),
+        tag: !!i.querySelector('.watchlist-note'),
         eye: !!i.querySelector('.tile-seen.is-on'),
       }));
-      assert(card.tag === 'Rewatch' && !card.seenButton && card.eye, JSON.stringify(card));
+      assert(/Log a rewatch/.test(card.rewatch || '') && card.remove && !card.seenButton && !card.tag && card.eye, JSON.stringify(card));
       await coco.evaluate((i) => i.scrollIntoView({ block: 'center' }));
-      await t.shot('watchlist-rewatch');
-      await t.press(await coco.$('.watchlist-act.is-remove'));
-      await t.waitFor(() => /Removed/.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
+      await t.shot('watchlist-watched-again');
+      await t.press(await coco.$('.watchlist-act.is-rewatch'));
+      await t.waitFor(() => /Logged a rewatch of .* and took it off your watchlist/.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
       assert(await coco.evaluate((i) => i.hidden), 'still on To watch');
-      assert((await count('watched')) === seen0, 'the Seen count moved');
+      assert((await count('want_to_watch')) === toWatch0 - 1 && (await count('watched')) === seen0, 'tab counts');
+      assert((await watchCount('movie', M.coco)) === before + 1, 'not logged');
+      await t.press(await page.$('.watchlist-toast.visible .watchlist-toast-undo'));
+      await t.waitFor(() => /Put .* back/.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
+      assert(!(await coco.evaluate((i) => i.hidden)), 'not back on To watch');
+      assert((await watchCount('movie', M.coco)) === before, 'Undo did not remove the rewatch');
       await t.stillHere(token);
       const st = await t.api.must('GET', '/statuses?status=watched&type=movie');
-      assert(st.items.some((i) => i.tmdbId === M.coco && !i.onWatchlist), 'Coco is not Watched any more');
-      return `tagged "${card.tag}", removed, still seen`;
+      assert(st.items.some((i) => i.tmdbId === M.coco && i.onWatchlist), 'Coco is not Watched and on the watchlist again');
+      // Remove still takes it off and keeps it seen.
+      await t.press(await coco.$('.watchlist-act.is-remove'));
+      await t.waitFor(() => /Removed/.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
+      const st2 = await t.api.must('GET', '/statuses?status=watched&type=movie');
+      assert(st2.items.some((i) => i.tmdbId === M.coco && !i.onWatchlist), 'Remove un-saw Coco');
+      return `"${card.rewatch}"; logged and off To watch, Undo back, Remove keeps it seen`;
     });
 
     // ---------- List tick-off ----------
