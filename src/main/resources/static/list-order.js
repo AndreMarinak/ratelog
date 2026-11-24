@@ -346,7 +346,8 @@
             if (!pending || failed) return;
             event.preventDefault();
             setStatus(editor.dataset.savingText || idleText);
-            queue.then(() => { if (!failed) window.location.href = done.href; });
+            // Replace this entry (list-filter.js): a mode switch adds no history entry.
+            queue.then(() => { if (!failed) window.location.replace(done.href); });
         });
     }
     window.addEventListener('beforeunload', (event) => {

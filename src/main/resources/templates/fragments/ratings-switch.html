@@ -11,18 +11,21 @@
     <!--/* Filters apply on change and get an ✕ each (fork, 2026-11-23); the label's {0} is filled in by the script. */-->
     <script src="/ratings-filters.js" defer th:data-clear-label="#{ratings.filters.clear}"></script>
     <link rel="stylesheet" href="/ratings-unrated.css">
-    <a href="/movies" class="ratings-switch-link" th:classappend="${current == 'movies'} ? 'active' : ''"
+    <!--/* Fork (2026-11-23): the three links load their page but replace this history entry (data-view-replace,
+           view-swap.js), so switching Movies / TV / To rate never adds a Back step. */-->
+    <script src="/view-swap.js" defer></script>
+    <a href="/movies" data-view-replace class="ratings-switch-link" th:classappend="${current == 'movies'} ? 'active' : ''"
        th:attr="aria-current=${current == 'movies'} ? 'page' : null">
         <i data-lucide="film" aria-hidden="true"></i>
         <span th:text="#{nav.movies}">Movies</span>
     </a>
-    <a href="/tvshows" class="ratings-switch-link" th:classappend="${current == 'tvshows'} ? 'active' : ''"
+    <a href="/tvshows" data-view-replace class="ratings-switch-link" th:classappend="${current == 'tvshows'} ? 'active' : ''"
        th:attr="aria-current=${current == 'tvshows'} ? 'page' : null">
         <i data-lucide="tv" aria-hidden="true"></i>
         <span th:text="#{nav.tvshows}">TV Shows</span>
     </a>
     <!--/* Fork (tile rating): "Seen, not rated" (/ratings/unrated), with how many are waiting (UnratedSeenCountAdvice). */-->
-    <a href="/ratings/unrated" class="ratings-switch-link ratings-switch-unrated" th:classappend="${current == 'unrated'} ? 'active' : ''"
+    <a href="/ratings/unrated" data-view-replace class="ratings-switch-link ratings-switch-unrated" th:classappend="${current == 'unrated'} ? 'active' : ''"
        th:attr="aria-current=${current == 'unrated'} ? 'page' : null"
        th:title="#{unrated.switch.title}">
         <i data-lucide="star" aria-hidden="true"></i>

@@ -58,7 +58,7 @@
         try { history.replaceState(Object.assign({}, state, { backNav: data }), ''); } catch (err) { /* ignore */ }
     };
     const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    // An entry pushed in place (list tabs) has no id yet: give it one.
+    // An entry without an id yet (a new page; in-place filters replace the URL but keep the state): give it one.
     const entryId = () => {
         const own = ownState();
         if (own) return own.id;
@@ -229,6 +229,8 @@
         if (want) {
             remove(RESTORE);
             if (Date.now() - (want.t || 0) < RESTORE_MAX_AGE_MS && withoutHash(want.url) === withoutHash(location.href)) {
+                // Page scripts that rebuild what you had loaded (browse.js: Discover's "Load more" pages) read this.
+                window.RatelogBackNav = { returned: true };
                 restore(want);
                 return;
             }

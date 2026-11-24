@@ -191,3 +191,22 @@
     font-size: 0.8rem;
   }
 }
+
+/* Fork: a filter loading in place (view-swap.js): the results fade a little, after a short delay so quick
+   swaps don't flicker; loader.js's thin bar shows if it takes longer. */
+.discover-view .browse-results,
+.discover-view .discover-rows {
+    transition: opacity 0.2s ease 0.15s;
+}
+
+.discover-view.is-loading .browse-results,
+.discover-view.is-loading .discover-rows {
+    opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .discover-view .browse-results,
+    .discover-view .discover-rows {
+        transition: none;
+    }
+}

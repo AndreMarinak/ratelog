@@ -29,8 +29,11 @@
         </form>
     </div>
 
+    <!--/* Fork: the tabs and the Movies / TV filter switch in place (view-swap.js): the toolbar, hint and grid below are
+           swapped from the new URL, which replaces this entry's URL (one Back leaves the watchlist). */-->
+    <div id="watchlistView" data-view data-view-fallback="status">
     <div class="watchlist-toolbar" th:fragment="toolbar">
-        <nav class="status-segmented watchlist-tabs" th:aria-label="#{watchlist.filter.status}">
+        <nav class="status-segmented watchlist-tabs" th:aria-label="#{watchlist.filter.status}" data-view-links="status">
             <a th:each="tab : ${tabs}" th:href="${tab.href}" class="status-segment" th:data-status="${tab.status}"
                th:classappend="${tab.active} ? 'active' : ''"
                th:aria-current="${tab.active} ? 'page' : null">
@@ -39,7 +42,7 @@
                 <span class="status-count" th:text="${tab.count}">0</span>
             </a>
         </nav>
-        <nav class="status-segmented" th:aria-label="#{watchlist.filter.type}">
+        <nav class="status-segmented" th:aria-label="#{watchlist.filter.type}" data-view-links="type">
             <a th:each="filter : ${typeFilters}" th:href="${filter.href}" class="status-segment"
                th:classappend="${filter.active} ? 'active' : ''"
                th:aria-current="${filter.active} ? 'page' : null"
@@ -101,8 +104,10 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
 <script src="/watchlist.js" defer></script>
+<script src="/view-swap.js" defer></script>
 <script src="/tile-actions.js" defer></script>
 <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
 </body>

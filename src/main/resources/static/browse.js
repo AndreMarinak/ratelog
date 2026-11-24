@@ -1,55 +1,99 @@
-// Fork: Discover grid enhancements (templates/discover.html). Without JS, "Load more" opens the next page and the bookmark buttons post normally.
-// - Load more: fetches the next page's results fragment (?partial=1) and appends its tiles.
-// - Bookmark: posts /watchlist/toggle in the background and flips the button, keeping scroll and loaded pages.
+// Fork: Discover grid enhancements (templates/discover.html). Without JS, "Load more" opens the next page.
+// - Load more: fetches the next page's results fragment (?partial=1) and appends its tiles. Delegated from `document`
+//   and looked up when used, so it keeps working after view-swap.js swaps the view in place.
+// - Coming back keeps your place (user feedback 2026-11-23, docs/design-decisions.md "One Back leaves the page"):
+//   the pages "Load more" appended are remembered per tab (sessionStorage, the grid's URL + the pages' hrefs + the
+//   scroll position). When you return to that same URL with Back / Forward, a reload or a title page's "← Discover"
+//   link, those pages are fetched again (fresh, so Seen / bookmarks changed meanwhile show) and appended, and the
+//   scroll position is put back unless you have scrolled yourself. The pages are not cached as HTML: Discover is
+//   `no-store`, and a stale copy would show a title you just marked seen.
+// (The poster quick actions are tile-actions.js.)
 (() => {
-    const grid = document.getElementById('browseGrid');
-    const more = document.getElementById('browseMore');
-    const toast = document.getElementById('browseToast');
-    if (!grid || !more || !window.fetch || !window.DOMParser) return;
+    if (!window.fetch || !window.DOMParser) return;
+
+    const KEY = 'ratelog.discover.grid';
+    const MAX_AGE_MS = 6 * 60 * 60 * 1000;
+    const MAX_PAGES = 10;
 
     const parse = (html) => new DOMParser().parseFromString(html, 'text/html');
     const refreshIcons = () => { if (window.lucide) window.lucide.createIcons(); };
+    const grid = () => document.getElementById('browseGrid');
+    const more = () => document.getElementById('browseMore');
+    const here = () => location.pathname + location.search;
+
+    const read = () => {
+        try { return JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (err) { return null; }
+    };
+    const write = (value) => {
+        try { sessionStorage.setItem(KEY, JSON.stringify(value)); } catch (err) { /* storage unavailable: page 1 only */ }
+    };
+
+    // The pages "Load more" appended to the grid shown now (their hrefs, in order).
+    let loaded = [];
+    let restoring = false;
+
+    function save() {
+        if (!grid() || restoring) return;
+        write({ url: here(), loaded, y: Math.round(window.scrollY), t: Date.now() });
+    }
 
     // --- Load more ---
 
-    more.addEventListener('click', (event) => {
-        const trigger = event.target.closest('a[data-load-more], button[data-retry-href]');
-        if (!trigger) return;
+    function partialUrl(href) {
+        const url = new URL(href, window.location.href);
+        url.searchParams.set('partial', '1');
+        return url;
+    }
+
+    async function fetchResults(href) {
+        const response = await fetch(partialUrl(href), { credentials: 'same-origin', headers: { Accept: 'text/html' } });
+        const results = parse(await response.text()).getElementById('browseResults');
+        // Logged out (login page) or something unexpected.
+        if (!response.ok || !results) return { ok: false, page: true };
+        if (results.querySelector('.browse-message')) return { ok: false };
+        return { ok: true, results };
+    }
+
+    // Appends one page's tiles (skipping any already shown); returns the first new tile.
+    function append(results) {
+        const list = grid();
+        const seen = new Set([...list.querySelectorAll('.browse-tile')].map((tile) => tile.dataset.key));
+        let firstNew = null;
+        results.querySelectorAll('#browseGrid > .browse-tile').forEach((tile) => {
+            if (seen.has(tile.dataset.key)) return;
+            const node = document.importNode(tile, true);
+            list.appendChild(node);
+            firstNew = firstNew || node;
+        });
+        const nextMore = results.querySelector('#browseMore');
+        const nextLink = nextMore && nextMore.querySelector('a[data-load-more]');
+        more().replaceChildren(...(nextLink ? [document.importNode(nextLink, true)] : []));
+        return firstNew;
+    }
+
+    document.addEventListener('click', (event) => {
+        const trigger = event.target.closest && event.target.closest('#browseMore a[data-load-more], #browseMore button[data-retry-href]');
+        if (!trigger || !grid() || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         loadMore(trigger.dataset.retryHref || trigger.getAttribute('href'), trigger);
     });
 
     async function loadMore(href, trigger) {
+        if (trigger.getAttribute('aria-busy') === 'true') return;
         trigger.setAttribute('aria-busy', 'true');
+        const box = more();
         const label = trigger.querySelector('span') || trigger;
         const original = label.textContent;
-        label.textContent = more.dataset.loading || original;
+        label.textContent = box.dataset.loading || original;
         try {
-            const url = new URL(href, window.location.href);
-            url.searchParams.set('partial', '1');
-            const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html' } });
-            const doc = parse(await response.text());
-            const results = doc.getElementById('browseResults');
-            // Logged out (login page) or something unexpected: let the browser open the page itself.
-            if (!response.ok || !results) {
-                window.location.assign(href);
+            const answer = await fetchResults(href);
+            if (!answer.ok) {
+                if (answer.page) window.location.assign(href); else showLoadError(href);
                 return;
             }
-            if (results.querySelector('.browse-message')) {
-                showLoadError(href);
-                return;
-            }
-            const seen = new Set([...grid.querySelectorAll('.browse-tile')].map((tile) => tile.dataset.key));
-            let firstNew = null;
-            results.querySelectorAll('#browseGrid > .browse-tile').forEach((tile) => {
-                if (seen.has(tile.dataset.key)) return;
-                const node = document.importNode(tile, true);
-                grid.appendChild(node);
-                firstNew = firstNew || node;
-            });
-            const nextMore = results.querySelector('#browseMore');
-            const nextLink = nextMore && nextMore.querySelector('a[data-load-more]');
-            more.replaceChildren(...(nextLink ? [document.importNode(nextLink, true)] : []));
+            const firstNew = append(answer.results);
+            loaded.push(href);
+            save();
             refreshIcons();
             if (firstNew) firstNew.querySelector('a')?.focus({ preventScroll: true });
         } catch (error) {
@@ -61,80 +105,87 @@
     }
 
     function showLoadError(href) {
+        const box = more();
         const message = document.createElement('p');
         message.className = 'browse-message';
         message.setAttribute('role', 'alert');
         const text = document.createElement('span');
-        text.textContent = more.dataset.error || 'Something went wrong.';
+        text.textContent = box.dataset.error || 'Something went wrong.';
         const retry = document.createElement('button');
         retry.type = 'button';
         retry.className = 'secondary';
         retry.dataset.retryHref = href;
-        retry.textContent = more.dataset.retry || 'Try again';
+        retry.textContent = box.dataset.retry || 'Try again';
         message.append(text, retry);
-        more.replaceChildren(message);
+        box.replaceChildren(message);
     }
 
-    // --- Bookmark (Want to watch) ---
+    // --- Coming back: the pages you had loaded, and where you were ---
 
-    let toastTimer = null;
-    function showToast(text) {
-        if (!toast || !text) return;
-        toast.textContent = text;
-        toast.classList.add('visible');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('visible'), 3200);
-    }
-
-    function setBookmark(form, on) {
-        form.classList.toggle('is-on', on);
-        form.dataset.status = on ? 'want_to_watch' : '';
-        const button = form.querySelector('button');
-        const label = on ? form.dataset.labelRemove : form.dataset.labelAdd;
-        button.setAttribute('aria-label', label);
-        button.title = label;
-        const icon = document.createElement('i');
-        icon.setAttribute('data-lucide', on ? 'bookmark-check' : 'bookmark');
-        icon.setAttribute('aria-hidden', 'true');
-        button.replaceChildren(icon);
-        refreshIcons();
-    }
-
-    grid.addEventListener('submit', async (event) => {
-        const form = event.target.closest('form.browse-bookmark');
-        if (!form) return;
-        event.preventDefault();
-        const button = form.querySelector('button');
-        if (button.getAttribute('aria-busy') === 'true') return;
-        button.setAttribute('aria-busy', 'true');
+    const navigationType = () => {
         try {
-            const response = await fetch(form.action, {
-                method: 'POST',
-                body: new URLSearchParams(new FormData(form)),
-                credentials: 'same-origin',
-            });
-            // Fork: rate limited (429): a toast instead of re-posting the form.
-            if (response.status === 429) {
-                const limited = parse(await response.text()).querySelector('.feedback.error');
-                showToast(limited ? limited.textContent.trim() : 'Too many requests');
-                return;
+            const entry = performance.getEntriesByType('navigation')[0];
+            if (entry && entry.type) return entry.type;
+        } catch (err) { /* old browser */ }
+        return 'navigate';
+    };
+
+    async function restore(record) {
+        let touched = false;
+        const stop = () => { touched = true; };
+        ['wheel', 'touchstart', 'mousedown', 'keydown'].forEach((type) =>
+            window.addEventListener(type, stop, { passive: true, once: true }));
+        restoring = true;
+        if (window.Loader) window.Loader.start();
+        const hrefs = record.loaded.slice(0, MAX_PAGES);
+        try {
+            // Fetched together, appended in order; a page that fails stops there with its "Try again".
+            const answers = await Promise.all(hrefs.map((href) => fetchResults(href).catch(() => ({ ok: false }))));
+            if (!grid() || here() !== record.url) return; // the view changed meanwhile
+            for (let i = 0; i < answers.length; i++) {
+                if (!answers[i].ok) { showLoadError(hrefs[i]); break; }
+                append(answers[i].results);
+                loaded.push(hrefs[i]);
             }
-            const landed = new URL(response.url, window.location.href);
-            if (!response.ok || landed.pathname === '/login') throw new Error('not saved');
-            // The endpoint redirects back here with a flash message; read it from the page it rendered.
-            const doc = parse(await response.text());
-            const flash = doc.querySelector('.feedback.success, .feedback.error');
-            if (!flash || flash.classList.contains('success')) {
-                // Only "Want to watch" toggles; Watching / Watched / Dropped are left as they are.
-                const status = form.dataset.status || '';
-                if (status === 'want_to_watch') setBookmark(form, false);
-                else if (status === '') setBookmark(form, true);
-            }
-            showToast(flash ? flash.textContent.trim() : '');
-        } catch (error) {
-            form.submit();
+            refreshIcons();
         } finally {
-            button.removeAttribute('aria-busy');
+            restoring = false;
+            if (window.Loader) window.Loader.stop();
         }
+        const scroll = () => {
+            if (!touched && Math.abs(window.scrollY - record.y) > 2) window.scrollTo({ top: record.y, left: 0, behavior: 'instant' });
+        };
+        scroll();
+        // Posters above may still change the height a little.
+        [300, 900].forEach((ms) => setTimeout(scroll, ms));
+        save();
+    }
+
+    function start() {
+        if (!grid()) return;
+        const record = read();
+        const returned = navigationType() !== 'navigate' || !!(window.RatelogBackNav && window.RatelogBackNav.returned);
+        if (returned && record && record.url === here() && Array.isArray(record.loaded) && record.loaded.length
+            && Date.now() - (record.t || 0) < MAX_AGE_MS && more() && more().querySelector('a[data-load-more]')) {
+            restore(record);
+        } else {
+            save();
+        }
+    }
+
+    // Keep the record current: the scroll position, right before a link leaves, and when the page is hidden.
+    let scrollTimer = 0;
+    window.addEventListener('scroll', () => {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(save, 150);
+    }, { passive: true });
+    document.addEventListener('click', (event) => { if (event.target.closest && event.target.closest('a[href]')) save(); }, true);
+    window.addEventListener('pagehide', save);
+    // A filter applied in place (view-swap.js) shows a new grid from its first page.
+    document.addEventListener('view:swapped', () => {
+        loaded = [];
+        save();
     });
+
+    start();
 })();

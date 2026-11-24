@@ -1,0 +1,128 @@
+// Fork: filters that apply in place (user feedback 2026-11-23: "the back button thing is REAL annoying on the phone,
+// as well as refreshes for filtered list when it shouldn't need a refresh"; docs/design-decisions.md "One Back
+// leaves the page"). Rule: filters replace, navigation pushes.
+//
+// <div id="discoverView" data-view data-view-fallback="type">      the region a filter changes (it needs an id)
+//   <nav data-view-links="type"> <a href="/discover?type=tv">...    links that swap it ("named groups", for focus)
+//
+// - A plain click on a link inside a [data-view-links] group of a [data-view] region, to the same path, fetches that
+//   URL and replaces the region with the same region from the answer, so every control, count and link matches the
+//   server's view. The URL is replaced, not pushed (history.replaceState, keeping other scripts' state such as
+//   back-nav.js's id): reload and sharing show the same view, and one Back leaves the page.
+// - Focus goes back to the same control: a <details data-menu> menu's trigger, else the group's active (or first)
+//   link, else the region's data-view-fallback group. Loader.start / stop (loader.js) show the thin bar if slow;
+//   a newer click cancels an older one; the region gets `is-loading` and aria-busy while it loads.
+// - `view:swapped` (detail: { url, regions }) lets page scripts start the new content (discover.js: rows' arrows and
+//   lazy loading; browse.js: "Load more" pages).
+// - <a data-view-replace>: a page switch that still loads its page but replaces this history entry
+//   (location.replace) instead of adding one (Ratings' Movies / TV / To rate switch).
+// Without JS, on a modified click (new tab), or if anything fails, the link loads its page as before.
+(() => {
+    if (window.__ratelogViewSwap) return;
+    window.__ratelogViewSwap = true;
+    if (!window.fetch || !window.DOMParser || !window.history || !history.replaceState) return;
+
+    let seq = 0;
+    let inFlight = null;
+
+    const plainClick = (event) =>
+        !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+
+    function replaceUrl(url) {
+        const state = history.state;
+        const keep = state && typeof state === 'object' ? state : {};
+        history.replaceState(Object.assign({}, keep, { view: true }), '', url);
+    }
+
+    const visible = (el) => !!el && el.getClientRects().length > 0;
+
+    // What to focus once the region is swapped: described by name, since the clicked node is replaced.
+    function focusKey(link) {
+        const menu = link.closest('details[data-menu]');
+        if (menu) return { menu: menu.dataset.menu };
+        const group = link.closest('[data-view-links]');
+        return { group: group ? group.dataset.viewLinks : '' };
+    }
+
+    function inGroup(group) {
+        if (!group) return null;
+        if (group.matches('a[href]')) return group;
+        const active = [...group.querySelectorAll('a.active, a[aria-current="page"], a[aria-current="true"]')].find(visible);
+        return active || [...group.querySelectorAll('a[href], summary')].find(visible) || null;
+    }
+
+    function focusAfter(key, region) {
+        const byName = (name) => (name ? region.querySelector(`[data-view-links="${CSS.escape(name)}"]`) : null);
+        let target = key.menu ? region.querySelector(`details[data-menu="${CSS.escape(key.menu)}"] > summary`) : null;
+        if (!target) target = inGroup(byName(key.group));
+        if (!target) target = inGroup(byName(region.dataset.viewFallback));
+        if (target) target.focus({ preventScroll: true });
+    }
+
+    function setBusy(region, busy) {
+        if (busy) region.setAttribute('aria-busy', 'true'); else region.removeAttribute('aria-busy');
+        region.classList.toggle('is-loading', busy);
+    }
+
+    async function show(region, url, key) {
+        const id = region.id;
+        const mine = ++seq;
+        if (inFlight) inFlight.abort();
+        const controller = window.AbortController ? new AbortController() : null;
+        inFlight = controller;
+        setBusy(region, true);
+        if (window.Loader) window.Loader.start();
+        try {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { Accept: 'text/html' },
+                signal: controller ? controller.signal : undefined,
+            });
+            const landed = new URL(response.url, window.location.href);
+            if (!response.ok || landed.pathname !== window.location.pathname) throw new Error('not loaded');
+            const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+            if (mine !== seq) return;
+            const fresh = doc.getElementById(id);
+            if (!fresh || !fresh.hasAttribute('data-view')) throw new Error('unexpected page');
+            const node = document.importNode(fresh, true);
+            region.replaceWith(node);
+            replaceUrl(url);
+            if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+            document.dispatchEvent(new CustomEvent('view:swapped', { detail: { url, regions: [node] } }));
+            focusAfter(key, node);
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            if (mine !== seq) return;
+            window.location.assign(url);
+        } finally {
+            if (mine === seq) {
+                inFlight = null;
+                if (region.isConnected) setBusy(region, false);
+                if (window.Loader) window.Loader.stop();
+            }
+        }
+    }
+
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest || !plainClick(event)) return;
+        const link = event.target.closest('a[href]');
+        if (!link) return;
+        const url = new URL(link.href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+
+        if (link.hasAttribute('data-view-replace')) {
+            event.preventDefault();
+            if (url.href !== window.location.href) window.location.replace(url.href);
+            return;
+        }
+
+        const region = link.closest('[data-view][id]');
+        if (!region || !link.closest('[data-view-links]') || url.pathname !== window.location.pathname) return;
+        event.preventDefault();
+        const menu = link.closest('details');
+        if (menu) menu.open = false;
+        // The view already shown (a menu's active entry): nothing to load.
+        if (url.pathname + url.search === window.location.pathname + window.location.search) return;
+        show(region, url.pathname + url.search, focusKey(link));
+    });
+})();

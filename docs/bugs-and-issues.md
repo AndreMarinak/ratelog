@@ -4,12 +4,6 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
-- **Going back to Discover's grid or search results only shows the first page again** (found building the back links,
-  2026-11-23): every page is sent with `Cache-Control: no-store` (Spring Security's default), so Chrome keeps no page in its
-  back/forward cache and Back (or the title page's back link) reloads the page. Pages added by "Load more" / infinite scroll are
-  gone; the scroll position is put back as far as the reloaded page reaches (search's infinite scroll then loads more as you're at
-  the end). Discover's landing rows are unaffected (their placeholders have the final height). Ideas: put the page number in the
-  URL as pages load (`replaceState`), or allow the back/forward cache for HTML pages.
 - **Without JS, the phone title page's "Play trailer" pill overlaps a "Watch the trailer on YouTube" link** (seen in the
   back-link no-JS check at 360px, 2026-11-23): the no-JS fallback link of the trailer is drawn over the pill. Cosmetic and
   only without JS; pre-existing (`fragments/title-info.html` / `title-info.css`).
@@ -74,6 +68,17 @@ Problems found while building and running the fork: what happened, the cause, an
 
 - **Two search boxes on the search results page** (user, phone, 2026-11-23): the earlier fix removed the Browse bar's field on
   Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see design-decisions.
+- **Going back to Discover's grid or search results only showed the first page again** (found building the back links,
+  fixed 2026-11-23 in "One Back leaves the page"): every page is sent with `Cache-Control: no-store` (Spring Security's
+  default), so Chrome keeps no page in its back/forward cache and Back (or the title page's back link) reloads the page, losing
+  the pages "Load more" / infinite scroll had added. `browse.js` and `search.js` now remember the loaded pages and the scroll
+  position per tab and, on Back / Forward, reload or the "← Discover" / "← Search results" link, fetch those pages again and
+  scroll back. Allowing the back/forward cache was the other idea; it would also keep stale Seen / bookmark states.
+- **Every Ratings filter and list tab added a history entry** (2026-11-23, user: "the back button thing is REAL annoying on the
+  phone"): `ratings-filters.js` and `list-filter.js` used `history.pushState`, so the phone's Back stepped back through each filter
+  before leaving the page. They now replace the URL (keeping back-nav.js's state); Discover, the list Sort menu and the watchlist
+  tabs switch in place too instead of loading a page. Housekeeping in the same change: `browse.js` still had a grid bookmark
+  handler for `form.browse-bookmark`, which no template renders since the poster quick actions (`tile-actions.js`); removed.
 - **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
   visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").
   `/fonts/**` is now public like the stylesheets.

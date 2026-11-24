@@ -36,7 +36,7 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **"New list" inside the add-to-list modal** creates the list and adds the title in one step, then opens the list (same destination as adding to an existing list). *(With JS it saves in place since the reload audit; moved to the top of the sheet, see "In your lists" below.)*
 - **Confirmation before destructive one-click actions** (remove from list, remove tag, revoke token) uses a `data-confirm` attribute + native `confirm()` (`static/confirm.js`): works inside modals and without extra UI code.
 - **List progress is always the viewer's own**, on their lists and on other people's public lists. "Seen" = rated (a show: at least one rated season, the same rule as Browse's hide-rated filter) or status Watched; Watching, Want to watch and Dropped are not seen. Marks are read with one query per media type in the list (`ListProgressDAO`), and the `/lists` cards' "9/25 seen" with one query for the whole page. Added to the upstream list page with a `@ControllerAdvice` (`ListProgressModelAdvice`) and template include lines; the upstream list controller and handler are untouched.
-- **List filters are plain links** (`/list/{id}?show=unseen` / `?show=seen`, unknown values = All) so they work without JS and can be shared. Ranks are places in the whole list (by position, then id), computed before filtering, so a filtered view never renumbers and removed titles leave no gaps.
+- **List filters are plain links** (`/list/{id}?show=unseen` / `?show=seen`, unknown values = All) so they work without JS and can be shared (with JS they switch in place and replace the URL, see "One Back leaves the page"). Ranks are places in the whole list (by position, then id), computed before filtering, so a filtered view never renumbers and removed titles leave no gaps.
 - **"Add the N unseen to my watchlist" never touches an existing status.** N counts unseen titles with **no status** (so the button disappears once there's nothing left to add, and Watching/Dropped titles aren't "added"). The write is a single `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, so even a status set a moment earlier wins; rated titles without a status are skipped. Earlier ranks get later timestamps, so the watchlist (newest first) lists them in the list's order. Asks first (`data-confirm`), flashes the count, and returns to the same tab.
 
 - **Official lists live in their own table** (`official_lists(list_id PK -> custom_lists ON DELETE CASCADE, created_at_epoch_ms)`, `V1120`)
@@ -362,7 +362,7 @@ recommendations but". Code: `org.ratelog.backnav`, `fragments/back-nav.html`, `s
   Storage access is wrapped in try/catch: without it the server's link stays.
 - **How it goes back:** when the origin is the previous entry in this tab's history (you opened the title straight from it),
   `history.back()`, so the browser restores the page itself, all of it (loaded "Load more" pages, rows) when it kept it in its
-  back/forward cache. Otherwise (after title-to-title taps, a rating save that reloaded the page) the link opens the origin's URL and
+  back/forward cache (when it didn't, `browse.js` / `search.js` load those pages again since 2026-11-23). Otherwise (after title-to-title taps, a rating save that reloaded the page) the link opens the origin's URL and
   the script scrolls it back to where you were, retrying for ~2 s while rows and posters load and stopping as soon as you scroll
   yourself. History then grows by one entry, like any link. Not `history.go(-n)`: counting entries breaks on in-page entries
   (`#seasons`), and overshooting would leave the app. A safety net opens the URL if `history.back()` doesn't leave the page.
@@ -484,10 +484,55 @@ item 20. Code: `org.ratelog.customlist.suggest`, `fragments/list-suggest.html`, 
   just the Any / Movies / TV filter, which applies as soon as it changes (`search-type.js`; the search button stays for no-JS),
   and the heading reads "Results for "…"".
 
+### One Back leaves the page: filters replace, navigation pushes (2026-11-23)
+
+The user: "also the back button thing is REAL annoying on the phone, as well as refreshes for filtered list when it shouldn't
+need a refresh". On a phone, Back (the edge swipe) is the main way out of a page, and every filter, tab and sort had pushed a
+history entry (Ratings filters, list tabs) or loaded a new page (Discover, list Sort, watchlist tabs), so leaving Ratings after
+three filters took four swipes. Code: `static/view-swap.js` (new, generic), `list-filter.js`, `ratings-filters.js`, `browse.js`,
+`search.js`, `discover.js`, `back-nav.js`; templates `discover.html`, `watchlist.html`, `fragments/browse-bar.html`,
+`fragments/ratings-switch.html`.
+
+- **The rule: filters replace, navigation pushes.** Anything that changes how the same page is shown (a filter, a tab, a sort,
+  the hide-seen switch, Movies / TV) replaces the current history entry's URL (`history.replaceState`). The URL still describes
+  the view, so reload, sharing and the title pages' "← Discover" link show exactly that view, but Back leaves the page in one
+  step. Going somewhere else (a poster, a row's "More", a nav tab, a list card) pushes as before. Replacing keeps the entry's
+  other `history.state` keys (back-nav.js stores the entry's id there), so the back links still find their origin.
+- **Filters apply in place everywhere they are links.** A click fetches the new URL and swaps the page's view region from it:
+  Discover's whole view (`#discoverView`: the switch, the bar, the chips, and the rows or the grid; one region, so the bar's
+  links, which each encode the full state, always match the results), the list page's region (tabs, Sort, grid; `list-filter.js`
+  already did this for tabs) and the watchlist's tabs and Movies / TV filter (`#watchlistView`). Declarative, like `inplace.js`:
+  `data-view` on the region (with an id), `data-view-links="<name>"` on each group of links. Focus goes back to the same control
+  (the menu's trigger, the switch, the active tab), the results fade after 150 ms and loader.js's thin bar shows after 400 ms,
+  and a newer click cancels an older one. The full Discover page is what's fetched (no new fragment endpoint): it costs the same
+  TMDB call the grid makes anyway, and swapping the whole view is simpler than keeping the bar and a partial grid in step.
+  Measured locally: swaps took 107-472 ms; the same view as a full page was 110-434 ms and 132 KB against 129-342 ms and 73 KB
+  for the grid-only `partial=1` fragment, so the time is TMDB's, not the page size.
+- **Without JS, or on any error, the links load their page** exactly as before (progressive enhancement); a modified click (new
+  tab) is left to the browser.
+- **Modes and page switches still load a page, but replace the entry:** the list's tick-off mode ("Mark what you've seen" /
+  Done) and the owner's "Edit order" / Done (`location.replace`), and the Ratings tab's Movies / TV shows / To rate switch
+  (`data-view-replace`). They are different layouts (and To rate is a different page), so a page load is the robust choice, but
+  none is a place you'd want Back to return to. Not done in place: the list suggestions row outside the list region depends on
+  the mode, and the reorder editor sets itself up on load.
+- **Coming back to Discover's grid or search results keeps your place.** `browse.js` / `search.js` remember per tab
+  (sessionStorage) the grid's URL, the pages "Load more" (or infinite scroll) added and the scroll position. Returning to that
+  same URL by Back / Forward, a reload or a title page's "← Discover" / "← Search results" link (back-nav.js sets
+  `window.RatelogBackNav.returned`) fetches those pages again, appends them in order and scrolls back, unless you scrolled first.
+  Re-fetching was chosen over caching the HTML: pages are `no-store`, and a cached copy would still show the title you just
+  marked seen (with "Hide titles I've seen" on) or an old bookmark. At most 10 pages are restored; a page that fails shows its
+  "Try again". A fresh visit to the same URL (a row's "More", typing it) starts at page 1.
+- **Checked for other needless entries:** modals and sheets never touch history, the title page's `?rate=` already used
+  `replaceState`, and the one in-page entry is the TV page's "Seasons" jump (`#seasons`), a real anchor kept as is. The pages
+  that still load are explicit saves (Rate modal, bulk "add unseen") and real navigation. The "To rate" view's All / Movies / TV
+  tabs are still plain page loads (pushed); `ratings-unrated.js` holds on to its section, so it would need a small change first.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
 **navigation and changes to the whole result set load a page** (they get their own URL, and Back works).
+*(Since 2026-11-23 filters, tabs and sorts also apply in place, and **filters replace, navigation pushes**: they replace the
+entry's URL instead of adding one, so one Back leaves the page. See "One Back leaves the page" above.)*
 Everything in place is progressive enhancement: without JS, or on any error, the plain form post / link still works.
 Generic hooks live in `static/inplace.js` (`data-inplace="<regions to refresh>"` on a form, `data-append` on a
 "Load more" link); a few pages have their own handler.
@@ -501,16 +546,17 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Poster Seen eye and bookmark (home, Discover rows and grid, search, lists) | — | in place (`tile-actions.js`, JSON answer), every copy of the title flips, toast |
 | Title page series / "More like this" tiles (bookmark, Seen) | — | in place (`tile-actions.js`); the series progress line and "You're here" eye follow (`title-related.js`) |
 | Discover row / grid bookmark | in place | in place (`discover.js`, `browse.js`) |
-| Discover "Load more", lazy rows | in place | in place |
-| Search results infinite scroll | in place | in place (`search.js`) |
-| List page All / Not seen / Seen tabs | reload | in place with URL + Back (`list-filter.js`) |
+| Discover "Load more", lazy rows | in place | in place; coming back (Back, reload, "← Discover") fetches the loaded pages again and scrolls back (`browse.js`, 2026-11-23) |
+| Search results infinite scroll | in place | in place (`search.js`); coming back loads the same pages again and scrolls back (2026-11-23) |
+| List page All / Not seen / Seen tabs | reload | in place, **URL replaced** (`list-filter.js`; pushed an entry per tab until 2026-11-23) |
 | List page remove item (after confirm) | reload | in place: progress, tabs and grid refresh (`#listRegion`) |
 | Add to list (modal), create list + add | **navigated to the list page** | stays on the title, modal closes, toast "Added to X" *(adding: see the next row)* |
 | Add-to-list sheet: tick / untick a list (untick after confirm) | — | in place, **sheet stays open** (`list-membership.js`, JSON answer): the tick, "In 2 of your lists" and the page's "In 2 lists" button update, toast |
 | Add-to-list sheet: New list (at the top) | — | in place: sheet closes, sheet and button refresh (`data-inplace="#addToListModal, [data-list-button]"`), toast |
 | List reorder mode: drag, "move to #", top / up / down / bottom | — | in place (`list-order.js`): the row moves at once, the server's order wins, toast; no JS = form post back to the row |
-| List page Sort menu | — | **page load**: a new arrangement of the whole list with its own URL (like Discover's sort); the tabs keep it |
-| List "Edit order" / "Done" | — | **page load**: a mode with its own URL, like tick-off |
+| List page Sort menu | — | in place, **URL replaced** (`list-filter.js`, 2026-11-23; was a page load): the tabs keep it, focus returns to Sort |
+| List "Edit order" / "Done" | — | **page load** that **replaces the entry** (`location.replace`, 2026-11-23): a mode with its own URL, like tick-off |
+| List "Mark what you've seen" (tick-off) / "Done" | page load | **page load** that **replaces the entry** (2026-11-23) |
 | List page "Suggested for this list": + Add | — | in place (`list-suggest.js`, JSON answer): the tile turns "Added", the list region refreshes with the new title at the end and its rank, the poster flashes, toast; no JS = form post back to the list |
 | List page "Suggested for this list": More suggestions, Start over, Not interested | — | in place: the row is fetched again (or the tile fades out); the list itself isn't touched |
 | Lists tab "Load more" | reload | appends in place |
@@ -529,9 +575,10 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | To rate view: rate a title | — | in place: the tile leaves, counts drop |
 | Watchlist poster ★ | — | in place: the tile leaves To watch (rating marks it seen), tab counts move |
 | Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
-| Discover bar filters, hide-seen switch, sort | page load | **page load kept**: new result set with its own URL (Letterboxd does the same) |
-| Ratings Movies / TV / To rate switch | page load | **page load kept**: a different page |
-| Ratings filters (genre, score type, name, count) | page load on Search | **in place with URL + Back** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter |
+| Discover bar filters, chips ✕, Clear all, hide-seen switch, sort, Movies / TV | page load | in place, **URL replaced** (`view-swap.js`, 2026-11-23; was a page load): the whole view is swapped from the new URL |
+| Watchlist tabs and Movies / TV filter | page load | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
+| Ratings Movies / TV / To rate switch | page load | **page load kept** (a different page), but it **replaces the entry** (`data-view-replace`, 2026-11-23) |
+| Ratings filters (genre, score type, name, count) | page load on Search | in place, **URL replaced** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter. Pushed an entry per filter until the same day's "one Back leaves the page" change |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
 | Title page back link ("← Discover", "› Toy Story 3") | — | **navigation**: `history.back()` when that page is the previous entry, else a page load of its URL with the scroll put back (`back-nav.js`) |
 
@@ -637,7 +684,8 @@ The user asked for a hardening pass on 2026-11-23. The rules now:
 - **Home Classics row**: acclaimed films from before 2000 (TMDB `vote_average.desc`, 4,000+ votes, no documentaries), placed after your own rows; it walks pages 1-3 by ISO week so it changes weekly.
 - **Ranking posters keep their 2:3 shape** on phones (object-fit: cover, fixed width) instead of stretching to the card height.
 - **Lists get their own tab** (`/lists`), separate from the watchlist: the watchlist is a status ("want to watch") on titles; lists are curated, ordered collections (often imported by Claude).
-- **Browse uses plain links for every filter** so the URL describes the view and works without JS; the same "Browse by" bar sits at the top of the home page. The bar no longer has its own "Find a title" field (2026-11-23): with the header search it put two search boxes on Home (user: "I end up seeing two search boxes").
+- **Browse uses plain links for every filter** so the URL describes the view and works without JS (with JS they apply in place
+  and replace the URL since 2026-11-23, see "One Back leaves the page"); the same "Browse by" bar sits at the top of the home page. The bar no longer has its own "Find a title" field (2026-11-23): with the header search it put two search boxes on Home (user: "I end up seeing two search boxes").
 - **One-click bookmark on posters** only toggles Want to watch; titles already Watching/Watched/Dropped show no bookmark so a click can't silently downgrade them.
 - **Tags are hidden in the web UI for now** (user request, 2026-11-23): `ratelog.features.tags` / env `RATELOG_FEATURES_TAGS` (default false) is exposed to templates as `tagsEnabled` by `system/FeatureFlagsAdvice.kt`; it hides the nav link, the title-page tags section, the Top-page tag filter and the profile button. Code, `/tags` pages, the API and list-import tags keep working.
 - **List posters carry three badges** in the home tiles' style (`home.css` `.home-status` / `.home-score`): rank bottom-left, your status top-right (Want to watch included, since list pages have no bookmark button; Dropped is muted), your score bottom-right. Status badges line up with the type tag.
@@ -665,7 +713,8 @@ The user asked for a hardening pass on 2026-11-23. The rules now:
   switch so the upstream templates are untouched):
   - **In place, with the URL pushed**, not a page load: the page is fetched and the ranking under the form swapped, so the
     dropdown you just used keeps focus, the page doesn't flash or jump, and Back / Forward step through filters (`popstate`
-    reloads the ranking and sets the dropdowns back). Same pattern as the list page tabs (`list-filter.js`). The URL only carries
+    reloads the ranking and sets the dropdowns back). *(Superseded the same day by "One Back leaves the page": the URL is now
+    replaced, so Back leaves Ratings in one step; the popstate handling and the per-burst entry are gone.)* Same pattern as the list page tabs (`list-filter.js`). The URL only carries
     filters that are set (`/movies?category=27`, not `?category=27&ratingCategory=&name=&limit=10`). Any failed fetch loads the URL.
   - **The name field applies after a 450 ms pause, or on Enter / leaving the field**, so typing "dune" doesn't reload four times;
     one typing burst is one history entry (later pauses replace it), so Back doesn't walk through "d", "du", "dun".
