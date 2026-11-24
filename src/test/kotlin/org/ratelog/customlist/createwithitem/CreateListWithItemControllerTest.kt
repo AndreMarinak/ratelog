@@ -7,6 +7,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.customlist.create.CreateListHandler
+import org.ratelog.customlist.create.ListLimitPolicy
 import org.ratelog.customlist.order.numbered.ListNumberedForm
 import org.ratelog.customlist.order.numbered.NumberedField
 import org.ratelog.test.InMemoryCustomListRepository
@@ -17,7 +18,7 @@ class CreateListWithItemControllerTest {
 
     private val lists = InMemoryCustomListRepository()
     private val numberedForm = mock<ListNumberedForm>()
-    private val controller = CreateListWithItemController(CreateListHandler(lists), AddToListHandler(lists), numberedForm)
+    private val controller = CreateListWithItemController(CreateListHandler(lists, ListLimitPolicy.fixed(ListLimitPolicy.USER_MAX)), AddToListHandler(lists), numberedForm)
     private val user = UserFactory.aUser(id = 1)
 
     @Test

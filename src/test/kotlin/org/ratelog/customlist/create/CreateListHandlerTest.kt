@@ -14,7 +14,7 @@ class CreateListHandlerTest {
     @BeforeEach
     fun setUp() {
         customListRepository = InMemoryCustomListRepository()
-        handler = CreateListHandler(customListRepository)
+        handler = CreateListHandler(customListRepository, ListLimitPolicy.fixed(ListLimitPolicy.USER_MAX))
     }
 
     @Test

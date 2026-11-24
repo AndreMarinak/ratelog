@@ -24,6 +24,7 @@ import org.ratelog.customlist.CustomListRepository
 import org.ratelog.customlist.create.CreateListCommand
 import org.ratelog.customlist.create.CreateListError
 import org.ratelog.customlist.create.CreateListHandler
+import org.ratelog.customlist.create.ListLimitPolicy
 import org.ratelog.customlist.delete.DeleteListCommand
 import org.ratelog.customlist.delete.DeleteListHandler
 import org.ratelog.customlist.official.OfficialListRepository
@@ -151,7 +152,7 @@ class ApiListController(
             { error ->
                 throw when (error) {
                     CreateListError.InvalidListName -> badRequest("invalid_name", "name must be 1-100 characters")
-                    CreateListError.ListLimitExceeded -> badRequest("list_limit", "List limit reached (${CreateListHandler.MAX_LISTS_PER_USER} per user)")
+                    CreateListError.ListLimitExceeded -> badRequest("list_limit", "List limit reached (${ListLimitPolicy.USER_MAX} per account, ${ListLimitPolicy.ADMIN_MAX} for admins)")
                 }
             },
             { it }

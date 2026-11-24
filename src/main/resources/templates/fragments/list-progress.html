@@ -76,7 +76,7 @@
         </span>
         <!--/* Fork: one tap for "I've seen them all" (asks first; titles not out yet are skipped). */-->
         <form th:if="${progress.seen < progress.total}" class="list-tick-all" method="post"
-              th:action="@{/list/{id}/seen-all(id=${progress.listId})}" data-inplace="#listRegion"
+              th:action="|/list/${progress.listId}/seen-all|" data-inplace="#listRegion"
               th:data-confirm="#{list.tick.all.confirm(${progress.total - progress.seen})}">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <input th:if="${progress.filterParam != null}" type="hidden" name="show" th:value="${progress.filterParam}" />

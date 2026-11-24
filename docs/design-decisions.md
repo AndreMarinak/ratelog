@@ -476,6 +476,14 @@ item 20. Code: `org.ratelog.customlist.suggest`, `fragments/list-suggest.html`, 
   Dropped become Watched. In place (`data-inplace="#listRegion"`), one request however long the list. No "Rate it?" prompts for
   the bulk action; rate later from the posters or the To rate tab. On phones (≤420px) the hint text hides so both buttons fit.
 
+- **List cap: 50 per account, 200 for admins** (user, 2026-11-23: "Admin cap maybe raise for now"). Upstream capped everyone at 50;
+  the admin curates the site's researched and official lists and had reached 47. `ListLimitPolicy` reads the role from the
+  database (`RoleListLimitPolicy`); managers count as users. The API's `list_limit` error names both numbers.
+- **One search box on results pages too** (user, 2026-11-23: "did u fix the phone seeing two search bars yet?"): the results page
+  (`/?q=…`) had its own text box under the header search. The query now lives only in the header (prefilled); the page keeps
+  just the Any / Movies / TV filter, which applies as soon as it changes (`search-type.js`; the search button stays for no-JS),
+  and the heading reads "Results for "…"".
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);

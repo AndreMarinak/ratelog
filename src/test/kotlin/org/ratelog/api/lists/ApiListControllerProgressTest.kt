@@ -15,6 +15,7 @@ import org.ratelog.api.media.MediaImporter
 import org.ratelog.api.media.TitleResolver
 import org.ratelog.customlist.additem.AddToListHandler
 import org.ratelog.customlist.create.CreateListHandler
+import org.ratelog.customlist.create.ListLimitPolicy
 import org.ratelog.customlist.delete.DeleteListHandler
 import org.ratelog.customlist.official.mark.SetListOfficialHandler
 import org.ratelog.customlist.order.move.MoveListItemHandler
@@ -47,7 +48,7 @@ class ApiListControllerProgressTest {
     private val mediaImporter = MediaImporter(tmdbClient, f.movies, InMemoryMovieDescriptionRepository(), f.shows, InMemoryTvDescriptionRepository())
     private val controller = ApiListController(
         customListRepository = f.lists,
-        createListHandler = CreateListHandler(f.lists),
+        createListHandler = CreateListHandler(f.lists, ListLimitPolicy.fixed(ListLimitPolicy.USER_MAX)),
         updateListHandler = UpdateListHandler(f.lists),
         deleteListHandler = DeleteListHandler(f.lists),
         removeFromListHandler = RemoveFromListHandler(f.lists),

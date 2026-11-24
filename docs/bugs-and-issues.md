@@ -72,6 +72,8 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Two search boxes on the search results page** (user, phone, 2026-11-23): the earlier fix removed the Browse bar's field on
+  Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see design-decisions.
 - **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
   visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").
   `/fonts/**` is now public like the stylesheets.

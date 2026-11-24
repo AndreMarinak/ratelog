@@ -22,14 +22,15 @@ data class CreateListCommand(
 
 @Service
 class CreateListHandler(
-    private val customListRepository: CustomListRepository
+    private val customListRepository: CustomListRepository,
+    private val listLimitPolicy: ListLimitPolicy, // fork: admins may own more lists
 ) {
     @Transactional
     fun handle(command: CreateListCommand): Either<CreateListError, CustomList> = either {
         val listName = ListName.parse(command.name).mapLeft { CreateListError.InvalidListName }.bind()
 
         val lists = customListRepository.findByUserId(command.userId)
-        if (lists.size >= MAX_LISTS_PER_USER) {
+        if (lists.size >= listLimitPolicy.maxLists(command.userId)) {
             raise(CreateListError.ListLimitExceeded)
         }
 
@@ -46,6 +47,6 @@ class CreateListHandler(
 
 
     companion object {
-        const val MAX_LISTS_PER_USER = 50
+        const val MAX_LISTS_PER_USER = ListLimitPolicy.USER_MAX
     }
 }
