@@ -97,6 +97,12 @@ bookmark on seen tiles and no confirm on the title page, and adds a "Rewatch" st
 snapshot and the restore know `onWatchlist`. Run on `feat/rewatch` (fresh `ratelog_rewatch` database, port 8235, desktop / 390 /
 360): **250/250** (home 58, seen 53, tilerate 54, title 21, recs 25, backnav 39).
 
+Updated for the rewatch log (2026-11-24, `feat/rewatchlog`): on a seen title the title page's Seen opens a menu, so the
+seen suite un-sees Severance through "Mark as not seen" and checks the rated Lion King's menu instead of a locked toast; the old
+"Rewatch" tag step became two self-seeding Watched again steps (title page menu + Undo, To watch + Undo + Remove) that compare
+`watchCount` before and after. Run on `feat/rewatchlog` (`ratelog_rewatchlog` database with leftover data, port 8122, desktop /
+390 / 360): **277/277** (home 58, seen 56, tilerate 54, title 27, recs 25, backnav 39, savedlists 18).
+
 Updated for master `7addbcf` (2026-11-23): poster actions go through `t.tileAct()` (the "⋯" chooser on touch, hover + click
 with a mouse), the official toggle is used from the list's "⋯" List actions menu (with its confirm), list tabs replace the URL
 (one Back leaves the list), the watchlist is opened per type (`?type=movie` / `?type=tv`; it opens on Movies), a show rated by
