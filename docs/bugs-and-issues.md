@@ -4,6 +4,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Without JS, the title page can't log a rewatch** (rewatch log, 2026-11-24): "Watched again" lives in the Seen button's
+  menu, which needs JS; without it Seen toggles as before. The watchlist's To watch button and the API work without JS. Left
+  as is (the menu would have to be a separate control without JS, which the user asked not to have).
+- **No way to remove an older rewatch in the UI** (rewatch log, 2026-11-24): only the toast's Undo (right after logging) and
+  `DELETE /api/v1/rewatches/{id}` remove one. A list of your watches belongs to the diary (roadmap #5, on hold for 2026).
 - **An admin can "Save" their own official list, and it doesn't stick on screen** (found 2026-11-24): the toggle is offered
   on every official card, the save is stored and the toast says "first in Official lists now", but pages leave out your own
   saved lists (`GetSavedListsHandler(includeOwn = false)`), so after a reload the card reads "Save" again and keeps its usual

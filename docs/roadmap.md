@@ -158,9 +158,13 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   [decisions/people-and-credits.md](decisions/people-and-credits.md#people-person-pages-and-people-in-search-2026-11-24).
 - [ ] **37. Rewatch log: "Watched again"** (requested 2026-11-24: the To watch "Rewatch" tag "isn't clickable, maybe if I've
   seen it already it should be a watched again button?", "how should it work with stats? maybe some ability to mark a movie
-  as rewatched?", and logging must not take "two clicks to add to watchlist then click watched again"). *In progress:* one
-  row per rewatch (`rewatches`, migration `V1144`); the watch count is 1 + rewatches while the title is seen. Phase 1: title
-  page and the watchlist's To watch button; phase 2: Stats, API, poster chooser.
+  as rewatched?", and logging must not take "two clicks to add to watchlist then click watched again"). One row per rewatch
+  (`rewatches`, migration `V1144`); the watch count is 1 + rewatches while the title is seen (un-seeing keeps the rows, not
+  counted). **Phase 1 done:** on a seen title the Seen button opens a menu (user: "click the same button instead of another
+  one"): Watched again (in place, toast with Undo and "Update your rating?"), Mark as not seen; "Seen 2× · last Nov 24, 2026"
+  under the toggles; the watchlist's dead "Rewatch" tag is a Watched again button that also takes the title off the
+  watchlist (Undo). *Phase 2 in progress:* Stats, API, poster chooser. Details in
+  [decisions/watchlist-and-seen.md](decisions/watchlist-and-seen.md#rewatch-log-watched-again-2026-11-24).
 
 ## Fixes and housekeeping done
 

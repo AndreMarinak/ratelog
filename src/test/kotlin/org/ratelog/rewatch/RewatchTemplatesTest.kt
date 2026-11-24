@@ -23,7 +23,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.Locale
 
-/** The title page's "Watched again" block and its notice, rendered from the real fragment and messages. */
+/** Seen's menu on the title page (Watched again), the watch count line and the notice, from the real fragments and messages. */
 class RewatchTemplatesTest {
     private val messages = ResourceBundleMessageSource().apply {
         setBasenames("messages")
@@ -62,7 +62,7 @@ class RewatchTemplatesTest {
         onWatchlist = false, rewatch = rewatch, zone = ZoneOffset.UTC,
     )
 
-    private fun render(a: TitleActionsView, notice: RewatchNotice? = null): String {
+    private fun render(a: TitleActionsView, notice: RewatchNotice? = null, fragment: String = "rewatch"): String {
         val context = Context(Locale.ENGLISH).apply {
             setVariable(ThymeleafEvaluationContext.THYMELEAF_EVALUATION_CONTEXT_CONTEXT_VARIABLE_NAME, ThymeleafEvaluationContext(appContext, null))
             setVariable("_csrf", DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "tok123"))
@@ -70,42 +70,63 @@ class RewatchTemplatesTest {
             setVariable("titleActions", a)
             setVariable("rewatchNotice", notice)
         }
-        return engine.process("fragments/title-actions", setOf("rewatch"), context)
+        return engine.process("fragments/title-actions", setOf(fragment), context)
     }
 
+    private fun menu(html: String) = html.substringAfter("<template data-seen-menu>", "").substringBefore("</template>")
+
     @Test
-    fun `a seen title gets Watched again, saving the panel in place, and no count before a rewatch`() {
-        val html = render(view())
-        assertTrue(html.contains("""action="/rewatch""""), html)
-        assertTrue(html.contains("""data-inplace=".title-panel""""))
-        assertTrue(html.contains("""name="tmdbId" value="438631""""))
-        assertTrue(html.contains("""name="type" value="movie""""))
-        assertTrue(html.contains("""name="back" value="/movie/438631""""))
-        assertTrue(html.contains(">Watched again<"))
-        assertFalse(Regex("""class="title-rewatch"[^>]*hidden""").containsMatchIn(html), "shown while seen")
-        assertFalse(html.contains("title-rewatch-count"), "no line until there is a rewatch")
+    fun `a seen title's Seen button opens a menu - Watched again saves the panel in place, then Mark as not seen`() {
+        val html = render(view(), fragment = "seen")
+        assertTrue(html.contains("""aria-haspopup="menu""""), html)
+        assertTrue(html.contains("""aria-expanded="false""""))
+        val menu = menu(html)
+        assertTrue(menu.contains("""role="menu""""), html)
+        assertTrue(menu.contains("""action="/rewatch""""))
+        assertTrue(menu.contains("""data-inplace=".title-panel""""))
+        assertTrue(menu.contains("""name="tmdbId" value="438631""""))
+        assertTrue(menu.contains("""name="type" value="movie""""))
+        assertTrue(menu.contains("""name="back" value="/movie/438631""""))
+        assertTrue(menu.indexOf(">Watched again<") in 0 until menu.indexOf(">Mark as not seen<"), "Watched again first")
+        assertEquals(2, Regex("""role="menuitem"""").findAll(menu).count())
+        assertFalse(menu.contains("stays seen"))
         assertFalse(html.contains("??"))
     }
 
     @Test
-    fun `with a rewatch the quiet line counts the first watch too`() {
-        val html = render(view(rated = true, rewatch = RewatchSummary(1, nov24)))
-        assertTrue(html.contains("Seen 2× · last Nov 24, 2026"), html)
-        assertEquals("Nov 24, 2026", view(rewatch = RewatchSummary(3, nov24)).lastRewatch)
-        assertEquals(4, view(rewatch = RewatchSummary(3, nov24)).watchCount)
+    fun `a rated movie's menu says why it stays seen instead of offering to unmark it, a rated show can still be unmarked`() {
+        val movie = menu(render(view(rated = true, rewatch = RewatchSummary(1, nov24)), fragment = "seen"))
+        assertFalse(movie.contains("Mark as not seen"), movie)
+        assertTrue(movie.contains("You rated it, so it stays seen"))
+        assertTrue(movie.contains("Seen 2× · last Nov 24, 2026"), "the count in the menu's head")
+        assertEquals(1, Regex("""role="menuitem"""").findAll(movie).count())
+
+        val show = menu(render(view(type = MediaType.tvshow, rated = true), fragment = "seen"))
+        assertTrue(show.contains(">Mark as not seen<"), show)
+        assertTrue(show.contains("Moves it back to Watching"))
+        assertTrue(show.contains("""name="type" value="tv""""))
     }
 
     @Test
-    fun `unseen titles render it hidden (title-actions js follows Seen), upcoming ones not at all`() {
-        val unseen = render(view(status = null))
-        assertTrue(Regex("""class="title-rewatch"[^>]*hidden""").containsMatchIn(unseen), unseen)
+    fun `an unseen title's Seen just marks it seen, an upcoming one has no menu`() {
+        val unseen = render(view(status = null), fragment = "seen")
+        assertFalse(unseen.contains("aria-haspopup"), unseen)
+        assertTrue(unseen.contains("data-seen-menu"), "the menu is there for when it is marked seen in place")
+        assertFalse(render(view(date = LocalDate.parse("2026-12-18")), fragment = "seen").contains("data-seen-menu"))
+    }
 
-        val watching = render(view(status = WatchStatus.WATCHING, type = MediaType.tvshow, rated = true))
-        assertTrue(Regex("""class="title-rewatch"[^>]*hidden""").containsMatchIn(watching), "a show you are watching is not seen")
-        assertTrue(watching.contains("""name="type" value="tv""""))
+    @Test
+    fun `the quiet line counts the first watch too, once there is a rewatch, and hides while un-seen`() {
+        assertFalse(render(view()).contains("title-rewatch"), "no line before a rewatch")
+        val html = render(view(rated = true, rewatch = RewatchSummary(1, nov24)))
+        assertTrue(html.contains("Seen 2× · last Nov 24, 2026"), html)
+        assertFalse(Regex("""class="title-rewatch"[^>]*hidden""").containsMatchIn(html))
+        assertEquals("Nov 24, 2026", view(rewatch = RewatchSummary(3, nov24)).lastRewatch)
+        assertEquals(4, view(rewatch = RewatchSummary(3, nov24)).watchCount)
 
-        val upcoming = render(view(date = LocalDate.parse("2026-12-18")))
-        assertFalse(upcoming.contains("title-rewatch"), upcoming)
+        val unseen = render(view(status = null, rewatch = RewatchSummary(2, nov24)))
+        assertTrue(Regex("""class="title-rewatch"[^>]*hidden""").containsMatchIn(unseen), "kept, not counted while unseen")
+        assertFalse(render(view(date = LocalDate.parse("2026-12-18"), rewatch = RewatchSummary(1, nov24))).contains("title-rewatch"))
     }
 
     @Test

@@ -67,6 +67,7 @@ independent. Code: `watchlist/WatchlistEntry.kt` (+ DAO, repository methods on `
   so seeing it later takes it off. Clearing the status entirely (`DELETE /api/v1/statuses/...`, an empty status) clears both.
 - **Watchlist page:** To watch lists every title on the watchlist, newest added first; a seen one is a **rewatch**: its card
   gets a green "Rewatch" tag (eye icon) where Seen / Watching would be and only Remove, and its poster keeps the eye and ★.
+  *(Superseded the same day: the tag is now a "Watched again" button, see "Rewatch log: Watched again".)*
   It still counts on the Seen tab. To watch's Remove is a new move, `unlist` (off the watchlist, the status stays), with Undo
   `relist`; Undo after Seen / Watching from To watch is `want_to_watch` (exactly "on the watchlist, no status"). Other tabs
   are unchanged (Remove on the Seen tab un-sees, and a rewatch stays on To watch). Tab counts move by the tab a title left
@@ -79,3 +80,48 @@ independent. Code: `watchlist/WatchlistEntry.kt` (+ DAO, repository methods on `
   and so counts as seen by the old "rated with no status" rule (shows rated before statuses existed). Rare; left as is.
 - Supersedes "Watchlist on an unrated Seen asks first" and the "Watchlist = Want to watch" part of "Seen / Watchlist instead
   of four statuses".
+
+## Rewatch log: "Watched again" (2026-11-24)
+
+User, 2026-11-24, about the To watch tab's green "Rewatch" tag: *"this button isn't clickable, maybe if I've seen it already
+it should be a watched again button?"*, then *"how should it work with stats? maybe some ability to mark a movie as
+rewatched?"*, and, offered "just a button" or "a rewatch log": *"normally there's a seen button so it'd have to be two clicks
+to add to watchlist then click watched again"*. So logging a rewatch is one click from the title, without the watchlist, and
+Stats counts it. Then, on the first build (a separate "Watched again" chip under the toggles): *"maybe be able to click the
+same button instead of another one?"*, so it lives in the Seen button. Code: `org.ratelog.rewatch` (`Rewatch`,
+`RewatchRepository`, `log/LogRewatchHandler`, `log/LogRewatchController`, `delete/DeleteRewatchHandler`), the `rewatched` /
+`unrewatch` watchlist moves, `fragments/title-actions.html` (`seen`, `rewatch`, `rewatchNotice`), `static/title-actions.js`.
+
+- **Data: a log, one row per rewatch** (`rewatches`, V1144: `user_id, media_type, media_id, watched_at_epoch_ms`). The first
+  watch is the existing seen state (status Watched, or rated: `SeenState`), so the **watch count is 1 + rewatches**. Movies and
+  shows (a whole show, not a season or an episode). Why a log and not a counter: Stats has to place each rewatch in the
+  period it happened, and Undo has to remove exactly the one just logged.
+- **Only a seen, released title can be rewatched**: `LogRewatchHandler` refuses an unseen title ("Mark it seen first") and an
+  upcoming one; the UI only offers it on seen titles. Logging never touches the status, the rating or the watchlist (except
+  the watchlist's own button, below).
+- **Un-seeing keeps the rows, they just don't count** (decided 2026-11-24). Un-seeing (the eye's "Mark as not seen", the Seen
+  tab's Remove, a status change through the API, or deleting the rating that made a movie seen) leaves the rows alone; every
+  reader counts them only while the title is seen (the title page hides the count, Stats and the API skip them), and seeing it
+  again brings the count back. Why: un-seeing is one tap with no Undo, and a rewatch log is history worth keeping; deleting it
+  on an accidental tap would lose it for good, while a deliberate "I never saw it" on a title with logged rewatches is a
+  contradiction that hardly happens. Deleting the rating of a movie usually keeps it seen anyway (rating set Watched).
+- **Title page: the Seen button is the entry point** (user: "click the same button instead of another one"). Not seen: Seen
+  marks it seen, as before. Seen: Seen opens a small menu anchored to the button (a bottom sheet at 600px and below, the poster
+  chooser's styles): **Watched again** first (logs it in place: `data-inplace=".title-panel"`, so the panel and its count are
+  swapped in), then **Mark as not seen** (the old toggle), or, on a rated movie, the muted "You rated it, so it stays seen"
+  (the existing locked message; a rated movie can't be un-seen here). Shows keep "Mark as not seen" when rated, with "Moves it
+  back to Watching" (the existing TV rule). Escape, a tap outside or the backdrop close it; `aria-haspopup="menu"`,
+  `aria-expanded`, the first item gets focus, arrows move, focus returns to Seen (also after the save). Without JS Seen still
+  toggles (the menu needs JS; the watchlist button works without it).
+- **The quiet line** "Seen 2× · last Nov 24, 2026" sits right under the toggles once there is a rewatch (also in the menu's
+  head), hidden while the title isn't seen.
+- **The toast confirms and offers two actions**: "Logged a rewatch of Dune." with **Undo** (deletes that row, in place) and
+  **"Update your rating?"** ("Rate it?" when unrated), which opens the page's own rate modal (a show: Rate show, or jumps to its
+  seasons). Built on `inplace.js`: a flash can now carry `[data-toast-text]` and `[data-toast-action]` controls, copied into the
+  toast (which then stays 7 s and takes clicks); a link with `data-toast-click` clicks that control on the page instead of
+  loading its `href` (`?rate=1`, the no-JS fallback).
+- **Watchlist To watch: the dead tag is a real "Watched again" button** (where Seen would be, spanning Seen's and Watching's
+  slots, then Remove). It logs a rewatch **and** takes the title off the watchlist (it stays seen, on the Seen tab), with the
+  usual toast: "Logged a rewatch of "Dune" and took it off your watchlist." Undo (`unrewatch` with the row's id) deletes that
+  row and puts it back on To watch (as a rewatch). Not on an upcoming rewatch (only Remove beside the date). Tab counts: To
+  watch −1, Seen unchanged.

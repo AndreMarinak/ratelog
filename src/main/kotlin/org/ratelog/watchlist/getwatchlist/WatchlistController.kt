@@ -42,6 +42,8 @@ data class WatchlistItemAction(
     val icon: String,
     /** CSS modifier: `is-seen`, `is-watching`, `is-dropped`, `is-remove`, `is-rewatch`. */
     val kind: String,
+    /** A short label kept on narrow cards, where the others are icons only ("Again" under ↻, which alone reads as refresh). */
+    val shortLabelKey: String? = null,
 )
 
 data class WatchlistItemResponse(
@@ -219,7 +221,7 @@ class WatchlistController(
             val dropped = WatchlistItemAction(WatchlistMove.DROPPED.param, "watchlist.action.dropped", "watchlist.action.dropped.aria", "circle-x", "is-dropped")
             val remove = WatchlistItemAction(WatchlistMove.REMOVE.param, "watchlist.action.remove", "watchlist.action.remove.aria.${status.apiName}", "x", "is-remove")
             val unlist = remove.copy(to = WatchlistMove.UNLIST.param)
-            val rewatched = WatchlistItemAction(WatchlistMove.REWATCHED.param, "watchlist.action.rewatched", "watchlist.action.rewatched.aria", "rotate-cw", "is-rewatch")
+            val rewatched = WatchlistItemAction(WatchlistMove.REWATCHED.param, "watchlist.action.rewatched", "watchlist.action.rewatched.aria", "rotate-cw", "is-rewatch", "watchlist.action.rewatched.short")
             return when (status) {
                 WatchStatus.WANT_TO_WATCH ->
                     if (rewatch) listOfNotNull(rewatched.takeIf { !upcoming }, unlist)

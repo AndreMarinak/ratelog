@@ -97,8 +97,11 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Community People / profile Follow, Following (unfollow asks first on touch screens) | — | in place (`data-inplace`): the button, "Following 2 of 5" and the Activity feed refresh, toast |
 | Title page Seen, Watchlist, Watching / Dropped | reload | in place (`title-actions.js`, JSON answer): every toggle updates from the server's state (Watchlist posts `/watchlist/set` since 2026-11-24, no confirm) |
 | Title page follow bell | reload | in place (`data-inplace=".title-panel"`) |
+| Title page Seen menu: Watched again (rewatch log, 2026-11-24) | — | in place (`data-inplace=".title-panel"`): the menu closes, the panel and its "Seen 2× · last …" line are swapped in, focus back on Seen, toast with **Undo** (deletes the row, in place) and "Update your rating?" (opens the page's rate modal, no load) |
+| Title page Seen menu: Mark as not seen | — (Seen toggled) | in place (`title-actions.js`, JSON answer), as the old toggle |
 | "Rate it?" score after Seen | — | **reload**: an explicit save that changes the rating card, Rate button and Seen |
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
+| Watchlist To watch "Watched again" on a rewatch (2026-11-24) | — (a tag that did nothing) | in place (`watchlist.js`, move `rewatched`): logs a rewatch, the tile leaves To watch (Seen count unchanged), toast with Undo (`unrewatch`: deletes the row, back on To watch) |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
 | List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |
 | Movie page: rate / edit / delete rating (modals, quick or detailed) | reload | in place (2026-11-24, user: "also does editing the rating when clicked on movie cause a refresh?"; was "reload kept"): `data-inplace="#your-rating, .title-panel"`, the modal closes, toast, "Your rating" (bars redrawn) and the panel (Rate / Edit rating + score, Seen, "Rate it?") are swapped in; also from `?rate=edit` / `?rate=detailed` (the parameter is replaced away). Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |

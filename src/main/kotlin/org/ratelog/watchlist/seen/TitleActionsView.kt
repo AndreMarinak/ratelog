@@ -51,10 +51,15 @@ data class TitleActionsView(
     val rewatches: Int = 0,
     /** "Nov 24, 2026": the latest rewatch, or null with none. */
     val lastRewatch: String? = null,
+    /** Rated (a show: a season or a whole-show score): Seen's menu says so instead of "Mark as not seen" on a movie. */
+    val rated: Boolean = false,
 ) {
     val canToggleSeen: Boolean get() = !upcoming
 
-    /** "Watched again" is rendered on every released title and shown while it is seen (title-actions.js follows Seen). */
+    /**
+     * Rewatches can be logged (Seen's menu) and counted on every released title, while it is seen (title-actions.js
+     * follows Seen in place).
+     */
     val canRewatch: Boolean get() = !upcoming
 
     /** The first watch plus the rewatches: "Seen 2×". */
@@ -98,6 +103,7 @@ data class TitleActionsView(
                 movieExtraStatus = status?.takeIf { !isTv && (it == WatchStatus.WATCHING || it == WatchStatus.DROPPED) },
                 showFollow = ReleaseRules.showFollow(type, releaseDate, tmdbStatus, today, followed),
                 followed = followed,
+                rated = rated,
                 rewatches = rewatch.rewatches,
                 lastRewatch = rewatch.lastAtEpochMs?.let {
                     ReleaseRules.longDate(LocalDate.ofInstant(Instant.ofEpochMilli(it), zone), locale)

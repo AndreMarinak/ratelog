@@ -263,6 +263,11 @@
   font-size: 0.92rem;
 }
 
+/* Fork (2026-11-24): a short label for narrow cards only (Watched again's "Again"). */
+.watchlist-act .watchlist-act-short {
+  display: none;
+}
+
 @container (max-width: 209px) {
   .watchlist-actions:not(.slots-1) {
     .watchlist-act {
@@ -271,6 +276,10 @@
       span {
         display: none;
       }
+    }
+
+    .watchlist-act .watchlist-act-short {
+      display: inline;
     }
 
     .watchlist-note span {
