@@ -74,6 +74,13 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **"Recommended for you" never loaded after switching Discover between Movies and TV in place** (found in the browser check
+  while building the row, 2026-11-23, never shipped): the row's placeholder carried `<noscript><style>...is-pending { display:
+  none }</style></noscript>`. `view-swap.js` parses the new view with `DOMParser`, which runs without scripting, so the
+  `<noscript>` content became a real `<style>` once imported: the placeholder was hidden, never intersected the viewport and
+  was never fetched. The `<noscript>` now sits outside the row, on Home only (Home has no in-place swap); Discover's
+  placeholder has none, like its other pending rows. `ForYouTemplatesTest` checks it.
+
 - **Discover's TV mode showed movie lists in its Official lists row** (user, 2026-11-23): `DiscoverOfficialListsAdvice` loaded
   every official list whatever the mode, so `/discover?type=tv` showed "AFI 100" and the other film lists. It now passes Discover's
   `type` to the lists query, which keeps only lists with at least one title of that type (`findOfficialContaining`); none = no

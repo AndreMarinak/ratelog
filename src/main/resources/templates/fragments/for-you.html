@@ -15,7 +15,11 @@
 <th:block th:fragment="home(row)">
     <!--/* Outside the section: the section is swapped out, and its styles must stay. */-->
     <link rel="stylesheet" href="/discover.css">
+    <link rel="stylesheet" href="/for-you.css">
     <script src="/for-you.js" defer></script>
+    <!--/* Without JS nothing would ever replace the skeleton. Outside the section: inside it, a swapped-in copy (parsed
+         with scripting off) would turn this into a real style and hide the row. */-->
+    <noscript><style>.for-you-row.is-pending { display: none; }</style></noscript>
     <section th:replace="~{fragments/for-you :: placeholder(${row.id}, ${row.srcHref})}"></section>
 </th:block>
 
@@ -27,8 +31,6 @@
 
 <section th:fragment="placeholder(id, src)" class="home-row discover-row for-you-row is-pending" th:id="${id}"
          th:data-src="${src}" aria-busy="true" th:aria-labelledby="${id + '-title'}">
-    <!--/* Without JS nothing would ever replace the skeleton. */-->
-    <noscript><style>.for-you-row.is-pending { display: none; }</style></noscript>
     <div class="home-row-head">
         <h2 th:id="${id + '-title'}" th:text="#{home.row.recommended}">Recommended for you</h2>
         <div class="home-row-arrows">
@@ -43,6 +45,8 @@
     <div class="home-row-track" aria-hidden="true">
         <div th:each="i : ${#numbers.sequence(1, 8)}" class="discover-skeleton">
             <div class="discover-skeleton-poster"></div>
+            <!--/* Two lines (title, year): the loaded tiles' height, so the row doesn't grow when it swaps in. */-->
+            <span class="discover-skeleton-line"></span>
             <span class="discover-skeleton-line"></span>
         </div>
     </div>

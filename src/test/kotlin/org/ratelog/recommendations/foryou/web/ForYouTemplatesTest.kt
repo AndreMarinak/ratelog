@@ -156,6 +156,9 @@ class ForYouTemplatesTest {
         // discover.js loads it like any pending row; Discover has its own loader, so no for-you.js here.
         assertTrue(html.contains("""data-src="/for-you/row?type=movie""""), html)
         assertFalse(html.contains("for-you.js"))
+        // A <noscript><style> inside the row would hide it after an in-place Movies / TV swap (DOMParser runs without
+        // scripting, so the style becomes real): the Discover row has none.
+        assertFalse(html.contains("noscript"))
     }
 
     @Test

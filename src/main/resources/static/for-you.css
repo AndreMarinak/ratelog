@@ -1,0 +1,14 @@
+/* Fork: "Recommended for you" on Home (fragments/for-you.html). The row and its tiles are Discover's (home.css +
+   discover.css); Home doesn't load browse.css, so the tiles' TMDB star gets its size and color here. */
+.home-dashboard .discover-tile-meta .browse-tmdb {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    color: #01b4e4;
+    fill: #01b4e4;
+  }
+}

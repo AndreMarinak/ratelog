@@ -20,7 +20,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
 - [x] **9. External scores and trailers on title pages**: TMDB score, runtime and click-to-load trailers from TMDB; IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores via MDBList (optional `MDBLIST_API_KEY`), cached in `title_extras`. Also `GET /api/v1/titles/{type}/{tmdbId}`.
-- [x] **10. Home dashboard + Lists tab + Browse**: scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV) with one-click watchlist bookmarks; Lists tab (`/lists`: mine, people I follow, other public lists); sticky header search (`/` shortcut) and "Ratelog" wordmark; `/browse` with the Letterboxd-style "Browse by" bar (also on the home page). API: `/api/v1/home`, `/api/v1/browse`.
+- [x] **10. Home dashboard + Lists tab + Browse**: scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV; Popular TV moved to Discover in 29) with one-click watchlist bookmarks; Lists tab (`/lists`: mine, people I follow, other public lists); sticky header search (`/` shortcut) and "Ratelog" wordmark; `/browse` with the Letterboxd-style "Browse by" bar (also on the home page). API: `/api/v1/home`, `/api/v1/browse`.
 - [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
   show the entries you haven't seen yet, in release order ("You've seen Toy Story and Toy Story 2 -> next: Toy Story 3").
   Optional TV counterpart: "New season of a show you've watched".
@@ -97,6 +97,13 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   Follow buttons on Community and profiles are labelled: "+ Follow" / "✓ Following" (reads "Unfollow" on hover; touch screens
   ask before unfollowing), same size in every state, in place, and they post the state they show (`POST /user/follow/set`).
   User search is case-insensitive. Admins are listed like everyone else. No migration, no API change.
+- [x] **29. Home vs Discover; Recommended for you** (decided 2026-11-23: keep trending / in theaters / coming soon on top of
+  Home, "Recommended for you on discover is good", no "Because you watched X", "recommended for you is based on rating"): one
+  lazy "Recommended for you" row on Home (movies + TV, after Up next) and Discover (the Movies / TV mode, after Popular now),
+  from TMDB recommendations of your titles rated 8+ (else your best-rated; up to 5, merged round-robin), never anything you've
+  rated or given a status. Classics and Popular TV left Home; Classics is a Discover Movies row (TV's Popular now already is
+  Popular TV). API: `GET /api/v1/recommendations` ([docs/api.md](api.md#recommended-for-you)). No migration. Details in
+  [design-decisions.md](design-decisions.md#home-vs-discover-recommended-for-you-2026-11-23).
 
 ## Fixes and housekeeping done
 

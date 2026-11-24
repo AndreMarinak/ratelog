@@ -41,6 +41,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | PUT | `/api/v1/lists/{id}/order` | `{items: [{tmdbId, type}]}` | list detail (see [List order](#list-order)) |
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
 | GET | `/api/v1/lists/{id}/suggestions` | optional `limit`, `skip` | titles that fit your list, best first (see [List suggestions](#list-suggestions)). Your own lists only |
+| GET | `/api/v1/recommendations` | optional `type` (`movie`, `tv`, `all`), `limit` | "Recommended for you" from your ratings (see [Recommended for you](#recommended-for-you)) |
 
 **Item**: `{"tmdbId": 949, "type": "movie"}` or `{"title": "Heat", "year": 1995, "type": "movie"}`. Unknown extra fields are ignored.
 Optional `"tags": ["heist", "comfort watch"]` adds those tags to the title (see [Tags](#tags)), whether it was just added or already in the list.
@@ -325,8 +326,9 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 
 ## Home
 
-The home dashboard as JSON: the same rows as the web home page (`/`), in the same order: trending movies, trending TV, in theaters, coming soon, then your own rows (only when they have something in them),
-then popular TV.
+The home dashboard as JSON: the same rows as the web home page (`/`), in the same order: trending movies, trending TV, in theaters, coming soon, then your own rows (only when they have something in them).
+Since 2026-11-23 there is no `popular_tv` (nor Classics) row: both moved to Discover. The page's "Recommended for you" row (after `up_next`)
+is loaded by the page and isn't in this response: `GET /api/v1/recommendations` returns it (see [Recommended for you](#recommended-for-you)).
 
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
@@ -344,7 +346,6 @@ Row ids, in this order:
 | `trending_movies`, `trending_tv` | TMDB trending this week |
 | `in_theaters` | TMDB now playing in your region |
 | `coming_soon` | TMDB upcoming in your region, future release dates only, soonest first |
-| `popular_tv` | TMDB popular TV |
 
 **HomeTitle**: `{tmdbId, type, title, year, posterUrl, status, score, releaseDate}`. `status` (`want_to_watch`, `watching`, `watched`, `dropped`) and `score`
 are yours, `null` when you have none. `releaseDate` is an ISO date: TMDB's on TMDB rows, the stored one on your own rows.
@@ -516,4 +517,52 @@ its series entries are left out of `moreLikeThis`, as are posterless titles and 
 ```bash
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/titles/movie/863/recommendations"
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/titles/tv/1396/recommendations?hideSeen=true"
+```
+
+## Recommended for you
+
+`GET /api/v1/recommendations`: the "Recommended for you" row of Home (no `type`: movies and TV mixed) and Discover (`type`: that
+mode only), from your ratings. Same list the pages show, in the same order.
+
+| Param | Values | Effect |
+|---|---|---|
+| `type` | `movie`, `tv`, `all`; default `all` | only movies, only shows, or both (seeds and titles of both types) |
+| `limit` | 1-60; default 20 | at most this many titles |
+
+How the list is made:
+
+1. **Seeds:** your titles rated **8 or more**, newest rating first (a show: its latest season rating, else its whole-show
+   rating); with fewer than 3 of those, your best-rated titles instead. At most 5. With `all`, each type you rated gets a seed.
+2. **Merge:** each seed's TMDB recommendations (page 1, the same ones as "More like this" on its page), taken round-robin
+   (1st of every seed, then 2nd, ...); a title several seeds recommend appears once, `because` the first.
+3. **Filter:** never anything you have rated or given any status (Watched, Watching, Dropped, or on your watchlist), no
+   posterless titles, no released titles with fewer than 10 TMDB votes, never the seeds.
+
+```json
+{
+  "type": "all",
+  "seeds": [
+    {"tmdbId": 603, "type": "movie", "title": "The Matrix", "score": 9.5},
+    {"tmdbId": 1396, "type": "tv", "title": "Breaking Bad", "score": 9.0}
+  ],
+  "titles": [
+    {"tmdbId": 604, "type": "movie", "title": "The Matrix Reloaded", "year": 2003, "releaseDate": "2003-05-15",
+     "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/604", "tmdbVoteAverage": 7.1, "upcoming": false,
+     "because": {"tmdbId": 603, "type": "movie", "title": "The Matrix"}},
+    {"tmdbId": 60059, "type": "tv", "title": "Better Call Saul", "year": 2015, "releaseDate": "2015-02-08",
+     "posterUrl": "...", "url": "/tv/60059", "tmdbVoteAverage": 8.7, "upcoming": false,
+     "because": {"tmdbId": 1396, "type": "tv", "title": "Breaking Bad"}}
+  ]
+}
+```
+
+- No ratings (of that type): `200` with empty `seeds` and `titles`.
+- Titles are in your metadata language. Nothing is saved. TMDB answers are cached a day (shared with the title pages); the
+  merged list is cached per user for 5 minutes, but your ratings and statuses are always read fresh, so a title you just rated
+  or bookmarked is gone on the next call. A seed TMDB can't answer for is skipped.
+- Errors: `invalid_type`, `invalid_parameter` (400), `tmdb_not_configured` (503), `tmdb_error` (502: TMDB failed for every seed).
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/recommendations"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/recommendations?type=tv&limit=40"
 ```
