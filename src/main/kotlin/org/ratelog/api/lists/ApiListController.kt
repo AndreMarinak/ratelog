@@ -87,6 +87,8 @@ data class ListItemDto(
     val score: Double? = null,
     /** Rated, or status `watched`. */
     val seen: Boolean = false,
+    /** Fork (2026-11-24): on your watchlist, independent of `status` (a `watched` title can be on it too, to rewatch). */
+    val onWatchlist: Boolean = false,
 )
 
 /** How many of the list's items the token user has seen. */
@@ -353,9 +355,10 @@ class ApiListController(
                     title = dto.title,
                     year = dto.year,
                     posterUrl = dto.posterUrl,
-                    status = entry?.status?.apiName,
+                    status = entry?.let { org.ratelog.watchlist.WatchStatus.effective(it.status, it.onWatchlist) }?.apiName,
                     score = entry?.score,
                     seen = entry?.seen ?: false,
+                    onWatchlist = entry?.onWatchlist ?: false,
                 )
             }
         }

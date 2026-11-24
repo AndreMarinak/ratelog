@@ -58,9 +58,9 @@ class ListProgressFixture {
     fun status(user: User.Id, show: TvShow, status: WatchStatus, at: Long = 5L) =
         statuses.save(MediaStatus(user, MediaType.tvshow, show.id!!.value, status, at))
 
-    fun statusOf(user: User.Id, movie: Movie): WatchStatus? = statuses.find(user, MediaType.movie, movie.id!!.value)?.status
+    fun statusOf(user: User.Id, movie: Movie): WatchStatus? = statuses.effective(user, MediaType.movie, movie.id!!.value)
 
-    fun statusOf(user: User.Id, show: TvShow): WatchStatus? = statuses.find(user, MediaType.tvshow, show.id!!.value)?.status
+    fun statusOf(user: User.Id, show: TvShow): WatchStatus? = statuses.effective(user, MediaType.tvshow, show.id!!.value)
 
     /** Saved straight to the rating fake, so (unlike the app) it does not auto-set Watched: a "legacy" rating. */
     fun rate(user: User.Id, movie: Movie, score: Double) =

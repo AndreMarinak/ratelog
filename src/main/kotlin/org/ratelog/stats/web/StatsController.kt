@@ -260,6 +260,7 @@ class StatsController(
                     today = today,
                     locale = locale,
                     score = score,
+                    onWatchlist = title.onWatchlist,
                 ),
             )
         }

@@ -34,6 +34,7 @@ class TitleActionsInterceptor(
         if (modelAndView == null || !request.method.equals("GET", ignoreCase = true)) return
         val model = modelAndView.model
         val status = model["watchStatus"] as? WatchStatus
+        val onWatchlist = model["watchOnWatchlist"] as? Boolean ?: false
         val today = LocalDate.now(clock)
         val locale = LocaleContextHolder.getLocale()
         try {
@@ -51,6 +52,7 @@ class TitleActionsInterceptor(
                         followed = movie.isFollowed,
                         today = today,
                         locale = locale,
+                        onWatchlist = onWatchlist,
                     )
                 }
 
@@ -69,6 +71,7 @@ class TitleActionsInterceptor(
                         followed = show.isFollowed,
                         today = today,
                         locale = locale,
+                        onWatchlist = onWatchlist,
                     )
                 }
 

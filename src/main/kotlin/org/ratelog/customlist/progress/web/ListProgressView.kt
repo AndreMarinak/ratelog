@@ -4,6 +4,7 @@ import org.ratelog.MediaType
 import org.ratelog.customlist.progress.ListFilter
 import org.ratelog.customlist.progress.ListProgress
 import org.ratelog.customlist.progress.ListProgressEntry
+import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.seen.TileActionsView
 import org.ratelog.watchlist.seen.TitleRelease
 import java.time.LocalDate
@@ -118,9 +119,10 @@ private fun ListProgressEntry.toView(filter: ListFilter, release: TitleRelease?,
     rank = rank,
     seen = seen,
     visible = filter.accepts(this),
-    statusIcon = status?.icon,
-    statusKey = status?.messageKey,
-    statusClass = status?.let { "is-" + it.apiName.replace('_', '-') },
+    // The status badge, or the bookmark for a title only on the watchlist (fork, 2026-11-24).
+    statusIcon = WatchStatus.effective(status, onWatchlist)?.icon,
+    statusKey = WatchStatus.effective(status, onWatchlist)?.messageKey,
+    statusClass = WatchStatus.effective(status, onWatchlist)?.let { "is-" + it.apiName.replace('_', '-') },
     scoreLabel = score?.let { String.format(Locale.ROOT, "%.1f", it) },
     actions = release?.let {
         TileActionsView.of(
@@ -132,6 +134,7 @@ private fun ListProgressEntry.toView(filter: ListFilter, release: TitleRelease?,
             today = today,
             locale = locale,
             score = score,
+            onWatchlist = onWatchlist,
         )
     },
 )

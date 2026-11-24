@@ -84,8 +84,8 @@
                  th:classappend="'slots-' + ${item.slots}" th:style="'--slots: ' + ${item.slots}"
                  th:aria-label="#{watchlist.actions.aria(${item.title})}">
                 <span th:if="${item.noteKey != null}" class="watchlist-note" th:style="'grid-column: span ' + ${item.noteSpan}"
-                      th:title="${item.noteKey == 'watchlist.note.rated'} ? #{watchlist.note.title.rated} : #{watchlist.note.title.upcoming}">
-                    <i th:data-lucide="${item.noteKey == 'watchlist.note.rated'} ? 'star' : 'calendar-clock'" aria-hidden="true"></i>
+                      th:classappend="${item.rewatch} ? 'is-rewatch' : ''" th:title="#{${item.noteTitleKey}}">
+                    <i th:data-lucide="${item.noteIcon}" aria-hidden="true"></i>
                     <span th:text="#{${item.noteKey}(${item.upcomingDate})}">Out Dec 18</span>
                 </span>
                 <form th:each="act, st : ${item.actions}" action="/watchlist/item" method="post"

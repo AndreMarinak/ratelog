@@ -52,7 +52,8 @@ Every suite must pass on a fresh database, on a database full of leftover data, 
 
 - **The runner makes its own API token** through `/settings/api` (named `uitest <stamp>`). It is kept in memory only: never
   printed, never written to a file. It is revoked at the end.
-- **Before anything runs, it snapshots** every rating and status of the account (`GET /api/v1/ratings`, `/api/v1/statuses`).
+- **Before anything runs, it snapshots** every rating and status of the account (`GET /api/v1/ratings`, `/api/v1/statuses`;
+  since 2026-11-24 a status also records `onWatchlist`, so a Watched title on the watchlist is put back as both).
   At the end it puts back every rating / status that differs (whatever a step changed, even a title it picked at random) and
   deletes every list whose name starts with `uitest <stamp>`. Ctrl-C runs the same cleanup.
 - **Each suite seeds what it uses**: `setup()` once (lists, with unique `uitest <stamp> ...` names; ids come from the API
@@ -69,7 +70,7 @@ Every suite must pass on a fresh database, on a database full of leftover data, 
 | Suite | Covers | Seeds |
 |---|---|---|
 | `home` | home rows, poster sharpness, row scroll, bookmark in place, header search (`/`), Discover rows / grid / load more / `/browse` redirect, title page actions + rate modal, add / remove from a list in place, official list mark / Lists tab / Discover row / unmark, Lists tab, list page back link + progress + tabs in place, phone bottom nav + menu sheet, nav links, Ratings tab switch + filters, tags hidden | two lists (Toy Story rated, Inside Out + WALL-E unseen; one public for the official step) |
-| `seen` | Upcoming badge (home, search, title page, list), home / Discover / search tiles Seen + Watchlist in place, Lion King's four actions, Seen -> "Rate it?" -> Skip, Watchlist replacing Seen, quick rating from the nudge + locked Seen, Rate / Add to list sheets, follow bell (upcoming movie, returning vs ended show), TV Watching / Seen, /watchlist Remove + Undo, Seen / Watching move tiles, list tick-off mode across tab swaps | watchlist (Up, Dune: Part Two, The Bear, The Last of Us, the upcoming movie), show statuses, two lists |
+| `seen` | Upcoming badge (home, search, title page, list), home / Discover / search tiles Seen + Watchlist in place, Lion King's four actions, Seen -> "Rate it?" -> Skip, Watchlist on a seen title (no confirm, stays seen; 2026-11-24), quick rating from the nudge + locked Seen, Rate / Add to list sheets, follow bell (upcoming movie, returning vs ended show), TV Watching / Seen, /watchlist Remove + Undo, Seen / Watching move tiles, a seen title on To watch tagged Rewatch + Remove keeps it seen (2026-11-24), list tick-off mode across tab swaps | watchlist (Up, Dune: Part Two, The Bear, The Last of Us, the upcoming movie), show statuses, two lists |
 | `tilerate` | tile star picker (sheet on phones), every copy updates, tiles fit their actions, Coming soon tiles have no star, add to list from a tile, edit / delete a quick rating from search, detailed rating -> title page edit modal, `?rate=detailed`, TV tile score links to seasons, Discover grid, watchlist rows + rating from the star, list page rate in place + progress, tick-off "Rate it?" prompt moving, ranking cards, To rate view, no-JS star link | Matrix 8.5, Interstellar 9, Heat detailed, Toy Story + Inception seen unrated, The Bear S1 8, watchlist titles, a 10-title list and a one-title list |
 | `title` | trailer thumbnail size on a movie and a show (fills the column on desktop, HD image or fallback; compact on phones), trailer modal, movie Rate modal in place (quick create, quick edit, detailed edit with bars, delete; panel score, Seen, toast, no reload), `?rate=edit` saving in place with the URL replaced, Delete rating in the movie editor in place (confirmation, API says gone, create mode has no delete), Delete rating for a TV season, 404 pages instead of a JSON 500 | The Incredibles rated 7.5, Breaking Bad season 1 rated 9, Parasite unrated with no status |
 | `recs` | series row and More like this: skeleton in the first HTML, lazy rows, order and current tile, poster sizes, Seen on a series tile and the page Seen button move the progress (desktop), bookmark in place + Seen hides it next visit (desktop), no series row for a film outside a collection, the upcoming movie's series entry, TV rows after the seasons, phone rows scroll inside | the Toy Story films unseen |
@@ -87,6 +88,11 @@ does not create yet.
 Updated for master `5a03f3d` (2026-11-23): Classics is checked on Discover (it left Home), the Ratings step no longer expects the
 count select (rankings load as you scroll), and the phone menu sheet has 5 items (Stats added). Run against the main session's
 port 8110 app on `5a03f3d`: home 58/58 (after the update), seen 50/50, tilerate 54/54, title 21/21, recs 25/25, backnav 39/39.
+
+Updated for the rewatch branch (2026-11-24, `feat/rewatch`): the watchlist is independent of Seen, so the seen suite expects the
+bookmark on seen tiles and no confirm on the title page, and adds a "Rewatch" step on /watchlist (53 steps). `setTitle`, the
+snapshot and the restore know `onWatchlist`. Run on `feat/rewatch` (fresh `ratelog_rewatch` database, port 8235, desktop / 390 /
+360): **250/250** (home 58, seen 53, tilerate 54, title 21, recs 25, backnav 39).
 
 Updated for master `7addbcf` (2026-11-23): poster actions go through `t.tileAct()` (the "⋯" chooser on touch, hover + click
 with a mouse), the official toggle is used from the list's "⋯" List actions menu (with its confirm), list tabs replace the URL

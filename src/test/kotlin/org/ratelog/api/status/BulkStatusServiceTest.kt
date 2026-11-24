@@ -1,5 +1,6 @@
 package org.ratelog.api.status
 
+import org.ratelog.test.WatchlistHandlers
 import arrow.core.left
 import arrow.core.right
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -44,7 +45,7 @@ class BulkStatusServiceTest {
     private val service = BulkStatusService(
         TitleResolver(tmdbClient),
         MediaImporter(tmdbClient, movies, InMemoryMovieDescriptionRepository(), shows, InMemoryTvDescriptionRepository()),
-        SetWatchStatusHandler(statuses, movies, shows),
+        WatchlistHandlers.setStatus(statuses, movies, shows),
     )
     private val user = User.Id(1)
 
@@ -76,7 +77,7 @@ class BulkStatusServiceTest {
             MediaType.movie -> movies.findByTmdbId(TmdbId(tmdbId))?.id?.value
             MediaType.tvshow -> shows.findByTmdbId(TmdbId(tmdbId))?.id?.value
         } ?: return null
-        return statuses.find(user, type, localId)?.status
+        return statuses.effective(user, type, localId)
     }
 
     @Test

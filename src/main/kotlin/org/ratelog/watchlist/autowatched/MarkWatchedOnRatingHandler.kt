@@ -45,12 +45,16 @@ object AiredSeasons {
 
 /**
  * Rating a title means it was (at least partly) seen:
- * - **Movies:** no status, Want to watch and Watching become Watched. Watched and Dropped are left as they are.
+ * - **Movies:** no status and Watching become Watched. Watched and Dropped are left as they are.
  * - **Shows** (rated per season): rating a season makes the show Watching; it becomes Watched only once every aired
  *   season ([AiredSeasons]) is rated. A Watched show is never downgraded and a Dropped one is never touched.
- * - **Shows rated as a whole** (fork, [MarkWatchedOnRating.wholeShow]): like a movie, no status, Want to watch and
- *   Watching become Watched; Dropped is left alone.
+ * - **Shows rated as a whole** (fork, [MarkWatchedOnRating.wholeShow]): like a movie, no status and Watching
+ *   become Watched; Dropped is left alone.
  * Deleting a rating never calls this (see AutoWatchedRatingRepositories).
+ *
+ * Fork (2026-11-24), the watchlist: when the status changes, a title that was put on the watchlist while unseen leaves it
+ * (you've now seen it, or started it), as when Want to watch was a status. A rewatch (added while already seen,
+ * [org.ratelog.watchlist.WatchlistEntry.rewatch]) stays: rating it again is why it was put there.
  */
 @Component
 class MarkWatchedOnRatingHandler(
@@ -85,6 +89,9 @@ class MarkWatchedOnRatingHandler(
             status = next,
             updatedAtEpochMs = clock.millis(),
         ).let(mediaStatusRepository::save)
+        mediaStatusRepository.findWatchlistEntry(command.userId, command.mediaType, command.mediaId)
+            ?.takeIf { !it.rewatch }
+            ?.let { mediaStatusRepository.removeFromWatchlist(command.userId, command.mediaType, command.mediaId) }
         return true
     }
 }

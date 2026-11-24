@@ -95,7 +95,7 @@ class TileRateControllerTest {
         assertNull(body.previousStatus)
         assertTrue(body.seen)
         assertTrue(body.seenLocked)
-        assertFalse(body.canToggleWatchlist)
+        assertTrue(body.canToggleWatchlist, "a rated title can go on the watchlist too (fork, 2026-11-24)")
         assertEquals(1, body.seenDelta)
         assertEquals("Rated \"Heat\" 8/10 and marked it seen.", body.message)
     }

@@ -20,8 +20,8 @@ class BrowseLibraryRepositoryImpl(
         return rows
             .mapNotNull { row ->
                 val status = row.status?.let { runCatching { WatchStatus.valueOf(it) }.getOrNull() }
-                if (!row.rated && status == null) return@mapNotNull null
-                row.tmdbId to LibraryMark(score = row.score?.takeIf { row.rated }, rated = row.rated, status = status)
+                if (!row.rated && status == null && !row.onWatchlist) return@mapNotNull null
+                row.tmdbId to LibraryMark(score = row.score?.takeIf { row.rated }, rated = row.rated, status = status, onWatchlist = row.onWatchlist)
             }
             .toMap()
     }

@@ -20,15 +20,15 @@ data class TitleActionsView(
     val tileType: String,
     /** The page itself, sent as `back` so every form returns here. */
     val back: String,
+    /** The progress status (Watching / Watched / Dropped), never Want to watch. */
     val status: WatchStatus?,
     val seen: Boolean,
     val seenLocked: Boolean,
-    val onWatchlist: Boolean,
     /**
-     * Watched but not rated: the one status can't be both, so adding it to the watchlist (a rewatch) would stop it
-     * counting as seen. The button asks first. A rated title stays seen through its rating, so it doesn't ask.
+     * Fork (2026-11-24): independent of Seen, so the Watchlist toggle works on seen and rated titles too and never asks:
+     * adding a seen title keeps it seen (it used to ask first, since the one status couldn't be both).
      */
-    val watchlistReplacesSeen: Boolean,
+    val onWatchlist: Boolean,
     val upcoming: Boolean,
     /** "Dec 18, 2026" (next to the year), or null when upcoming without a date (or not upcoming). */
     val upcomingDate: String?,
@@ -56,8 +56,9 @@ data class TitleActionsView(
             followed: Boolean,
             today: LocalDate,
             locale: Locale,
+            onWatchlist: Boolean,
         ): TitleActionsView {
-            val state = SeenState(status, rated, isTv = type == MediaType.tvshow)
+            val state = SeenState(status, rated, isTv = type == MediaType.tvshow, onWatchlist = onWatchlist)
             val upcoming = ReleaseRules.isUpcoming(type, releaseDate, tmdbStatus, today)
             val isTv = type == MediaType.tvshow
             return TitleActionsView(
@@ -71,7 +72,6 @@ data class TitleActionsView(
                 seen = state.seen,
                 seenLocked = state.seenLocked,
                 onWatchlist = state.onWatchlist,
-                watchlistReplacesSeen = status == WatchStatus.WATCHED && !state.seenLocked,
                 upcoming = upcoming,
                 upcomingDate = if (upcoming) releaseDate?.let { ReleaseRules.longDate(it, locale) } else null,
                 upcomingShortDate = if (upcoming) releaseDate?.let { ReleaseRules.shortDate(it, today, locale) } else null,

@@ -1,5 +1,6 @@
 package org.ratelog.watchlist.seen.web
 
+import org.ratelog.test.WatchlistHandlers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -76,7 +77,7 @@ class SeenWebTest {
     @Test
     fun `an upcoming movie gets the Upcoming date, no Seen and the bell`() {
         val doomsday = movies.save(MovieFactory.aMovie(tmdbId = 1003596, originalTitle = "Avengers: Doomsday", releaseDate = LocalDate.parse("2026-12-18"), status = Status.POST_PRODUCTION))
-        val mav = ModelAndView("movie-detail", mapOf("movie" to movieResponse(doomsday.id!!.value, 1003596), "watchStatus" to WatchStatus.WANT_TO_WATCH))
+        val mav = ModelAndView("movie-detail", mapOf("movie" to movieResponse(doomsday.id!!.value, 1003596), "watchStatus" to null, "watchOnWatchlist" to true))
 
         titles.postHandle(get(), MockHttpServletResponse(), Any(), mav)
 
@@ -211,7 +212,7 @@ class SeenWebTest {
         val heat = movies.save(MovieFactory.aMovie(tmdbId = 949, originalTitle = "Heat"))
         val severance = shows.save(TvShowFactory.aTvShow(tmdbId = 95396, originalName = "Severance"))
         val controller = StatusJsonController(
-            SetWatchStatusHandler(statuses, movies, shows),
+            WatchlistHandlers.setStatus(statuses, movies, shows),
             SeenStateReader(statuses, InMemoryRatingRepository(), InMemoryTvRatingRepository()),
             BrowseBarViewsTest.testMessageSource(),
         )
@@ -224,7 +225,11 @@ class SeenWebTest {
 
         statuses.save(MediaStatus(User.Id(1), MediaType.movie, heat.id!!.value, WatchStatus.WATCHED, 1L))
         val moved = controller.setStatus(user, "movie", heat.id!!.value, "want_to_watch").body!!
-        assertEquals(-1, moved.seenDelta, "Watched -> Want to watch stops counting as seen")
+        // Fork (2026-11-24): Watched + on the watchlist, a rewatch that stays seen.
+        assertEquals(0, moved.seenDelta, "a Watched title on the watchlist stays seen")
+        assertTrue(moved.seen)
+        assertTrue(moved.onWatchlist)
+        assertEquals("watched", moved.status)
 
         val watching = controller.setStatus(user, "tvshow", severance.id!!.value, "watching").body!!
         assertEquals("watching", watching.status)

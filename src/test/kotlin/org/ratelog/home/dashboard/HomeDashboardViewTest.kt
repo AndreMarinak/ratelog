@@ -73,7 +73,7 @@ class HomeDashboardViewTest {
         // Want to watch is shown by the filled bookmark, not by a second badge.
         assertTrue(tiles.getValue(2).inWatchlist)
         assertNull(tiles.getValue(2).statusIcon)
-        assertFalse(tiles.getValue(3).canToggleWatchlist)
+        assertTrue(tiles.getValue(3).canToggleWatchlist, "Watched: a rewatch can go on the watchlist (fork, 2026-11-24)")
         assertEquals("eye", tiles.getValue(3).statusIcon)
         assertFalse(tiles.getValue(4).canToggleWatchlist)
         assertEquals("tv", tiles.getValue(4).type)
@@ -181,7 +181,7 @@ class HomeDashboardViewTest {
 
         val watched = tiles.getValue(2).actions!!
         assertTrue(watched.seen)
-        assertFalse(watched.canToggleWatchlist)
+        assertTrue(watched.canToggleWatchlist, "a seen title can go on the watchlist too (fork, 2026-11-24)")
         assertFalse(watched.upcoming)
 
         assertTrue(tiles.getValue(3).actions!!.seenLocked, "rated")

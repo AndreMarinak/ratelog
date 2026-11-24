@@ -8,8 +8,7 @@ import org.ratelog.customlist.progress.ViewerMark
 import org.ratelog.movie.Movie
 import org.ratelog.tvshow.TvShow
 import org.ratelog.user.User
-import org.ratelog.watchlist.MediaStatus
-import org.ratelog.watchlist.WatchStatus
+import org.ratelog.watchlist.WatchlistEntry
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -49,9 +48,11 @@ class InMemoryListProgressRepository(
             .sortedWith(compareBy<CustomListItem> { it.position }.thenBy { it.id!!.value })
         var added = 0
         chosen.forEachIndexed { index, item ->
-            // ON CONFLICT DO NOTHING: any existing status wins.
-            if (statuses.find(userId, item.mediaType, item.mediaId) == null) {
-                statuses.save(MediaStatus(userId, item.mediaType, item.mediaId, WatchStatus.WANT_TO_WATCH, nowEpochMs - index))
+            // Any status (Watching / Watched / Dropped) is skipped; ON CONFLICT DO NOTHING: already on the watchlist.
+            if (statuses.find(userId, item.mediaType, item.mediaId) == null &&
+                statuses.findWatchlistEntry(userId, item.mediaType, item.mediaId) == null
+            ) {
+                statuses.addToWatchlist(WatchlistEntry(userId, item.mediaType, item.mediaId, nowEpochMs - index))
                 added++
             }
         }
@@ -60,11 +61,12 @@ class InMemoryListProgressRepository(
 
     private fun mark(userId: User.Id, mediaType: MediaType, mediaId: Long): ViewerMark {
         val status = statuses.find(userId, mediaType, mediaId)?.status
+        val listed = statuses.findWatchlistEntry(userId, mediaType, mediaId) != null
         return when (mediaType) {
             MediaType.movie -> ratings.findByMovieIdAndUserId(Movie.Id(mediaId), userId)
-                .let { ViewerMark(status, it?.score?.value, rated = it != null) }
+                .let { ViewerMark(status, it?.score?.value, rated = it != null, onWatchlist = listed) }
             MediaType.tvshow -> tvRatings.findByTvShowIdAndUserId(TvShow.Id(mediaId), userId)
-                .let { ViewerMark(status, it?.score?.value, rated = it?.isRated == true) }
+                .let { ViewerMark(status, it?.score?.value, rated = it?.isRated == true, onWatchlist = listed) }
         }
     }
 }

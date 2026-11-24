@@ -89,7 +89,7 @@ class GetHomeDashboardHandler(
         val recentlyRated = homeRepository.findRecentlyRated(query.userId, query.lang, ROW_LIMIT)
         val personal = listOf(
             HomeRow(HomeRowKind.CONTINUE_WATCHING, titles = homeRepository.findByStatus(query.userId, WatchStatus.WATCHING, query.lang, ROW_LIMIT)),
-            HomeRow(HomeRowKind.UP_NEXT, titles = homeRepository.findByStatus(query.userId, WatchStatus.WANT_TO_WATCH, query.lang, ROW_LIMIT)),
+            HomeRow(HomeRowKind.UP_NEXT, titles = homeRepository.findWatchlist(query.userId, query.lang, ROW_LIMIT)),
             HomeRow(HomeRowKind.RECENTLY_RATED, titles = recentlyRated),
             HomeRow(HomeRowKind.YOUR_LISTS, lists = listSummaryRepository.findByOwner(query.userId).take(ROW_LIMIT)),
         )
@@ -154,6 +154,7 @@ class GetHomeDashboardHandler(
                     status = mark?.status,
                     score = mark?.score,
                     releaseDate = title.releaseDate,
+                    onWatchlist = mark?.onWatchlist == true,
                 )
             }
         }

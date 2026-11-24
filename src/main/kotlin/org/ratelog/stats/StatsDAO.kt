@@ -47,6 +47,8 @@ data class StatsTitleDbRow(
     @Column("release_date") val releaseDate: String?,
     @Column("poster_path") val posterPath: String?,
     val status: String?,
+    /** Fork (2026-11-24): on the watchlist (independent of the status). */
+    @Column("on_watchlist") val onWatchlist: Boolean = false,
 )
 
 class StatsMarker
@@ -124,7 +126,8 @@ interface StatsDAO : Repository<StatsMarker, Long> {
                    m.original_title) AS title,
                m.release_year AS release_year, m.release_date AS release_date, m.poster_path AS poster_path,
                (SELECT ms.status FROM media_statuses ms WHERE ms.user_id = :userId AND ms.media_type = 'movie'
-                 AND ms.media_id = m.id) AS status
+                 AND ms.media_id = m.id) AS status,
+               EXISTS (SELECT 1 FROM watchlist_entries w WHERE w.user_id = :userId AND w.media_type = 'movie' AND w.media_id = m.id) AS on_watchlist
         FROM movies m
         WHERE m.tmdb_id IN (:tmdbIds)
         """
@@ -140,7 +143,8 @@ interface StatsDAO : Repository<StatsMarker, Long> {
                    t.original_name) AS title,
                t.first_air_year AS release_year, t.first_air_date AS release_date, t.poster_path AS poster_path,
                (SELECT ms.status FROM media_statuses ms WHERE ms.user_id = :userId AND ms.media_type = 'tvshow'
-                 AND ms.media_id = t.id) AS status
+                 AND ms.media_id = t.id) AS status,
+               EXISTS (SELECT 1 FROM watchlist_entries w WHERE w.user_id = :userId AND w.media_type = 'tvshow' AND w.media_id = t.id) AS on_watchlist
         FROM tv t
         WHERE t.tmdb_id IN (:tmdbIds)
         """

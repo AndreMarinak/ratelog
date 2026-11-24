@@ -28,6 +28,7 @@ class InMemoryBrowseLibraryRepository(
                         score = rating?.score?.value,
                         rated = rating != null,
                         status = statuses.find(userId, MediaType.movie, movie.id.value)?.status,
+                        onWatchlist = statuses.findWatchlistEntry(userId, MediaType.movie, movie.id.value) != null,
                     )
                 }
                 MediaType.tvshow -> shows.findByTmdbId(TmdbId(tmdbId))?.let { show ->
@@ -37,10 +38,11 @@ class InMemoryBrowseLibraryRepository(
                         score = rating?.score?.value?.takeIf { rated },
                         rated = rated,
                         status = statuses.find(userId, MediaType.tvshow, show.id.value)?.status,
+                        onWatchlist = statuses.findWatchlistEntry(userId, MediaType.tvshow, show.id.value) != null,
                     )
                 }
             }
-            mark?.takeIf { it.rated || it.status != null }?.let { tmdbId to it }
+            mark?.takeIf { it.rated || it.status != null || it.onWatchlist }?.let { tmdbId to it }
         }.toMap()
     }
 }

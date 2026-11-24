@@ -14,6 +14,7 @@ import org.ratelog.user.User
 import org.ratelog.watchlist.MediaStatus
 import org.ratelog.watchlist.MediaStatusRepository
 import org.ratelog.watchlist.WatchStatus
+import org.ratelog.watchlist.seen.SeenState
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -34,13 +35,27 @@ data class WatchlistItem(
     val title: String,
     val year: Int?,
     val posterPath: String?,
+    /** The effective status ([WatchStatus.effective]): the progress status, or Want to watch when only on the watchlist. */
     val status: WatchStatus,
     /** The user's own score, if they rated it. */
     val score: Double?,
+    /** When the status changed; for a title only on the watchlist (and on the To watch tab), when it was added. */
     val updatedAtEpochMs: Long,
     /** Release date (a show's first air date), for the Upcoming badge. */
     val releaseDate: LocalDate? = null,
-)
+    /** Fork (2026-11-24): on the watchlist (independent of [status]). */
+    val onWatchlist: Boolean = status == WatchStatus.WANT_TO_WATCH,
+    /** Seen (SeenState's rule: Watched, or rated). On the To watch tab that makes it a rewatch. */
+    val seen: Boolean = false,
+    /** Rated (a show: a rated season or a whole-show score). */
+    val rated: Boolean = score != null,
+) {
+    /** The progress status alone (Watching / Watched / Dropped), null when it only is on the watchlist. */
+    val progress: WatchStatus? get() = status.takeIf { it != WatchStatus.WANT_TO_WATCH }
+
+    /** On the watchlist and already seen. */
+    val rewatch: Boolean get() = onWatchlist && seen
+}
 
 data class Watchlist(
     val items: List<WatchlistItem>,
@@ -58,11 +73,40 @@ class GetWatchlistHandler(
     private val tvDescriptionRepository: TvDescriptionRepository,
     private val tvRatingRepository: TvRatingRepository,
 ) {
+    /**
+     * Fork (2026-11-24): Want to watch (the To watch tab) is every title on the watchlist, seen ones (rewatches) included,
+     * newest first. The other statuses come from the status table and say whether each title is on the watchlist too.
+     * Without a status filter (the API) every title is listed once, under its effective status.
+     */
     @Transactional(readOnly = true)
     fun handle(query: GetWatchlist): Watchlist {
-        val items = mediaStatusRepository.findByUser(query.userId, query.status, query.mediaType)
-            .mapNotNull { toItem(it, query.lang) }
-        val counts = mediaStatusRepository.countByStatus(query.userId, query.mediaType)
+        val entries = mediaStatusRepository.findWatchlist(query.userId, query.mediaType)
+        val listed = entries.map { it.mediaType to it.mediaId }.toSet()
+        val items = when (query.status) {
+            WatchStatus.WANT_TO_WATCH -> entries.mapNotNull { entry ->
+                val progress = mediaStatusRepository.find(query.userId, entry.mediaType, entry.mediaId)
+                toItem(
+                    MediaStatus(entry.userId, entry.mediaType, entry.mediaId, progress?.status ?: WatchStatus.WANT_TO_WATCH, entry.addedAtEpochMs),
+                    query.lang,
+                    onWatchlist = true,
+                )
+            }
+
+            null -> {
+                val withStatus = mediaStatusRepository.findByUser(query.userId, null, query.mediaType)
+                val statused = withStatus.map { it.mediaType to it.mediaId }.toSet()
+                val onlyListed = entries.filter { (it.mediaType to it.mediaId) !in statused }
+                    .map { MediaStatus(it.userId, it.mediaType, it.mediaId, WatchStatus.WANT_TO_WATCH, it.addedAtEpochMs) }
+                (withStatus + onlyListed)
+                    .sortedByDescending { it.updatedAtEpochMs }
+                    .mapNotNull { toItem(it, query.lang, onWatchlist = (it.mediaType to it.mediaId) in listed) }
+            }
+
+            else -> mediaStatusRepository.findByUser(query.userId, query.status, query.mediaType)
+                .mapNotNull { toItem(it, query.lang, onWatchlist = (it.mediaType to it.mediaId) in listed) }
+        }
+        val counts = mediaStatusRepository.countByStatus(query.userId, query.mediaType) +
+            (WatchStatus.WANT_TO_WATCH to entries.size)
 
         return Watchlist(
             items = items,
@@ -70,8 +114,9 @@ class GetWatchlistHandler(
         )
     }
 
-    private fun toItem(status: MediaStatus, lang: Lang): WatchlistItem? = when (status.mediaType) {
+    private fun toItem(status: MediaStatus, lang: Lang, onWatchlist: Boolean): WatchlistItem? = when (status.mediaType) {
         MediaType.movie -> movieRepository.findById(Movie.Id(status.mediaId))?.let { movie ->
+            val rating = ratingRepository.findByMovieIdAndUserId(movie.id!!, status.userId)
             val description = movieDescriptionRepository.findByTmdbIdAndLang(movie.tmdbId, lang)
                 ?: movieDescriptionRepository.findByTmdbIdAndLang(movie.tmdbId, Lang.en)
             WatchlistItem(
@@ -82,13 +127,18 @@ class GetWatchlistHandler(
                 year = movie.releaseYear,
                 posterPath = movie.posterPath?.value,
                 status = status.status,
-                score = ratingRepository.findByMovieIdAndUserId(movie.id!!, status.userId)?.score?.value,
+                score = rating?.score?.value,
                 updatedAtEpochMs = status.updatedAtEpochMs,
                 releaseDate = movie.releaseDate,
+                onWatchlist = onWatchlist,
+                seen = SeenState(status.status.takeIf { it != WatchStatus.WANT_TO_WATCH }, rating != null).seen,
+                rated = rating != null,
             )
         }
 
         MediaType.tvshow -> tvShowRepository.findById(TvShow.Id(status.mediaId))?.let { show ->
+            val rating = tvRatingRepository.findByTvShowIdAndUserId(show.id!!, status.userId)
+            val rated = rating?.isRated == true
             val description = tvDescriptionRepository.findByTmdbIdAndLang(show.tmdbId, lang)
                 ?: tvDescriptionRepository.findByTmdbIdAndLang(show.tmdbId, Lang.en)
             WatchlistItem(
@@ -99,9 +149,12 @@ class GetWatchlistHandler(
                 year = show.firstAirYear,
                 posterPath = show.posterPath?.value,
                 status = status.status,
-                score = tvRatingRepository.findByTvShowIdAndUserId(show.id!!, status.userId)?.score?.value,
+                score = rating?.score?.value,
                 updatedAtEpochMs = status.updatedAtEpochMs,
                 releaseDate = show.firstAirDate,
+                onWatchlist = onWatchlist,
+                seen = SeenState(status.status.takeIf { it != WatchStatus.WANT_TO_WATCH }, rated, isTv = true).seen,
+                rated = rated,
             )
         }
     }

@@ -46,6 +46,8 @@ data class HomeTitleDto(
     val score: Double?,
     /** ISO date, for TMDB titles. */
     val releaseDate: String?,
+    /** Fork (2026-11-24): on your watchlist, independent of `status` (a `watched` title can be on it too, to rewatch). */
+    val onWatchlist: Boolean = false,
 )
 
 data class HomeListDto(
@@ -92,9 +94,10 @@ class ApiHomeController(
         title = title,
         year = year,
         posterUrl = posterPath?.let(::posterUrl),
-        status = status?.apiName,
+        status = org.ratelog.watchlist.WatchStatus.effective(status, onWatchlist)?.apiName,
         score = score,
         releaseDate = releaseDate?.toString(),
+        onWatchlist = onWatchlist,
     )
 
     private fun ListSummary.toDto() = HomeListDto(

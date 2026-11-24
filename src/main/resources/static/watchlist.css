@@ -322,3 +322,11 @@ button.watchlist-toast-undo {
     border-radius: 14px;
   }
 }
+
+/* Fork (2026-11-24): a title you've already seen, on To watch to rewatch. Solid, in the seen green, so it reads as a tag. */
+.watchlist-note.is-rewatch {
+  border-style: solid;
+  border-color: hsl(140 18% 33% / 0.55);
+  color: hsl(140 20% 74%);
+  background: hsl(140 18% 33% / 0.18);
+}

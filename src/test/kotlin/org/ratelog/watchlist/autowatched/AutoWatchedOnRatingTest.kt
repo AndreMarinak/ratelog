@@ -58,8 +58,8 @@ class AutoWatchedOnRatingTest {
         TvShowFactory.aTvShow(originalName = "Severance", lastSeasonNumber = 2, lastSeasonAirDate = LocalDate.parse("2025-01-17"), nextSeasonAirDate = null)
     )
 
-    private fun movieStatus() = statuses.find(user, MediaType.movie, movie.id!!.value)?.status
-    private fun showStatus() = statuses.find(user, MediaType.tvshow, show.id!!.value)?.status
+    private fun movieStatus() = statuses.effective(user, MediaType.movie, movie.id!!.value)
+    private fun showStatus() = statuses.effective(user, MediaType.tvshow, show.id!!.value)
 
     private fun setStatus(type: MediaType, id: Long, status: WatchStatus) =
         statuses.save(MediaStatus(user, type, id, status, updatedAtEpochMs = 1))
@@ -71,7 +71,7 @@ class AutoWatchedOnRatingTest {
         AddSeasonRating(of.id!!, SeasonNumber(season), user, Score(8.0), Score(8.0), Score(8.0), Score(8.0), Score(8.0), null, null)
     )
 
-    private fun statusOf(of: TvShow) = statuses.find(user, MediaType.tvshow, of.id!!.value)?.status
+    private fun statusOf(of: TvShow) = statuses.effective(user, MediaType.tvshow, of.id!!.value)
 
     private fun aShow(last: Int?, lastDate: LocalDate?, next: LocalDate? = null) = shows.save(
         TvShowFactory.aTvShow(originalName = "Show $last", lastSeasonNumber = last, lastSeasonAirDate = lastDate, nextSeasonAirDate = next)
@@ -231,6 +231,8 @@ class AutoWatchedOnRatingTest {
         assertTrue(deleteSeasonRating.handle(DeleteSeasonRating(show.id!!, SeasonNumber(2), user)).isRight())
         assertEquals(WatchStatus.WATCHED, showStatus(), "not downgraded to Watching")
 
+        // Only on the watchlist (no status): still nothing changes.
+        statuses.delete(user, MediaType.tvshow, show.id!!.value)
         setStatus(MediaType.tvshow, show.id!!.value, WatchStatus.WANT_TO_WATCH)
         assertTrue(deleteSeasonRating.handle(DeleteSeasonRating(show.id!!, SeasonNumber(1), user)).isRight())
         assertEquals(WatchStatus.WANT_TO_WATCH, showStatus())
@@ -243,7 +245,7 @@ class AutoWatchedOnRatingTest {
 
         rateMovie()
 
-        assertEquals(WatchStatus.WANT_TO_WATCH, statuses.find(other, MediaType.movie, movie.id!!.value)?.status)
+        assertEquals(WatchStatus.WANT_TO_WATCH, statuses.effective(other, MediaType.movie, movie.id!!.value))
     }
 
     @Test

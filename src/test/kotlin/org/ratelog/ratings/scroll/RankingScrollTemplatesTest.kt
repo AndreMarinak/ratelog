@@ -111,7 +111,7 @@ class RankingScrollTemplatesTest {
     fun `the ranking fragment alone renders the cards with their place in the list and the footer`() {
         val tops = (31..33).map { GetTopMoviesResponse(it, 600 + it, "Movie $it", 1999, "/p$it.jpg", 8.0, emptyList()) }
         val actions = tops.associate {
-            it.tmdbId to TileActionsView.of(it.tmdbId, MediaType.movie, null, true, null, LocalDate.parse("2026-11-23"), Locale.ENGLISH, score = 8.0)
+            it.tmdbId to TileActionsView.of(it.tmdbId, MediaType.movie, null, true, null, LocalDate.parse("2026-11-23"), Locale.ENGLISH, score = 8.0, onWatchlist = false)
         }
         val page = RankingScroll.page("/movies", RankingScroll.window(30, 30), 3, emptyList())
         val html = render("movies", setOf("ranking"), mapOf("tops" to tops, "rankingPage" to page, "rankingActions" to actions))

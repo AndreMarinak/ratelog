@@ -1,5 +1,6 @@
 package org.ratelog.watchlist.seen
 
+import org.ratelog.test.WatchlistHandlers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -49,7 +50,7 @@ class ToggleSeenControllerTest {
     private val controller = ToggleSeenController(importer, ToggleSeenHandler(statuses, movies, shows, reader, MutableClock()), messages)
     private val quickJson = QuickWatchlistJsonController(
         importer,
-        QuickWatchlistController(importer, statuses, SetWatchStatusHandler(statuses, movies, shows)),
+        QuickWatchlistController(importer, statuses, WatchlistHandlers.setWatchlist(statuses, movies, shows, ratings)),
         reader,
         messages,
     )
@@ -71,7 +72,7 @@ class ToggleSeenControllerTest {
     fun tearDown() = LocaleContextHolder.resetLocaleContext()
 
     private fun request(referer: String? = null) = MockHttpServletRequest().apply { referer?.let { addHeader("Referer", it) } }
-    private fun status(id: Long = heat.id!!.value) = statuses.find(user.id!!, MediaType.movie, id)?.status
+    private fun status(id: Long = heat.id!!.value) = statuses.effective(user.id!!, MediaType.movie, id)
 
     @Test
     fun `a form post toggles seen and goes back to the page it came from`() {
@@ -137,7 +138,7 @@ class ToggleSeenControllerTest {
             assertTrue(seen)
             assertFalse(seenLocked)
             assertFalse(onWatchlist, "seen takes it off the watchlist")
-            assertFalse(canToggleWatchlist, "the bookmark hides on a Watched title")
+            assertTrue(canToggleWatchlist, "a Watched title keeps the bookmark (fork, 2026-11-24: it can be a rewatch)")
             assertEquals(1, seenDelta)
             assertEquals("Marked as seen.", message)
         }

@@ -1,5 +1,6 @@
 package org.ratelog.watchlist.setstatus
 
+import org.ratelog.test.WatchlistHandlers
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -33,7 +34,7 @@ class SetWatchStatusHandlerTest {
         statuses = InMemoryMediaStatusRepository()
         movies = InMemoryMovieRepository()
         shows = InMemoryTvShowRepository()
-        handler = SetWatchStatusHandler(statuses, movies, shows)
+        handler = WatchlistHandlers.setStatus(statuses, movies, shows)
         movieId = movies.save(MovieFactory.aMovie(originalTitle = "Heat")).id!!.value
         showId = shows.save(TvShowFactory.aTvShow(originalName = "Severance")).id!!.value
     }
@@ -43,7 +44,7 @@ class SetWatchStatusHandlerTest {
         val result = handler.handle(SetWatchStatus(user, MediaType.movie, movieId, WatchStatus.WANT_TO_WATCH))
 
         assertEquals(SetWatchStatusResult(previous = null, current = WatchStatus.WANT_TO_WATCH), result.getOrNull())
-        assertEquals(WatchStatus.WANT_TO_WATCH, statuses.find(user, MediaType.movie, movieId)?.status)
+        assertEquals(WatchStatus.WANT_TO_WATCH, statuses.effective(user, MediaType.movie, movieId))
     }
 
     @Test
@@ -54,7 +55,7 @@ class SetWatchStatusHandlerTest {
 
         assertTrue(result.changed)
         assertEquals(WatchStatus.WANT_TO_WATCH, result.previous)
-        assertEquals(WatchStatus.WATCHING, statuses.find(user, MediaType.tvshow, showId)?.status)
+        assertEquals(WatchStatus.WATCHING, statuses.effective(user, MediaType.tvshow, showId))
         assertEquals(1, statuses.findByUser(user, null, null).size)
     }
 
@@ -92,8 +93,8 @@ class SetWatchStatusHandlerTest {
         handler.handle(SetWatchStatus(user, MediaType.movie, movieId, WatchStatus.WATCHED))
         handler.handle(SetWatchStatus(otherUser, MediaType.movie, movieId, WatchStatus.DROPPED))
 
-        assertEquals(WatchStatus.WATCHED, statuses.find(user, MediaType.movie, movieId)?.status)
-        assertEquals(WatchStatus.DROPPED, statuses.find(otherUser, MediaType.movie, movieId)?.status)
+        assertEquals(WatchStatus.WATCHED, statuses.effective(user, MediaType.movie, movieId))
+        assertEquals(WatchStatus.DROPPED, statuses.effective(otherUser, MediaType.movie, movieId))
     }
 
     @Test

@@ -96,7 +96,7 @@ class ListSuggestViews(
             initial = t.title.trim().take(1).uppercase().ifEmpty { "?" },
             userScore = suggestion.mark?.score?.let { String.format(Locale.ROOT, "%.1f", it) },
             series = suggestion.reason == SuggestionReason.SERIES,
-            actions = TileActionsView.of(t.tmdbId, t.type, suggestion.mark?.status, suggestion.mark?.rated == true, t.releaseDate, today, locale, score = suggestion.mark?.score),
+            actions = TileActionsView.of(t.tmdbId, t.type, suggestion.mark?.status, suggestion.mark?.rated == true, t.releaseDate, today, locale, score = suggestion.mark?.score, onWatchlist = suggestion.mark?.onWatchlist == true),
         )
     }
 

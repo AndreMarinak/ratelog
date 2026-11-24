@@ -63,7 +63,21 @@ data class WatchlistItemResponse(
     val slots: Int = 3,
     /** Shown in the slots no button can fill ("Out Dec 18" where Seen would be, "Rated" where Remove would be). */
     val noteKey: String? = null,
+    /** Fork (2026-11-24): on To watch, a title you've already seen (on the watchlist to rewatch). */
+    val rewatch: Boolean = false,
 ) {
+    /** The note's icon and tooltip key. */
+    val noteIcon: String get() = when (noteKey) {
+        "watchlist.note.rated" -> "star"
+        WatchlistController.NOTE_REWATCH -> "eye"
+        else -> "calendar-clock"
+    }
+    val noteTitleKey: String get() = when (noteKey) {
+        "watchlist.note.rated" -> "watchlist.note.title.rated"
+        WatchlistController.NOTE_REWATCH -> "watchlist.note.title.rewatch"
+        else -> "watchlist.note.title.upcoming"
+    }
+
     val upcoming: Boolean get() = upcomingDate != null
 
     /** How many slots the note takes. */
@@ -127,7 +141,7 @@ class WatchlistController(
         })
         val today = LocalDate.now(clock)
         val locale = LocaleContextHolder.getLocale()
-        model.addAttribute("items", watchlist.items.map { toResponse(it, today, locale) })
+        model.addAttribute("items", watchlist.items.map { toResponse(it, selectedStatus, today, locale) })
         // Watching is for shows: on Movies it says so (a movie only has it from before, or through the API).
         val moviesWatching = selectedStatus == WatchStatus.WATCHING && selectedType == MediaType.movie
         model.addAttribute("emptyKey", if (moviesWatching) "watchlist.tab.empty.watching.movie" else "watchlist.tab.empty.${selectedStatus.apiName}")
@@ -138,8 +152,9 @@ class WatchlistController(
         return "watchlist"
     }
 
-    private fun toResponse(item: WatchlistItem, today: LocalDate, locale: Locale): WatchlistItemResponse {
+    private fun toResponse(item: WatchlistItem, tab: WatchStatus, today: LocalDate, locale: Locale): WatchlistItemResponse {
         val upcoming = ReleaseRules.isUpcoming(item.releaseDate, today)
+        val rewatch = tab == WatchStatus.WANT_TO_WATCH && item.rewatch
         return WatchlistItemResponse(
             href = when (item.mediaType) {
                 MediaType.movie -> "/movie/${item.tmdbId}"
@@ -153,12 +168,13 @@ class WatchlistController(
             mediaType = item.mediaType.name,
             mediaId = item.mediaId,
             upcomingDate = if (upcoming) item.releaseDate?.let { ReleaseRules.shortDate(it, today, locale) } else null,
-            actions = actionsFor(item.status, item.mediaType == MediaType.tvshow, upcoming, rated = item.score != null),
-            slots = slotsFor(item.status),
-            noteKey = noteFor(item.status, upcoming, rated = item.score != null, hasDate = item.releaseDate != null),
+            actions = actionsFor(tab, item.mediaType == MediaType.tvshow, upcoming, rated = item.rated, rewatch = rewatch),
+            slots = slotsFor(tab),
+            noteKey = if (rewatch) NOTE_REWATCH else noteFor(tab, upcoming, rated = item.rated, hasDate = item.releaseDate != null),
+            rewatch = rewatch,
             tileActions = TileActionsView.of(
-                item.tmdbId, item.mediaType, item.status, rated = item.score != null, releaseDate = item.releaseDate,
-                today = today, locale = locale, score = item.score,
+                item.tmdbId, item.mediaType, item.progress, rated = item.rated, releaseDate = item.releaseDate,
+                today = today, locale = locale, score = item.score, onWatchlist = item.onWatchlist,
             ),
         )
     }
@@ -172,6 +188,9 @@ class WatchlistController(
     }
 
     companion object {
+        /** The To watch note on a title you've already seen: "Rewatch" where Seen (and Watching) would be. */
+        const val NOTE_REWATCH = "watchlist.note.rewatch"
+
         private val TYPE_FILTERS = mapOf(
             "movie" to MediaType.movie,
             "movies" to MediaType.movie,
@@ -191,14 +210,19 @@ class WatchlistController(
          * is something you're in the middle of), then Remove. To watch and Dropped: Seen · Watching · Remove; Watching:
          * Seen · Drop · Remove; Seen: Remove. An upcoming title gets no Seen or Watching (it isn't out; [noteFor] fills the
          * slot). A rated title on the Seen tab gets no Remove: it would still count as seen through its rating.
+         * Fork (2026-11-24): To watch's Remove only takes it off the watchlist (`unlist`), so a rewatch stays seen; a
+         * rewatch (already seen) gets only Remove, its "Rewatch" note fills the other slots.
          */
-        fun actionsFor(status: WatchStatus, isTv: Boolean, upcoming: Boolean, rated: Boolean): List<WatchlistItemAction> {
+        fun actionsFor(status: WatchStatus, isTv: Boolean, upcoming: Boolean, rated: Boolean, rewatch: Boolean = false): List<WatchlistItemAction> {
             val seen = WatchlistItemAction(WatchlistMove.SEEN.param, "watchlist.action.seen", "watchlist.action.seen.aria", "eye", "is-seen")
             val watching = WatchlistItemAction(WatchlistMove.WATCHING.param, "watchlist.action.watching", "watchlist.action.watching.aria", "circle-play", "is-watching")
             val dropped = WatchlistItemAction(WatchlistMove.DROPPED.param, "watchlist.action.dropped", "watchlist.action.dropped.aria", "circle-x", "is-dropped")
             val remove = WatchlistItemAction(WatchlistMove.REMOVE.param, "watchlist.action.remove", "watchlist.action.remove.aria.${status.apiName}", "x", "is-remove")
+            val unlist = remove.copy(to = WatchlistMove.UNLIST.param)
             return when (status) {
-                WatchStatus.WANT_TO_WATCH -> listOfNotNull(seen.takeIf { !upcoming }, watching.takeIf { isTv && !upcoming }, remove)
+                WatchStatus.WANT_TO_WATCH ->
+                    if (rewatch) listOf(unlist)
+                    else listOfNotNull(seen.takeIf { !upcoming }, watching.takeIf { isTv && !upcoming }, unlist)
                 WatchStatus.WATCHING -> listOfNotNull(seen.takeIf { !upcoming }, dropped.takeIf { isTv }, remove)
                 WatchStatus.WATCHED -> listOfNotNull(remove.takeIf { !rated })
                 WatchStatus.DROPPED -> listOfNotNull(seen.takeIf { !upcoming }, watching.takeIf { isTv && !upcoming }, remove)

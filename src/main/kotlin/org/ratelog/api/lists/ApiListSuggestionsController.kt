@@ -52,6 +52,8 @@ data class ListSuggestionDto(
     /** The tiles' Seen rule: a movie rated or Watched; a show Watched, or rated with no status. */
     val seen: Boolean,
     val status: String?,
+    /** Fork (2026-11-24): on your watchlist, independent of `status` (a `watched` title can be on it too, to rewatch). */
+    val onWatchlist: Boolean = false,
     val userScore: Double?,
     /** `series` (an entry of a series the list has titles of) or `recommended`. */
     val reason: String,
@@ -105,7 +107,8 @@ class ApiListSuggestionsController(
         tmdbVoteAverage = title.voteAverage,
         upcoming = ReleaseRules.isUpcoming(title.releaseDate, today),
         seen = seen,
-        status = mark?.status?.apiName,
+        status = mark?.effectiveStatus?.apiName,
+        onWatchlist = mark?.onWatchlist == true,
         userScore = mark?.score,
         reason = if (reason == SuggestionReason.SERIES) "series" else "recommended",
         recommendedBy = recommendedBy,

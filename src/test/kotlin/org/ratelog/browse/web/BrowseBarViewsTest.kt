@@ -228,7 +228,7 @@ class BrowseBarViewsTest {
             assertEquals("movie", it.type)
             assertEquals("https://image.tmdb.org/t/p/w342/m.jpg", it.posterUrl)
             assertEquals("https://image.tmdb.org/t/p/w500/m.jpg", it.posterUrl2x)
-            assertFalse(it.canToggleWatchlist, "Watched: the bookmark would only toggle Want to watch")
+            assertTrue(it.canToggleWatchlist, "Watched: a seen title can go on the watchlist too (fork, 2026-11-24)")
             assertEquals("8.2", it.tmdbScore)
             assertEquals("8.5", it.userScore)
             assertEquals("eye", it.statusIcon)

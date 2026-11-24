@@ -48,7 +48,7 @@ class TileMarksTest {
     private val user = UserFactory.aUser(id = 7)
 
     private fun tile(tmdbId: Int, type: MediaType = MediaType.movie, score: Double? = null, detailed: Boolean = false) =
-        TileActionsView.of(tmdbId, type, null, score != null, LocalDate.parse("2001-01-01"), today, Locale.ENGLISH, score = score, detailed = detailed)
+        TileActionsView.of(tmdbId, type, null, score != null, LocalDate.parse("2001-01-01"), today, Locale.ENGLISH, score = score, detailed = detailed, onWatchlist = false)
 
     @Test
     fun `nothing is queried until a tile asks, then each set is read once for the whole page`() {

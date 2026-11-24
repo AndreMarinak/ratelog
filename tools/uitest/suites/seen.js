@@ -23,6 +23,8 @@ module.exports = {
     const want = [['movie', M.up, 'up'], ['movie', M.dune2, 'dune2'], ['movie', data.upcoming.tmdbId, 'upcoming'], ['tv', TV.bear, 'bear'], ['tv', TV.tlou, 'tlou']];
     for (const [type, id, key] of want) {
       if (type === 'movie') await setTitle(api, 'movie', id, { score: null });
+      // Exactly "To watch": no status (the watchlist is independent of Seen, so a Watched one would stay Watched).
+      await api.must('DELETE', `/statuses/${type}/${id}`, undefined, [204, 404]);
       const r = await api.must('PUT', `/statuses/${type}/${id}`, { status: 'want_to_watch' });
       data.titles[key] = r.title;
     }
@@ -81,7 +83,8 @@ module.exports = {
       const token = await t.mark();
       const sel = `#row-trending-movies [data-tile-actions][data-key="${key}"]`;
       await t.tileAct(`${sel}`, 'seen');
-      await t.waitFor((s) => document.querySelector(s + ' .tile-seen.is-on') && document.querySelector(s + ' .tile-watchlist[hidden]'), sel);
+      // A seen title keeps its bookmark (2026-11-24: it can go on the watchlist to rewatch).
+      await t.waitFor((s) => document.querySelector(s + ' .tile-seen.is-on') && !document.querySelector(s + ' .tile-watchlist[hidden]'), sel);
       await t.stillHere(token);
       const nudge = await page.evaluate(() => !!document.querySelector('.title-nudge:not([hidden])'));
       assert(!nudge, 'Rate it? showed on a tile');
@@ -194,15 +197,22 @@ module.exports = {
       return 'seen, no rating after Skip and reload';
     });
 
-    await t.step('movie page: Watchlist toggles in place (asks first when it would replace Seen)', async () => {
+    await t.step('movie page: Watchlist toggles in place on a seen title, no question, and it stays seen', async () => {
       await t.go(`/movie/${M.lionKing}`);
       const token = await t.mark();
-      await t.pressSel('[data-title-watchlist]'); // seen + unrated: confirm (auto-accepted) and move to the watchlist
-      await t.waitFor(() => document.querySelector('[data-title-watchlist].is-on') && document.querySelector('[data-title-seen]:not(.is-on)'));
+      const asked = [];
+      const onDialog = (d) => asked.push(d.message());
+      page.on('dialog', onDialog);
+      await t.pressSel('[data-title-watchlist]'); // seen + unrated: on the watchlist, still seen (2026-11-24)
+      await t.waitFor(() => document.querySelector('[data-title-watchlist].is-on') && document.querySelector('[data-title-seen].is-on'));
       await t.pressSel('[data-title-watchlist]');
-      await t.waitFor(() => document.querySelector('[data-title-watchlist]:not(.is-on)'));
+      await t.waitFor(() => document.querySelector('[data-title-watchlist]:not(.is-on)') && document.querySelector('[data-title-seen].is-on'));
+      page.off('dialog', onDialog);
       await t.stillHere(token);
-      return 'on (Seen off), off';
+      assert(asked.length === 0, `asked: ${asked.join(' | ')}`);
+      const st = await t.api.must('GET', '/statuses?status=watched&type=movie');
+      assert(st.items.some((i) => i.tmdbId === M.lionKing && !i.onWatchlist), 'not Watched any more');
+      return 'on (Seen stays on), off (Seen stays on), no confirm';
     });
 
     await t.step('movie page: rating from "Rate it?" saves a quick rating', async () => {
@@ -361,6 +371,33 @@ module.exports = {
       await t.shot('watchlist-watching-tv');
       await t.noOverflow();
       return `${titles.dune2} -> Seen, ${titles.tlou} -> Watching`;
+    });
+
+    await t.step('watchlist: a seen title on To watch is tagged Rewatch; Remove keeps it seen', async () => {
+      // Coco is Watched (reset); put it on the watchlist too.
+      const added = await t.api.must('PUT', `/watchlist/movie/${M.coco}`);
+      assert(added.onWatchlist && added.seen && added.status === 'watched', JSON.stringify(added));
+      await t.go('/watchlist?status=want_to_watch&type=movie');
+      const token = await t.mark();
+      const seen0 = await count('watched');
+      const coco = await itemByKey(`movie:${M.coco}`, added.title);
+      assert(await coco.evaluate((i) => !!i), `${added.title} not on To watch`);
+      const card = await coco.evaluate((i) => ({
+        tag: i.querySelector('.watchlist-note.is-rewatch')?.innerText.trim(),
+        seenButton: !!i.querySelector('.watchlist-act.is-seen'),
+        eye: !!i.querySelector('.tile-seen.is-on'),
+      }));
+      assert(card.tag === 'Rewatch' && !card.seenButton && card.eye, JSON.stringify(card));
+      await coco.evaluate((i) => i.scrollIntoView({ block: 'center' }));
+      await t.shot('watchlist-rewatch');
+      await t.press(await coco.$('.watchlist-act.is-remove'));
+      await t.waitFor(() => /Removed/.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
+      assert(await coco.evaluate((i) => i.hidden), 'still on To watch');
+      assert((await count('watched')) === seen0, 'the Seen count moved');
+      await t.stillHere(token);
+      const st = await t.api.must('GET', '/statuses?status=watched&type=movie');
+      assert(st.items.some((i) => i.tmdbId === M.coco && !i.onWatchlist), 'Coco is not Watched any more');
+      return `tagged "${card.tag}", removed, still seen`;
     });
 
     // ---------- List tick-off ----------

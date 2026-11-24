@@ -61,11 +61,14 @@ class SeenTemplatesTest {
         return engine.process(template, fragments ?: setOf(fragment!!), context)
     }
 
-    private fun tile(status: WatchStatus? = null, rated: Boolean = false, date: LocalDate? = LocalDate.parse("2001-01-01"), type: MediaType = MediaType.movie) =
-        TileActionsView.of(603, type, status, rated, date, today, Locale.ENGLISH)
+    private fun tile(status: WatchStatus? = null, rated: Boolean = false, date: LocalDate? = LocalDate.parse("2001-01-01"), type: MediaType = MediaType.movie, onWatchlist: Boolean = false) =
+        TileActionsView.of(603, type, status, rated, date, today, Locale.ENGLISH, onWatchlist = onWatchlist)
 
-    private fun title(type: MediaType = MediaType.movie, status: WatchStatus? = null, rated: Boolean = false, date: LocalDate? = LocalDate.parse("1994-06-24"), tmdbStatus: String? = "Released", followed: Boolean = false) =
-        TitleActionsView.of(type, 42, 8587, status, rated, date, tmdbStatus, followed, today, Locale.ENGLISH)
+    private fun title(type: MediaType = MediaType.movie, status: WatchStatus? = null, rated: Boolean = false, date: LocalDate? = LocalDate.parse("1994-06-24"), tmdbStatus: String? = "Released", followed: Boolean = false, onWatchlist: Boolean = false) =
+        TitleActionsView.of(
+            type, 42, 8587, status?.takeIf { it != WatchStatus.WANT_TO_WATCH }, rated, date, tmdbStatus, followed, today, Locale.ENGLISH,
+            onWatchlist = onWatchlist || status == WatchStatus.WANT_TO_WATCH,
+        )
 
     // --- Tiles ---
 
@@ -86,9 +89,10 @@ class SeenTemplatesTest {
     }
 
     @Test
-    fun `a watched tile shows the eye on and keeps the bookmark only hidden`() {
+    fun `a watched tile shows the eye on and the bookmark too (fork, 2026-11-24)`() {
         val html = render("fragments/tile-actions", "actions", mapOf("a" to tile(WatchStatus.WATCHED), "title" to "Heat"))
-        assertTrue(Regex("""<form class="tile-act tile-watchlist"[^>]*\shidden[\s>=]""").containsMatchIn(html), html)
+        assertFalse(Regex("""<form class="tile-act tile-watchlist[^"]*"[^>]*\shidden[\s>=]""").containsMatchIn(html), html)
+        assertTrue(html.contains("""aria-label="Add to watchlist: Heat""""))
         assertTrue(html.contains("""class="tile-act tile-seen is-on""""))
         assertTrue(html.contains("""aria-label="Seen (tap to unmark): Heat""""))
     }
@@ -165,17 +169,22 @@ class SeenTemplatesTest {
     }
 
     @Test
-    fun `the watchlist toggle asks first only when it would replace an unrated Seen`() {
+    fun `the watchlist toggle never asks, a seen title included (fork, 2026-11-24)`() {
         val plain = render("fragments/title-actions", "watchlist", mapOf("a" to title()))
-        assertTrue(plain.contains("""name="status" value="want_to_watch""""))
-        assertFalse(Regex("""data-confirm="""").containsMatchIn(plain))
-        assertTrue(plain.contains("data-confirm-seen="))
+        assertTrue(plain.contains("""action="/watchlist/set""""), plain)
+        assertTrue(plain.contains("""name="on" value="1""""))
+        assertFalse(plain.contains("data-confirm"))
 
         val seen = render("fragments/title-actions", "watchlist", mapOf("a" to title(status = WatchStatus.WATCHED)))
-        assertTrue(Regex("""data-confirm="This is marked as seen""").containsMatchIn(seen), seen)
+        assertFalse(seen.contains("data-confirm"), seen)
+        assertTrue(seen.contains("""name="on" value="1""""))
+
+        val rewatch = render("fragments/title-actions", "watchlist", mapOf("a" to title(status = WatchStatus.WATCHED, onWatchlist = true)))
+        assertTrue(rewatch.contains("""name="on" value="0""""), "tapping again takes it off (the status stays)")
+        assertTrue(rewatch.contains(">In watchlist<"))
 
         val on = render("fragments/title-actions", "watchlist", mapOf("a" to title(status = WatchStatus.WANT_TO_WATCH)))
-        assertTrue(on.contains("""name="status" value="""""), "tapping again clears it")
+        assertTrue(on.contains("""name="on" value="0""""), "tapping again takes it off")
         assertTrue(on.contains(">In watchlist<"))
     }
 

@@ -15,6 +15,9 @@ class HomeRepositoryImpl(
     override fun findByStatus(userId: User.Id, status: WatchStatus, lang: Lang, limit: Int): List<HomeTitle> =
         homeDAO.findByStatus(userId.value, status.name, lang.name, limit).map { it.toDomain() }
 
+    override fun findWatchlist(userId: User.Id, lang: Lang, limit: Int): List<HomeTitle> =
+        homeDAO.findWatchlist(userId.value, lang.name, limit).map { it.toDomain() }
+
     override fun findRecentlyRated(userId: User.Id, lang: Lang, limit: Int): List<HomeTitle> =
         homeDAO.findRecentlyRated(userId.value, lang.name, limit).map { it.toDomain() }
 
@@ -26,8 +29,8 @@ class HomeRepositoryImpl(
             MediaType.tvshow -> homeDAO.findTvMarks(userId.value, ids)
         }
         return rows
-            .map { it.tmdbId to TitleMark(it.status?.let(WatchStatus::valueOf), it.score) }
-            .filter { (_, mark) -> mark.status != null || mark.score != null }
+            .map { it.tmdbId to TitleMark(it.status?.let(WatchStatus::valueOf), it.score, it.onWatchlist) }
+            .filter { (_, mark) -> mark.status != null || mark.score != null || mark.onWatchlist }
             .toMap()
     }
 
@@ -40,5 +43,6 @@ class HomeRepositoryImpl(
         status = status?.let(WatchStatus::valueOf),
         score = score,
         releaseDate = releaseDate?.take(10)?.let { runCatching { it.toLocalDate() }.getOrNull() },
+        onWatchlist = onWatchlist,
     )
 }

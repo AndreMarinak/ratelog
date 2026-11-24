@@ -12,6 +12,8 @@ data class UnratedSeenRow(
     @Column("release_date") val releaseDate: String?,
     @Column("poster_path") val posterPath: String?,
     @Column("sort_key") val sortKey: Long,
+    /** Fork (2026-11-24): on the watchlist too (a rewatch). */
+    @Column("on_watchlist") val onWatchlist: Boolean = false,
 )
 
 class UnratedSeenMarker
@@ -34,7 +36,8 @@ interface UnratedSeenDAO : Repository<UnratedSeenMarker, Long> {
                m.release_year AS release_year,
                m.release_date AS release_date,
                m.poster_path AS poster_path,
-               ms.updated_at_epoch_ms AS sort_key
+               ms.updated_at_epoch_ms AS sort_key,
+               EXISTS (SELECT 1 FROM watchlist_entries w WHERE w.user_id = :userId AND w.media_type = 'movie' AND w.media_id = m.id) AS on_watchlist
         FROM media_statuses ms
         JOIN movies m ON m.id = ms.media_id
         WHERE ms.user_id = :userId AND ms.media_type = 'movie' AND ms.status = 'WATCHED'
@@ -55,7 +58,8 @@ interface UnratedSeenDAO : Repository<UnratedSeenMarker, Long> {
                t.first_air_year AS release_year,
                t.first_air_date AS release_date,
                t.poster_path AS poster_path,
-               ms.updated_at_epoch_ms AS sort_key
+               ms.updated_at_epoch_ms AS sort_key,
+               EXISTS (SELECT 1 FROM watchlist_entries w WHERE w.user_id = :userId AND w.media_type = 'tvshow' AND w.media_id = t.id) AS on_watchlist
         FROM media_statuses ms
         JOIN tv t ON t.id = ms.media_id
         WHERE ms.user_id = :userId AND ms.media_type = 'tvshow' AND ms.status = 'WATCHED'

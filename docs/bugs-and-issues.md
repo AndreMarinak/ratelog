@@ -8,6 +8,14 @@ Problems found while building and running the fork: what happened, the cause, an
   prompt's form in `fragments/title-actions.html` has no `data-inplace` (that file was being edited on another branch). Fix:
   add `data-inplace="#your-rating, .title-panel"` to `.title-nudge-form` and change the `seen` suite's nudge step from a
   navigation to the in-place wait.
+- **A Watching show with rated seasons, moved to To watch from its title page, counts as seen** (rewatch, 2026-11-24): adding
+  to the watchlist replaces Watching / Dropped (as before), and a show with rated seasons and no status is seen by the old
+  rule for shows rated before statuses existed, so it shows as a Rewatch. Rare (the poster bookmark doesn't touch Watching
+  shows); a fix would be to keep such a show Watching, or drop the legacy rule.
+- **Remove on the Seen tab keeps a rewatch's `rewatch` flag** (2026-11-24): the flag is set when
+  a title is added (seen then or not) and reset by the eye's un-see, but not by "Remove" on the Seen tab (so its Undo restores
+  exactly). A title un-seen that way and rated later stays on the watchlist instead of leaving it. Harmless (Remove takes it off).
+
 - **The "Add N unseen to watchlist" count in a list's "⋯" menu can lag behind a poster tap** (compact header, 2026-11-23):
   ticking a poster Seen or Watchlist in place updates the progress line and the tab counts (`list-tick.js`) but not N, until
   the next tab / Sort switch or reload. Pre-existing (the old orange button had the same count); harmless because the server

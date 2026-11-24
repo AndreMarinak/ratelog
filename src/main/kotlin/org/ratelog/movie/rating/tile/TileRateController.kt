@@ -171,7 +171,7 @@ class TileRateController(
                 TileRateOutcome.CHANGED -> "tile.rate.done.changed"
                 TileRateOutcome.DELETED -> "tile.rate.done.deleted"
             }
-            ResponseEntity.ok(response(r.after, r.before.status?.apiName, r.seenDelta, r.score?.value, false, message(key, outcome.title, r.score?.value?.let(::compactScore) ?: "")))
+            ResponseEntity.ok(response(r.after, r.before.effectiveStatus?.apiName, r.seenDelta, r.score?.value, false, message(key, outcome.title, r.score?.value?.let(::compactScore) ?: "")))
         }
         is Outcome.Failed -> {
             val detailed = outcome.error as? TileRateHandlerError.DetailedRating
@@ -199,7 +199,7 @@ class TileRateController(
 
     private fun response(state: SeenState, previous: String?, seenDelta: Int, score: Double?, detailed: Boolean, message: String?) = TileRateResponse(
         ok = true,
-        status = state.status?.apiName,
+        status = state.effectiveStatus?.apiName,
         previousStatus = previous,
         seen = state.seen,
         seenLocked = state.seenLocked,

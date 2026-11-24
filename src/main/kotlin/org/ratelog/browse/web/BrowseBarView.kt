@@ -79,6 +79,6 @@ data class BrowseTileView(
     /** Fork: the Seen / Watchlist quick actions and the Upcoming badge (fragments/tile-actions.html). */
     val actions: TileActionsView? = null,
 ) {
-    /** Rows show the one-click bookmark only when it can't downgrade a status (none yet, or Want to watch). */
-    val canToggleWatchlist: Boolean get() = status == null || onWatchlist
+    /** Rows show the one-click bookmark on any title but a Watching / Dropped one (fork, 2026-11-24: seen ones too). */
+    val canToggleWatchlist: Boolean get() = status != "watching" && status != "dropped"
 }

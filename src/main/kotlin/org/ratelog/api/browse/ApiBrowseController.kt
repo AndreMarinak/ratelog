@@ -65,6 +65,8 @@ data class BrowseTitleDto(
     val userScore: Double?,
     /** Your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or null. */
     val status: String?,
+    /** Fork (2026-11-24): on your watchlist, independent of `status` (a `watched` title can be on it too, to rewatch). */
+    val onWatchlist: Boolean = false,
 )
 
 /**
@@ -131,7 +133,8 @@ class ApiBrowseController(
         tmdbVoteAverage = title.voteAverage,
         url = if (title.type == MediaType.movie) "/movie/${title.tmdbId}" else "/tv/${title.tmdbId}",
         userScore = mark?.score,
-        status = mark?.status?.apiName,
+        status = mark?.effectiveStatus?.apiName,
+        onWatchlist = mark?.onWatchlist == true,
     )
 
     private fun BrowseError.toApiException() = when (this) {

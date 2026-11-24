@@ -47,10 +47,8 @@
             watch.title = state.onWatchlist ? watch.dataset.titleOn : watch.dataset.titleOff;
             setLabel(watch, state.onWatchlist);
             setIcon(watch, state.onWatchlist ? 'bookmark-check' : 'bookmark');
-            form.querySelector('input[name="status"]').value = state.onWatchlist ? '' : 'want_to_watch';
-            // An unrated Watched title would stop counting as seen: ask first (confirm.js reads data-confirm).
-            if (state.status === 'watched' && !state.seenLocked) form.dataset.confirm = form.dataset.confirmSeen;
-            else delete form.dataset.confirm;
+            // Fork (2026-11-24): independent of Seen (POST /watchlist/set), so no confirm: a seen title stays seen.
+            form.querySelector('input[name="on"]').value = state.onWatchlist ? '0' : '1';
         }
 
         panel.querySelectorAll('[data-progress-value]').forEach((button) => {

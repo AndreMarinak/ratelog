@@ -7,7 +7,8 @@ Reserved migration numbers (so parallel work never collides): API tokens `V1000`
 statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, imports/export `V1050–1059`,
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
 lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
-accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`).
+accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`), watchlist entries `V1141`
+(`watchlist_entries`, the watchlist independent of the status).
 
 ## Build now (in suggested order)
 
@@ -118,6 +119,14 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   state. API: `GET /api/v1/stats?year=YYYY|all` ([docs/api.md](api.md#stats)). No migration. Follow-ups: other people's
   stats, TV hours (episode counts), tags, streaks. Details in
   [design-decisions.md](design-decisions.md#stats-your-year-in-movies-2026-11-23).
+- [x] **32. Rewatch: seen titles on the watchlist** (requested 2026-11-24: "on movies I've already seen I should still be able
+  to add it to the general watchlist"): the watchlist is its own table (`watchlist_entries`, migration `V1141`; Want to watch
+  rows moved over), independent of the status, so a Watched or rated movie or show can be on it and stays seen everywhere.
+  The bookmark shows on seen and rated posters and the title page's Watchlist no longer asks; To watch tags them "Rewatch"
+  (only Remove, which keeps them seen); Home "Up next" includes them. Seeing an unseen watchlist title still takes it off;
+  rating a rewatch doesn't. API: `onWatchlist` on statuses, list items, Home, Discover and recommendations, plus
+  `PUT/DELETE /api/v1/watchlist/{type}/{tmdbId}` ([docs/api.md](api.md#watchlist)); `/api/v1/statuses` stays compatible.
+  Details in [design-decisions.md](design-decisions.md#rewatch-the-watchlist-is-independent-of-seen-2026-11-24).
 
 ## Fixes and housekeeping done
 

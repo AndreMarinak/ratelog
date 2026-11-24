@@ -19,8 +19,11 @@ class InMemoryHomeRepository : HomeRepository {
     /** findMarks calls, to check marks are looked up in one go per media type. */
     val markQueries = AtomicInteger()
 
+    /** Want to watch: the watchlist ("Up next"), titles with no status and on the watchlist (fork, 2026-11-24). */
     fun setStatusTitles(userId: User.Id, status: WatchStatus, titles: List<HomeTitle>) {
-        byStatus[userId to status] = titles.map { it.copy(status = status) }
+        byStatus[userId to status] = titles.map {
+            if (status == WatchStatus.WANT_TO_WATCH) it.copy(onWatchlist = true) else it.copy(status = status)
+        }
     }
 
     fun setRecentlyRated(userId: User.Id, titles: List<HomeTitle>) {
@@ -33,6 +36,9 @@ class InMemoryHomeRepository : HomeRepository {
 
     override fun findByStatus(userId: User.Id, status: WatchStatus, lang: Lang, limit: Int): List<HomeTitle> =
         byStatus[userId to status].orEmpty().take(limit)
+
+    override fun findWatchlist(userId: User.Id, lang: Lang, limit: Int): List<HomeTitle> =
+        byStatus[userId to WatchStatus.WANT_TO_WATCH].orEmpty().take(limit)
 
     override fun findRecentlyRated(userId: User.Id, lang: Lang, limit: Int): List<HomeTitle> =
         recentlyRated[userId].orEmpty().take(limit)
