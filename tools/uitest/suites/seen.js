@@ -222,7 +222,11 @@ module.exports = {
       await t.waitFor(() => document.querySelector('[data-rate-nudge]:not([hidden])'));
       const score = await page.$('[data-rate-nudge] .title-nudge-score[value="8"]');
       assert(score, 'no 8 in the nudge');
-      await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), t.press(score)]);
+      // Saves in place since 2026-11-24 (no reload): wait for the rating card to appear with the score.
+      await page.evaluate(() => { window.__nudgeMarker = 1; });
+      await t.press(score);
+      await t.waitFor(() => /8\.00/.test(document.querySelector('.title-rating')?.innerText || ''));
+      assert(await page.evaluate(() => window.__nudgeMarker === 1), 'rating from "Rate it?" reloaded the page');
       const r = await page.evaluate(() => ({
         card: document.querySelector('.title-rating')?.innerText.replace(/\s+/g, ' ').trim(),
         rate: document.querySelector('.title-action.is-rated')?.innerText.replace(/\s+/g, ' ').trim(),

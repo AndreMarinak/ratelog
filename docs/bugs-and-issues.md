@@ -4,10 +4,6 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
-- **"Rate it?" after Seen on a movie page still reloads the page** (left from the movie in-place rating fix, 2026-11-24): the
-  prompt's form in `fragments/title-actions.html` has no `data-inplace` (that file was being edited on another branch). Fix:
-  add `data-inplace="#your-rating, .title-panel"` to `.title-nudge-form` and change the `seen` suite's nudge step from a
-  navigation to the in-place wait.
 - **A Watching show with rated seasons, moved to To watch from its title page, counts as seen** (rewatch, 2026-11-24): adding
   to the watchlist replaces Watching / Dropped (as before), and a show with rated seasons and no status is seen by the old
   rule for shows rated before statuses existed, so it shows as a Rewatch. Rare (the poster bookmark doesn't touch Watching
@@ -85,6 +81,10 @@ Problems found while building and running the fork: what happened, the cause, an
   answers with the saved order (then it catches up) or the page reloads.
 
 ## Fixed
+
+- **"Rate it?" after Seen on a movie page reloaded the page** (left from the movie in-place rating fix, fixed 2026-11-24): the
+  prompt's form in `fragments/title-actions.html` had no `data-inplace`; it now swaps `#your-rating, .title-panel` like the Rate
+  modal (inplace.js sends the tapped score button's value). The `seen` suite step waits for the in-place update.
 
 - **Typing in the header search scrolled the page up** (user, laptop, 2026-11-24: "as I type in search bar it scrolls me up,
   check all the search bars"): every keystroke moved the page up ~64px on every page, laptop and phone. Cause:

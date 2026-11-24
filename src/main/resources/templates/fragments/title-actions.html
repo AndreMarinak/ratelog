@@ -62,7 +62,7 @@
        which are rated per season). One tap on a score saves a quick rating through the Rate modal's own POST /movie/rate. */-->
 <div th:fragment="rateNudge(a)" th:if="${a != null and !a.isTv and !a.seenLocked}" class="title-nudge" data-rate-nudge hidden
      role="group" th:aria-label="#{title.nudge.aria}">
-    <form action="/movie/rate" method="post" class="title-nudge-form">
+    <form action="/movie/rate" method="post" class="title-nudge-form" data-inplace="#your-rating, .title-panel">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" name="movieId" th:value="${a.mediaId}" />
         <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
