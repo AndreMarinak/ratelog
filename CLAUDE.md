@@ -40,7 +40,7 @@ Feature quality and the test rules below are never traded for tokens. These cut 
     directly by the main session (with the same tests before pushing) instead of starting an agent, which pays ~50k tokens of
     reading before it writes anything.
 11. **Brief agents with a context pack:** the exact files to read and change, the relevant doc sections by heading, ports and
-    DB names, and what is out of scope. Agents read `docs/` sections they need (by heading), not whole files.
+    DB names, and what is out of scope. Agents read `docs/` sections they need (by heading), not whole files; for decisions they read the `docs/design-decisions.md` index and only the `docs/decisions/<topic>.md` files they need.
 12. **One test path.** Agents run their own feature check plus `node tools/uitest/run.js` (the repo suite) once at the end; the
     main session runs the suite once per merged batch. No extra copies of walkthrough scripts. Read screenshots only to judge a
     layout or when a check fails, not one per step.
@@ -61,7 +61,7 @@ agent branches). Before every commit and push, check each file below and update 
 
 | File | Update it when |
 |---|---|
-| [docs/design-decisions.md](docs/design-decisions.md) | you choose how something works or looks: write the decision **and why** (user request with date, data, trade-off) |
+| [docs/design-decisions.md](docs/design-decisions.md) (index) + `docs/decisions/<topic>.md` | you choose how something works or looks: write the decision **and why** (user request with date, data, trade-off) |
 | [docs/bugs-and-issues.md](docs/bugs-and-issues.md) | you find a bug (cause + fix), or leave one open (move it from Open to Fixed when fixed) |
 | [docs/roadmap.md](docs/roadmap.md) | a feature is requested, started or finished; new migration ranges |
 | [docs/api.md](docs/api.md) | any `/api/v1` endpoint, field or error code changes |
@@ -104,7 +104,7 @@ agent branches). Before every commit and push, check each file below and update 
 - Prefer new files and new packages over editing upstream files; keep edits to upstream files small (`@ControllerAdvice`, interceptors, repository decorators, one `th:replace` line per template). Merging upstream: `git fetch upstream && git merge upstream/master`.
 - New JSON endpoints go under `/api/v1/` in `org.ratelog.api` and are covered by `ApiSecurityConfig` (token auth, stateless, no CSRF). Errors: throw `ApiException` / `badRequest()` / `notFound()`.
 - **Parallel work:** one git worktree per feature (`../ratelog-worktrees/<name>`, branch `feat/<name>`), append-only `messages.properties` sections per feature, merged into `master` with `--no-ff` one at a time, tested after each merge.
-- **Small actions save in place** (no reload, a toast confirms): add `data-inplace="<regions>"` to the form (`static/inplace.js`). Navigation and whole-result changes load a page. The audit table is in design-decisions.md; add new actions to it.
+- **Small actions save in place** (no reload, a toast confirms): add `data-inplace="<regions>"` to the form (`static/inplace.js`). Navigation and whole-result changes load a page. The audit table is in [docs/decisions/navigation-and-reloads.md](docs/decisions/navigation-and-reloads.md#when-the-page-reloads-audit-2026-11-23); add new actions to it.
 - **Feature flags:** `ratelog.features.*` in `application.yml`, exposed to templates by `system/FeatureFlagsAdvice.kt` (tags are hidden: `tagsEnabled`).
 - Buttons ignore `hidden` (base `button { display: inline-flex }`): add `&[hidden] { display: none }` to any button you toggle.
 - **Stay inside the Content-Security-Policy** (`security/SecurityHeaders.kt`): scripts, styles and fonts only from the app itself

@@ -21,11 +21,11 @@
         <a class="nav-link" href="/community" th:text="#{nav.community}" th:classappend="${active == 'community'} ? 'active' : ''">Community</a>
     </nav>
 
-    <!-- Fork: in-place saves for small actions (inplace.js / inplace.css), see docs/design-decisions.md. -->
+    <!-- Fork: in-place saves for small actions (inplace.js / inplace.css), see docs/decisions/navigation-and-reloads.md. -->
     <link rel="stylesheet" href="/inplace.css">
     <script src="/inplace.js" defer></script>
     <script src="/saved-lists.js" defer></script>
-    <!-- Fork: back links on title pages (back-nav.js remembers the page you came from), see docs/design-decisions.md. -->
+    <!-- Fork: back links on title pages (back-nav.js remembers the page you came from), see docs/decisions/title-pages.md. -->
     <th:block th:replace="~{fragments/back-nav :: page(${backNavPage})}"></th:block>
 
     <!-- Fork: header search on every page (GET / ?q=, the existing results page). "/" focuses it (nav.js). -->

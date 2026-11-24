@@ -1,7 +1,7 @@
 // Fork: Discover grid enhancements (templates/discover.html). Without JS, "Load more" opens the next page.
 // - Load more: fetches the next page's results fragment (?partial=1) and appends its tiles. Delegated from `document`
 //   and looked up when used, so it keeps working after view-swap.js swaps the view in place.
-// - Coming back keeps your place (user feedback 2026-11-23, docs/design-decisions.md "One Back leaves the page"):
+// - Coming back keeps your place (user feedback 2026-11-23, docs/decisions/navigation-and-reloads.md "One Back leaves the page"):
 //   the pages "Load more" appended are remembered per tab (sessionStorage, the grid's URL + the pages' hrefs + the
 //   scroll position). When you return to that same URL with Back / Forward, a reload or a title page's "← Discover"
 //   link, those pages are fetched again (fresh, so Seen / bookmarks changed meanwhile show) and appended, and the

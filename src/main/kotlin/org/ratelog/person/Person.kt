@@ -5,7 +5,7 @@ import java.text.Normalizer
 import java.time.LocalDate
 
 /*
- * Fork: person pages and People in search (docs/design-decisions.md "People: person pages and People in search").
+ * Fork: person pages and People in search (docs/decisions/people-and-credits.md "People: person pages and People in search").
  * A person as TMDB describes them, and every credit they have (cast and crew, movies and TV).
  */
 

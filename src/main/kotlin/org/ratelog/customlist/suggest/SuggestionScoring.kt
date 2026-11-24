@@ -38,7 +38,7 @@ data class SeedRecommendations(
 
 /**
  * How "Suggested for this list" picks and orders titles (pure functions; numbers measured on real lists, see
- * docs/design-decisions.md "Suggested for this list"):
+ * docs/decisions/lists.md "Suggested for this list"):
  *
  * 1. **Seeds**: up to [MAX_SEEDS] list titles, so one list costs at most that many recommendation calls. Smaller lists
  *    use every title. Bigger ones split the seeds between movies and shows by their share of the list, and within a

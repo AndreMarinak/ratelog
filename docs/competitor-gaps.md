@@ -42,7 +42,7 @@ Letterboxd has no multi-season TV, so this app's TV support already goes beyond 
 - **JustWatch credit:** TMDB requires a JustWatch credit wherever watch-provider data is shown. It's being added under "Where to watch" on title pages.
 - **TMDB terms:** non-commercial use, cache for at most 6 months. They also forbid using TMDB content "in connection with... an AI based Application", which is a gray area for Claude reading TMDB data through this app's API. This is a personal, non-commercial instance; revisit if that changes.
 - **JustWatch:** no public API (partners only), and the unofficial wrappers amount to scraping. Don't use them.
-- **Rotten Tomatoes:** never scrape it (see the scores decision in design-decisions.md).
+- **Rotten Tomatoes:** never scrape it (see the scores decision in [decisions/api-and-external-data.md](decisions/api-and-external-data.md)).
 
 ## Sources (selected)
 

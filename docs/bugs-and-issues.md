@@ -124,14 +124,14 @@ Problems found while building and running the fork: what happened, the cause, an
 - **The To rate view's All / Movies / TV tabs added a Back step each** (found in the phone-Back work, 2026-11-23): they were
   plain links, and `ratings-unrated.js` kept the section it found on load, so swapping the section in place would have left
   its "rated, leave the view" handler working on a detached copy. The section is now a view-swap.js region (the tabs replace
-  the URL) and the script looks it up on each event. See design-decisions ("Ratings load as you scroll").
+  the URL) and the script looks it up on each event. See [decisions/ratings.md](decisions/ratings.md#ratings-load-as-you-scroll-2026-11-23).
 - **Paged rankings could repeat or skip a title** (ranking scroll, 2026-11-23, caught before shipping):
   `ROW_NUMBER() OVER (ORDER BY score DESC)` had no tiebreaker, so titles with the same score could come back in a different
   order in the next page's query. Ties now rank by rating id in both ranking queries (and in the in-memory test fakes).
 - **Discover's TV mode showed movie lists in its Official lists row** (user, 2026-11-23): `DiscoverOfficialListsAdvice` loaded
   every official list whatever the mode, so `/discover?type=tv` showed "AFI 100" and the other film lists. It now passes Discover's
   `type` to the lists query, which keeps only lists with at least one title of that type (`findOfficialContaining`); none = no
-  row. See design-decisions ("Watchlist opens on Movies; Discover's Official lists follow Movies / TV").
+  row. See [decisions/watchlist-and-seen.md](decisions/watchlist-and-seen.md) ("Watchlist opens on Movies; Discover's Official lists follow Movies / TV").
 
 - **User search was case-sensitive, and `_` was a wildcard** (upstream, found 2026-11-23 building Community's People list):
   `UserDAO` searched `username LIKE CONCAT('%', :username, '%')`, so "Mari" missed "marisol", and since usernames may contain
@@ -140,7 +140,7 @@ Problems found while building and running the fork: what happened, the cause, an
   finds nobody; the People list shows everyone anyway.
 - **The profile follow button was an unlabeled icon** (user, 2026-11-23: "its not very clear"): a user-round-check icon to
   follow and user-round-x to unfollow, with no text and only a tooltip. Replaced by the labelled Follow / Following button; see
-  design-decisions ("Community: People and Follow buttons").
+  [decisions/community-and-accounts.md](decisions/community-and-accounts.md) ("Community: People and Follow buttons").
 - **Rating several seasons of a show reloaded the TV page after each one** (user, 2026-11-23: "on a tv show rating when im
   rating mult seasons it reloads the page after each rating"): the season rate modal and the delete confirmation were plain
   form posts that redirected back to `/tv/{id}`, so every season cost a full page load (and a TMDB call) and the scroll
@@ -150,7 +150,7 @@ Problems found while building and running the fork: what happened, the cause, an
   and `breakdown.js` redraws category bars in swapped-in regions (`inplace:swapped` event). Without JS it is still a post and
   a redirect.
 - **Two search boxes on the search results page** (user, phone, 2026-11-23): the earlier fix removed the Browse bar's field on
-  Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see design-decisions.
+  Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see [decisions/home-and-discover.md](decisions/home-and-discover.md).
 - **Going back to Discover's grid or search results only showed the first page again** (found building the back links,
   fixed 2026-11-23 in "One Back leaves the page"): every page is sent with `Cache-Control: no-store` (Spring Security's
   default), so Chrome keeps no page in its back/forward cache and Back (or the title page's back link) reloads the page, losing

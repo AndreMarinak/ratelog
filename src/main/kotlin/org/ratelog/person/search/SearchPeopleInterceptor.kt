@@ -49,7 +49,7 @@ data class SearchPersonView(
 }
 
 /**
- * Fork: People in search (docs/design-decisions.md "People: person pages and People in search"). On the first page of
+ * Fork: People in search (docs/decisions/people-and-credits.md "People: person pages and People in search"). On the first page of
  * results for Any type (`/?q=tom+hanks`), the TMDB people search starts when the request comes in (preHandle), runs
  * beside the upstream title search, and its answer goes in the model as `searchPeople` (postHandle), so the upstream
  * controller stays untouched and the page waits at most for the slower of the two. Any failure or a slow TMDB only

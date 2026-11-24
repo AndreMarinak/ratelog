@@ -19,7 +19,7 @@ import java.time.Clock
 import java.time.LocalDate
 
 /**
- * Fork: `/person/{tmdbPersonId}` (docs/design-decisions.md "People: person pages and People in search"): photo, known
+ * Fork: `/person/{tmdbPersonId}` (docs/decisions/people-and-credits.md "People: person pages and People in search"): photo, known
  * for, dates, a short bio, then the filmography with department / type / sort filters (links that view-swap.js applies
  * in place, replacing the URL). Reached from People in search, and from the credits on title pages when
  * `ratelog.features.people` is on.

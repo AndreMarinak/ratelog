@@ -7,7 +7,7 @@
 //   "Show more" link is clicked, those cards are appended before it (any already shown are skipped) and the new
 //   footer replaces it: "Show more" again, or "That's all 45" after the last title.
 // - The URL is replaced with the view and how many are shown (?limit=60, data-address; history.replaceState, keeping
-//   other scripts' history.state): no history entry per page, so one Back leaves the page (docs/design-decisions.md
+//   other scripts' history.state): no history entry per page, so one Back leaves the page (docs/decisions/navigation-and-reloads.md
 //   "One Back leaves the page"), and a reload or Back shows as many again (the browser puts the scroll back).
 // - The poster quick actions on appended cards just work (tile-actions.js and tile-rate.js are delegated from
 //   document); only their icons need creating.

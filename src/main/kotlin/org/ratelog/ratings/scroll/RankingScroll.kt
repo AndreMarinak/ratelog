@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets
 /**
  * Fork (user request 2026-11-23: "the ratings page only natively loads 10 the default but can we just have it load
  * more as u scroll?"): the Ratings rankings (`/movies`, `/tvshows`) show [PAGE_SIZE] titles and load the next
- * [PAGE_SIZE] as you scroll near the end (static/ranking-scroll.js). docs/design-decisions.md "Ratings load as you scroll".
+ * [PAGE_SIZE] as you scroll near the end (static/ranking-scroll.js). docs/decisions/ratings.md "Ratings load as you scroll".
  *
  * - `limit`: how many the page shows from the top (default one page). After scrolling, the script puts the loaded
  *   count in the address (`?limit=60`, history.replaceState, never a new entry), so a reload or Back shows them again.

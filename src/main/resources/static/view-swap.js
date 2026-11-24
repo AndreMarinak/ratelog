@@ -1,5 +1,5 @@
 // Fork: filters that apply in place (user feedback 2026-11-23: "the back button thing is REAL annoying on the phone,
-// as well as refreshes for filtered list when it shouldn't need a refresh"; docs/design-decisions.md "One Back
+// as well as refreshes for filtered list when it shouldn't need a refresh"; docs/decisions/navigation-and-reloads.md "One Back
 // leaves the page"). Rule: filters replace, navigation pushes.
 //
 // <div id="discoverView" data-view data-view-fallback="type">      the region a filter changes (it needs an id)
