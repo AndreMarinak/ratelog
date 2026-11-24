@@ -68,7 +68,8 @@ class ApiHomeController(
     fun home(@CurrentUser user: User): HomeResponse {
         val dashboard = handler.handle(GetHomeDashboard(userId = user.id!!, lang = user.metadataLang))
         return HomeResponse(
-            rows = dashboard.rows.map { it.toDto() },
+            // Fork: "Recommended for you" is loaded by the page; its titles are at /api/v1/recommendations.
+            rows = dashboard.rows.filterNot { it.lazy }.map { it.toDto() },
             tmdb = when (dashboard.discover) {
                 DiscoverState.OK -> "ok"
                 DiscoverState.NOT_CONFIGURED -> "not_configured"

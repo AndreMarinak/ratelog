@@ -60,6 +60,8 @@ data class DiscoverTitle(
     val year: Int?,
     val posterPath: String?,
     val releaseDate: LocalDate?,
+    /** Fork: TMDB's average, for the Discover tiles' star (Classics). */
+    val voteAverage: Double? = null,
 )
 
 sealed interface DiscoverError {
@@ -176,6 +178,7 @@ data class DiscoverResultDto(
     @JsonProperty("first_air_date") val firstAirDate: String? = null,
     @JsonProperty("poster_path") val posterPath: String? = null,
     @JsonProperty("adult") val adult: Boolean? = null,
+    @JsonProperty("vote_average") val voteAverage: Double? = null,
 ) {
     fun toTitle(mediaType: MediaType): DiscoverTitle? {
         val tmdbId = id?.takeIf { it > 0 } ?: return null
@@ -190,6 +193,7 @@ data class DiscoverResultDto(
             year = date?.year,
             posterPath = posterPath?.takeIf { it.isNotBlank() },
             releaseDate = date,
+            voteAverage = voteAverage?.takeIf { it > 0 },
         )
     }
 

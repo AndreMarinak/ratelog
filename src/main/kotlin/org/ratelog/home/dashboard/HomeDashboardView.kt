@@ -4,6 +4,7 @@ import org.ratelog.MediaType
 import org.ratelog.customlist.browse.ListCardView
 import org.ratelog.customlist.browse.toCard
 import org.ratelog.home.HomeTitle
+import org.ratelog.recommendations.foryou.web.ForYouViews
 import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.seen.TileActionsView
 import java.time.LocalDate
@@ -29,6 +30,8 @@ data class HomeRowView(
     val isLists: Boolean,
     val tiles: List<HomeTileView>,
     val lists: List<ListCardView>,
+    /** Fork: a row the page fetches itself (fragments/for-you.html), or null for a rendered row. */
+    val srcHref: String? = null,
 )
 
 data class HomeTileView(
@@ -75,22 +78,31 @@ private fun HomeRow.toView(locale: Locale, today: LocalDate): HomeRowView {
         isLists = kind == HomeRowKind.YOUR_LISTS,
         tiles = titles.map { it.toTile(kind, locale, today, showType, showStatus) },
         lists = lists.map { it.toCard(showOwner = false) },
+        srcHref = if (lazy) lazySrc(kind) else null,
     )
 }
 
-/** "See all" for personal rows, "More" (the Discover grid, which hides seen titles by default) for TMDB rows. */
-val HomeRowKind.moreHref: String
+/** Where the page fetches a lazy row from. */
+private fun lazySrc(kind: HomeRowKind): String? = when (kind) {
+    HomeRowKind.RECOMMENDED -> ForYouViews.src(type = null)
+    else -> null
+}
+
+/**
+ * "See all" for personal rows, "More" (the Discover grid, which hides seen titles by default) for TMDB rows.
+ * "Recommended for you" has none.
+ */
+val HomeRowKind.moreHref: String?
     get() = when (this) {
         HomeRowKind.CONTINUE_WATCHING -> "/watchlist?status=watching"
         HomeRowKind.UP_NEXT -> "/watchlist?status=want_to_watch"
         HomeRowKind.RECENTLY_RATED -> "/profile"
         HomeRowKind.YOUR_LISTS -> "/lists"
+        HomeRowKind.RECOMMENDED -> null
         HomeRowKind.TRENDING_MOVIES -> "/discover?type=movie&popular=week"
         HomeRowKind.TRENDING_TV -> "/discover?type=tv&popular=week"
         HomeRowKind.IN_THEATERS -> "/discover?type=movie&sort=newest"
         HomeRowKind.COMING_SOON -> "/discover?type=movie&year=upcoming"
-        HomeRowKind.CLASSICS -> "/discover?type=movie&sort=rating"
-        HomeRowKind.POPULAR_TV -> "/discover?type=tv&popular=now"
     }
 
 fun HomeTitle.href(): String = when (mediaType) {

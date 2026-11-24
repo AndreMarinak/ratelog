@@ -18,12 +18,16 @@ class DiscoverRowsTest {
 
             assertEquals(DiscoverRows.POPULAR, rows.first().id)
             assertEquals(BrowsePopular.NOW, rows.first().filters.popular)
-            assertTrue(rows.drop(1).all { it.genre in BrowseGenres.forType(type) }, "$type genres must exist on TMDB for $type")
+            assertTrue(rows.drop(1).filter { it.feed == null }.all { it.genre in BrowseGenres.forType(type) }, "$type genres must exist on TMDB for $type")
             assertEquals(rows.size, rows.map { it.id }.toSet().size, "ids are unique")
             assertTrue(rows.all { it.filters.type == type && it.filters.hideSeen })
+            // Fork (2026-11-23): Classics moved here from Home, movies only; TV's "Popular now" already is Popular TV.
+            assertEquals(type == MediaType.movie, rows.getOrNull(1)?.id == DiscoverRows.CLASSICS)
             assertTrue(rows.none { it.filters.isUnfiltered }, "every row opens a grid")
         }
-        assertEquals(Genre.HORROR, DiscoverRows.forType(MediaType.movie, true)[1].genre)
+        assertEquals(Genre.HORROR, DiscoverRows.forType(MediaType.movie, true)[2].genre)
+        assertEquals(org.ratelog.home.DiscoverFeed.CLASSICS, DiscoverRows.forType(MediaType.movie, true)[1].feed)
+        assertEquals("home.row.classics", DiscoverRows.forType(MediaType.movie, true)[1].titleKey)
         assertTrue(DiscoverRows.TV_GENRES.none { it in setOf(Genre.NEWS, Genre.TALK, Genre.SOAP) })
     }
 

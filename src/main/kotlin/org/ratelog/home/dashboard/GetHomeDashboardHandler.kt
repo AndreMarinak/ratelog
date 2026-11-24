@@ -27,27 +27,32 @@ data class GetHomeDashboard(
 
 /** Rows in display order. `apiName` is the row id in the JSON API and the HTML anchor. */
 enum class HomeRowKind(val apiName: String, val titleKey: String, val feed: DiscoverFeed? = null) {
-    // User preference: what's new leads the page (trending, in theaters, coming soon), then the viewer's own rows,
-    // then Popular TV.
+    // User preference: what's new leads the page (trending, in theaters, coming soon), then the viewer's own rows.
+    // Fork (user decision 2026-11-23): "Recommended for you" sits after Up next; Classics and Popular TV moved to Discover.
     TRENDING_MOVIES("trending_movies", "home.row.trending.movies", DiscoverFeed.TRENDING_MOVIES),
     TRENDING_TV("trending_tv", "home.row.trending.tv", DiscoverFeed.TRENDING_TV),
     IN_THEATERS("in_theaters", "home.row.in.theaters", DiscoverFeed.NOW_PLAYING),
     COMING_SOON("coming_soon", "home.row.coming.soon", DiscoverFeed.UPCOMING),
     CONTINUE_WATCHING("continue_watching", "home.row.continue.watching"),
     UP_NEXT("up_next", "home.row.up.next"),
+
+    /** Loaded by the page from /for-you/row (org.ratelog.recommendations.foryou); see [HomeRow.lazy]. */
+    RECOMMENDED("recommended", "home.row.recommended"),
     RECENTLY_RATED("recently_rated", "home.row.recently.rated"),
-    YOUR_LISTS("your_lists", "home.row.your.lists"),
-    CLASSICS("classics", "home.row.classics", DiscoverFeed.CLASSICS),
-    POPULAR_TV("popular_tv", "home.row.popular.tv", DiscoverFeed.POPULAR_TV);
+    YOUR_LISTS("your_lists", "home.row.your.lists");
 
     val isPersonal: Boolean get() = feed == null
 }
 
-/** A row has titles, except [HomeRowKind.YOUR_LISTS], which has lists. Rows are never empty. */
+/**
+ * A row has titles, except [HomeRowKind.YOUR_LISTS], which has lists. Rows are never empty, except a [lazy] one: the
+ * page fetches its titles itself ([HomeRowKind.RECOMMENDED]) and drops it when there are none.
+ */
 data class HomeRow(
     val kind: HomeRowKind,
     val titles: List<HomeTitle> = emptyList(),
     val lists: List<ListSummary> = emptyList(),
+    val lazy: Boolean = false,
 )
 
 enum class DiscoverState {
@@ -69,7 +74,8 @@ data class HomeDashboard(
 }
 
 /**
- * The home page: rows in [HomeRowKind] order (trending / in theaters / coming soon, the viewer's own non-empty rows, classics, popular TV).
+ * The home page: rows in [HomeRowKind] order (trending / in theaters / coming soon, then the viewer's own non-empty rows,
+ * with "Recommended for you" after Up next when the viewer has rated something and TMDB is configured).
  * A TMDB feed that fails just leaves its row out; the dashboard itself never fails.
  */
 @Service
@@ -80,10 +86,11 @@ class GetHomeDashboardHandler(
     private val clock: Clock = Clock.systemDefaultZone(),
 ) {
     fun handle(query: GetHomeDashboard): HomeDashboard {
+        val recentlyRated = homeRepository.findRecentlyRated(query.userId, query.lang, ROW_LIMIT)
         val personal = listOf(
             HomeRow(HomeRowKind.CONTINUE_WATCHING, titles = homeRepository.findByStatus(query.userId, WatchStatus.WATCHING, query.lang, ROW_LIMIT)),
             HomeRow(HomeRowKind.UP_NEXT, titles = homeRepository.findByStatus(query.userId, WatchStatus.WANT_TO_WATCH, query.lang, ROW_LIMIT)),
-            HomeRow(HomeRowKind.RECENTLY_RATED, titles = homeRepository.findRecentlyRated(query.userId, query.lang, ROW_LIMIT)),
+            HomeRow(HomeRowKind.RECENTLY_RATED, titles = recentlyRated),
             HomeRow(HomeRowKind.YOUR_LISTS, lists = listSummaryRepository.findByOwner(query.userId).take(ROW_LIMIT)),
         )
 
@@ -103,8 +110,13 @@ class GetHomeDashboardHandler(
             else -> DiscoverState.OK
         }
 
+        // Fork: recommendations start from the viewer's ratings, so without any (or without TMDB) there is no row.
+        val recommended = listOfNotNull(
+            HomeRow(HomeRowKind.RECOMMENDED, lazy = true).takeIf { recentlyRated.isNotEmpty() && discover != DiscoverState.NOT_CONFIGURED },
+        )
+
         return HomeDashboard(
-            rows = (personal + marked).filter { it.titles.isNotEmpty() || it.lists.isNotEmpty() }.sortedBy { it.kind.ordinal },
+            rows = (personal + marked).filter { it.titles.isNotEmpty() || it.lists.isNotEmpty() }.plus(recommended).sortedBy { it.kind.ordinal },
             discover = discover,
         )
     }

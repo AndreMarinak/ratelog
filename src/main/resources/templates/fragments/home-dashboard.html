@@ -20,7 +20,10 @@
         <p th:text="#{home.welcome.text}">Mark titles as Want to watch or Watching, rate what you've seen and make lists: they'll show up here.</p>
     </div>
 
-    <section th:each="row : ${home.rows}" class="home-row" th:id="${row.id}" th:aria-labelledby="${row.id + '-title'}">
+    <th:block th:each="row : ${home.rows}">
+    <!--/* Fork: a row the page loads itself ("Recommended for you", fragments/for-you.html). */-->
+    <th:block th:if="${row.srcHref != null}"><th:block th:replace="~{fragments/for-you :: home(${row})}"></th:block></th:block>
+    <section th:if="${row.srcHref == null}" class="home-row" th:id="${row.id}" th:aria-labelledby="${row.id + '-title'}">
         <div class="home-row-head">
             <h2 th:id="${row.id + '-title'}" th:text="#{${row.titleKey}}">Row</h2>
             <a th:if="${row.moreHref != null}" class="home-row-more" th:href="${row.moreHref}">
@@ -67,6 +70,7 @@
             </div>
         </div>
     </section>
+    </th:block>
 
     <p th:if="${home.tmdbNotConfigured and #authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}" class="home-note">
         <i data-lucide="key-round" aria-hidden="true"></i>

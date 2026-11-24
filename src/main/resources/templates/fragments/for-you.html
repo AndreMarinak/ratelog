@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: "Recommended for you" (user decision 2026-11-23: one row based on your ratings, on Home and Discover).
+  The page renders a placeholder (real heading, skeleton posters); the titles come from /for-you/row, which answers
+  Discover's `discover-rows :: lazyRow` (the same row and tiles as the other Discover rows). On Discover, discover.js
+  fetches it like any pending row; on Home, for-you.js does. Nothing to show: the placeholder is removed.
+
+  Home (home-dashboard.html, for the row with a srcHref):
+    <th:block th:replace="~{fragments/for-you :: home(${row})}"></th:block>
+  Discover (discover-rows.html, after "Popular now"): `forYouRow` is a lazy ForYouPlaceholderView, or null.
+    <th:block th:replace="~{fragments/for-you :: discoverRow}"></th:block>
+*/-->
+<th:block th:fragment="home(row)">
+    <!--/* Outside the section: the section is swapped out, and its styles must stay. */-->
+    <link rel="stylesheet" href="/discover.css">
+    <script src="/for-you.js" defer></script>
+    <section th:replace="~{fragments/for-you :: placeholder(${row.id}, ${row.srcHref})}"></section>
+</th:block>
+
+<th:block th:fragment="discoverRow">
+    <th:block th:if="${forYouRow != null}">
+        <section th:replace="~{fragments/for-you :: placeholder(${forYouRow.id}, ${forYouRow.src})}"></section>
+    </th:block>
+</th:block>
+
+<section th:fragment="placeholder(id, src)" class="home-row discover-row for-you-row is-pending" th:id="${id}"
+         th:data-src="${src}" aria-busy="true" th:aria-labelledby="${id + '-title'}">
+    <!--/* Without JS nothing would ever replace the skeleton. */-->
+    <noscript><style>.for-you-row.is-pending { display: none; }</style></noscript>
+    <div class="home-row-head">
+        <h2 th:id="${id + '-title'}" th:text="#{home.row.recommended}">Recommended for you</h2>
+        <div class="home-row-arrows">
+            <button type="button" data-row-prev th:aria-label="#{home.row.scroll.back}" disabled>
+                <i data-lucide="chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" data-row-next th:aria-label="#{home.row.scroll.forward}">
+                <i data-lucide="chevron-right" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+    <div class="home-row-track" aria-hidden="true">
+        <div th:each="i : ${#numbers.sequence(1, 8)}" class="discover-skeleton">
+            <div class="discover-skeleton-poster"></div>
+            <span class="discover-skeleton-line"></span>
+        </div>
+    </div>
+</section>
+</body>
+</html>

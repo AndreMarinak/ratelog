@@ -14,8 +14,8 @@ data class DiscoverRowView(
     /** HTML id, e.g. `discover-row-horror`. */
     val id: String,
     val title: String,
-    /** The row's filtered grid, carrying the "hide seen" choice. */
-    val moreHref: String,
+    /** The row's filtered grid, carrying the "hide seen" choice. Null: no "More" link (fork: "Recommended for you"). */
+    val moreHref: String?,
     /** Where discover.js fetches a pending row from (`/discover/row?...`); null once loaded. */
     val srcHref: String?,
     val tiles: List<BrowseTileView>,
@@ -54,7 +54,7 @@ class DiscoverRowViews(
     )
 
     private fun title(spec: DiscoverRowSpec, locale: Locale): String {
-        val key = spec.genre?.let { "genre.${it.tmdbId}" } ?: "discover.row.popular"
+        val key = spec.titleKey ?: spec.genre?.let { "genre.${it.tmdbId}" } ?: "discover.row.popular"
         return messages.getMessage(key, null, key, locale) ?: key
     }
 
