@@ -14,6 +14,9 @@ interface TileMarksRepository {
 
     /** TMDB ids of the movies the user rated in detail (all five categories). */
     fun findDetailedMovieRatings(userId: User.Id): Set<Int>
+
+    /** Fork: TMDB ids of the shows with at least one rated season. */
+    fun findSeasonRatedShows(userId: User.Id): Set<Int> = emptySet()
 }
 
 @Repository
@@ -27,4 +30,7 @@ class TileMarksRepositoryImpl(
 
     override fun findDetailedMovieRatings(userId: User.Id): Set<Int> =
         dao.findDetailedMovieRatings(userId.value).map { it.tmdbId }.toSet()
+
+    override fun findSeasonRatedShows(userId: User.Id): Set<Int> =
+        dao.findSeasonRatedShows(userId.value).map { it.tmdbId }.toSet()
 }

@@ -34,6 +34,7 @@ class DeleteSeasonRatingHandler(
         val updatedTvRating = tvRating.deleteSeasonRating(command.seasonNumber)
 
         updatedTvRating.let(tvRatingRepository::save)
-        if (updatedTvRating.seasonRatings.isEmpty()) tvRatingRepository.deleteById(tvRating.id!!)
+        // Fork: a whole-show score keeps the row (it is the show's score again once no season is rated).
+        if (updatedTvRating.isEmpty) tvRatingRepository.deleteById(tvRating.id!!)
     }
 }

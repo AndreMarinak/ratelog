@@ -55,7 +55,7 @@ class HiddenOfficialListsTest {
 
     private fun discoverRowFor(user: User): Any? {
         val model = ExtendedModelMap()
-        discoverAdvice.addOfficialListsRow(user, model)
+        discoverAdvice.addOfficialListsRow(user, null, model)
         return (model[DiscoverOfficialListsAdvice.MODEL_KEY] as ILazyContextVariable<*>).value
     }
 

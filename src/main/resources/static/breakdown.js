@@ -65,4 +65,11 @@
   } else {
     init();
   }
+
+  // Fork: regions saved in place (inplace.js) come in as server HTML: draw their bars too.
+  document.addEventListener('inplace:swapped', () => {
+    document.querySelectorAll('.rating-breakdown').forEach((container) => {
+      if (!container.querySelector('.breakdown-list')) render(container);
+    });
+  });
 })();

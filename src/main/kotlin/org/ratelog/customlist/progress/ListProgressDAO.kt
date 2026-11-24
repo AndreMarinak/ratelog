@@ -21,7 +21,7 @@ data class ListSeenRow(
 class ListProgressMarker
 
 /*
- * "Rated" matches Browse's hide-rated filter: a movie_ratings row for movies, at least one season_ratings row for TV.
+ * "Rated" matches Browse's hide-rated filter: a movie_ratings row for movies, at least one season_ratings row (or, fork, a whole-show score) for TV.
  * "Seen" (SeenState): a movie rated or Watched; a show Watched, or rated with no status at all.
  * The status and score are scalar subqueries, so a title is one row even if a rating row were duplicated.
  */
@@ -49,7 +49,7 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
                  WHERE s.user_id = :userId AND s.media_type = 'tvshow' AND s.media_id = t.id) AS status,
                (SELECT r.score FROM tv_ratings r
                  WHERE r.tv_show_id = t.id AND r.user_id = :userId ORDER BY r.id DESC LIMIT 1) AS score,
-               EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = :userId) AS rated
+               (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = :userId) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = t.id AND tr.user_id = :userId AND tr.show_score IS NOT NULL)) AS rated
         FROM tv t
         WHERE t.id IN (:mediaIds)
         """
@@ -69,7 +69,7 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
              OR (i.media_type = 'movie'
                  AND EXISTS (SELECT 1 FROM movie_ratings r WHERE r.user_id = :userId AND r.movie_id = i.media_id))
              OR (i.media_type = 'tvshow'
-                 AND EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = :userId AND sr.tv_show_id = i.media_id)
+                 AND (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = i.media_id AND sr.user_id = :userId) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = i.media_id AND tr.user_id = :userId AND tr.show_score IS NOT NULL))
                  AND NOT EXISTS (SELECT 1 FROM media_statuses s
                                   WHERE s.user_id = :userId AND s.media_type = 'tvshow' AND s.media_id = i.media_id))
           )
@@ -99,7 +99,7 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
                  AND NOT EXISTS (SELECT 1 FROM movie_ratings r WHERE r.user_id = :userId AND r.movie_id = i.media_id))
              OR (i.media_type = 'tvshow'
                  AND EXISTS (SELECT 1 FROM tv t WHERE t.id = i.media_id)
-                 AND NOT EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = :userId AND sr.tv_show_id = i.media_id))
+                 AND NOT (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = i.media_id AND sr.user_id = :userId) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = i.media_id AND tr.user_id = :userId AND tr.show_score IS NOT NULL)))
           )
         ON CONFLICT (user_id, media_type, media_id) DO NOTHING
         """

@@ -41,4 +41,15 @@ interface TileMarksDAO : Repository<TileMarksMarker, Long> {
         """
     )
     fun findDetailedMovieRatings(userId: Long): List<TileKeyRow>
+
+    /** Fork: shows with at least one rated season (their score is the season average, not a whole-show score). */
+    @Query(
+        """
+        SELECT DISTINCT 'tvshow' AS media_type, t.tmdb_id AS tmdb_id
+        FROM season_ratings sr
+        JOIN tv t ON t.id = sr.tv_show_id
+        WHERE sr.user_id = :userId
+        """
+    )
+    fun findSeasonRatedShows(userId: Long): List<TileKeyRow>
 }

@@ -249,7 +249,8 @@ curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: appli
 ## Ratings
 
 A rating is **quick** (one overall `score`) or **detailed** (the five categories; its score is their average).
-TV is rated per season, and a show's score is the average of its rated seasons. Scores go from 0 to 10.
+TV is rated per season, or (since 2026-11-23) as a whole with one score. A show's score is the average of its rated
+seasons when at least one is rated, else its whole-show score. Scores go from 0 to 10.
 
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
@@ -257,9 +258,11 @@ TV is rated per season, and a show's score is the average of its rated seasons. 
 | GET | `/api/v1/ratings/movie/{tmdbId}` | | `MovieRating` |
 | PUT | `/api/v1/ratings/movie/{tmdbId}` | `RatingBody` | `201` (new) or `200` (replaced) with `MovieRating` |
 | DELETE | `/api/v1/ratings/movie/{tmdbId}` | | `204` |
-| GET | `/api/v1/ratings/tv/{tmdbId}` | | `TvRating` |
+| GET | `/api/v1/ratings/tv/{tmdbId}` | | `TvRating` (rated by season, as a whole, or both) |
+| PUT | `/api/v1/ratings/tv/{tmdbId}` | `{"score": 8}` (0-10) | `201` (no whole-show score before) or `200` (changed) with `TvRating`. While seasons are rated it is stored but `score` stays their average |
+| DELETE | `/api/v1/ratings/tv/{tmdbId}` | | `204`. Deletes only the whole-show score (season ratings stay); `404` when there is none |
 | PUT | `/api/v1/ratings/tv/{tmdbId}/seasons/{season}` | `RatingBody` | `201` (new season) or `200` (replaced) with the whole `TvRating` |
-| DELETE | `/api/v1/ratings/tv/{tmdbId}/seasons/{season}` | | `204`. Deleting the last rated season removes the show's rating |
+| DELETE | `/api/v1/ratings/tv/{tmdbId}/seasons/{season}` | | `204`. Deleting the last rated season removes the show's rating, unless it has a whole-show score (that is its score again) |
 
 **RatingBody**: quick `{"score": 8.5}`, or detailed `{"directing": 9, "cinematography": 8, "acting": 9, "soundtrack": 7, "screenplay": 8}`.
 Optional `reviewTitle` (up to 100 characters) and `reviewText` (up to 5000).
@@ -271,7 +274,10 @@ Optional `reviewTitle` (up to 100 characters) and `reviewText` (up to 5000).
 **MovieRating**: `{tmdbId, type: "movie", title, year, posterUrl, mode: "quick" | "detailed", score, categories, reviewTitle, reviewText, createdAt, url}`.
 `categories` is `{directing, cinematography, acting, soundtrack, screenplay}`, or `null` for a quick rating.
 
-**TvRating**: `{tmdbId, type: "tv", title, year, posterUrl, score, seasons: [{season, mode, score, categories, reviewTitle, reviewText, createdAt}], url}`.
+**TvRating**: `{tmdbId, type: "tv", title, year, posterUrl, score, scoreSource, showScore, seasons: [{season, mode, score, categories, reviewTitle, reviewText, createdAt}], url}`.
+`scoreSource` is `"seasons"` (`score` is the average of `seasons`) or `"show"` (`score` is the whole-show score, `seasons` is empty).
+`showScore` is the whole-show score, or `null`; it is kept while seasons are rated (unused) and becomes `score` again when every
+season rating is deleted. Rating a show as a whole marks it Watched, like rating a movie (a Dropped show stays Dropped).
 
 Rating errors: `invalid_rating`, `invalid_score`, `invalid_review`, `invalid_season` (400), `not_found` (404: TMDB doesn't know the id, or you haven't rated it),
 `conflict` (409: another request created the same rating at the same moment; retry).
@@ -309,7 +315,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 - `externalScores` is `null` when no MDBList key is set (Admin → Configuration, or the `MDBLIST_API_KEY` variable), MDBList has nothing for the title, or it is
   rate limited; any single score inside it can be `null` too. Rotten Tomatoes and Metacritic are 0-100, IMDb 0-10, Letterboxd 0-5.
 - `userRating` is `null` when you haven't rated the title. For shows, `score` is the average of your season ratings and
-  `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`.
+  `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`; a show rated only as a whole has `seasons: []` and
+  `score` = its whole-show score. Shows also get `showScore` (the whole-show score, or `null`; unused while seasons are rated).
 - `inLists` names **your own** lists that contain the title, newest list first (`[]` when none); `rank` is its place in
   the list (1 = first, counted in list order like the list page, the same number as `position` in list responses), or `null` on a
   plain (unnumbered) list. Added in this fork.

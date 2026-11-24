@@ -82,7 +82,11 @@ class WatchlistController(
     private val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
-    /** `status`: want_to_watch (default) | watching | watched | dropped. `type`: movie | tv, or omitted for both. */
+    /**
+     * `status`: want_to_watch (default) | watching | watched | dropped. `type`: movie | tv; without it the page opens on
+     * Movies like Ratings and Discover (user, 2026-11-23), except the Watching tab, which opens on TV (only shows are
+     * Watching). Movies | TV is a two-way switch, no "All", and every tab link keeps the type.
+     */
     @GetMapping("/watchlist")
     fun watchlistPage(
         @CurrentUser user: User,
@@ -91,7 +95,7 @@ class WatchlistController(
         model: Model,
     ): String {
         val selectedStatus = WatchStatus.parse(status) ?: WatchStatus.DEFAULT_TAB
-        val selectedType = TYPE_FILTERS[type?.trim()?.lowercase()]
+        val selectedType = TYPE_FILTERS[type?.trim()?.lowercase()] ?: defaultType(selectedStatus)
 
         val watchlist = GetWatchlist(
             userId = user.id!!,
@@ -100,7 +104,7 @@ class WatchlistController(
             lang = user.metadataLang,
         ).let(handler::handle)
 
-        val typeParam = selectedType?.let(::typeParam)
+        val typeParam = typeParam(selectedType)
         model.addAttribute("tabs", WatchStatus.entries.map { s ->
             WatchlistTabResponse(
                 labelKey = tabLabelKey(s),
@@ -111,22 +115,23 @@ class WatchlistController(
                 status = s.apiName,
             )
         })
-        model.addAttribute("typeFilters", listOf(null, MediaType.movie, MediaType.tvshow).map { t ->
+        model.addAttribute("typeFilters", MediaType.entries.map { t ->
             WatchlistTypeFilterResponse(
                 labelKey = when (t) {
-                    null -> "watchlist.filter.all"
                     MediaType.movie -> "watchlist.filter.movies"
                     MediaType.tvshow -> "watchlist.filter.tv"
                 },
-                href = href(selectedStatus, t?.let(::typeParam)),
+                href = href(selectedStatus, typeParam(t)),
                 active = t == selectedType,
             )
         })
         val today = LocalDate.now(clock)
         val locale = LocaleContextHolder.getLocale()
         model.addAttribute("items", watchlist.items.map { toResponse(it, today, locale) })
-        model.addAttribute("emptyKey", "watchlist.tab.empty.${selectedStatus.apiName}")
-        model.addAttribute("tabHintKey", "watchlist.tab.hint.${selectedStatus.apiName}")
+        // Watching is for shows: on Movies it says so (a movie only has it from before, or through the API).
+        val moviesWatching = selectedStatus == WatchStatus.WATCHING && selectedType == MediaType.movie
+        model.addAttribute("emptyKey", if (moviesWatching) "watchlist.tab.empty.watching.movie" else "watchlist.tab.empty.${selectedStatus.apiName}")
+        model.addAttribute("tabHintKey", if (moviesWatching) "watchlist.tab.hint.watching.movie" else "watchlist.tab.hint.${selectedStatus.apiName}")
         // Every quick action comes back to this tab and filter.
         model.addAttribute("watchlistSelf", href(selectedStatus, typeParam))
 
@@ -158,8 +163,8 @@ class WatchlistController(
         )
     }
 
-    private fun href(status: WatchStatus, typeParam: String?) =
-        "/watchlist?status=${status.apiName}" + (typeParam?.let { "&type=$it" } ?: "")
+    private fun href(status: WatchStatus, typeParam: String) =
+        "/watchlist?status=${status.apiName}&type=$typeParam"
 
     private fun typeParam(type: MediaType) = when (type) {
         MediaType.movie -> "movie"
@@ -173,6 +178,10 @@ class WatchlistController(
             "tv" to MediaType.tvshow,
             "tvshow" to MediaType.tvshow,
         )
+
+        /** The type shown when the URL has none: Movies, or TV on the Watching tab (a series is what you're in the middle of). */
+        fun defaultType(status: WatchStatus): MediaType =
+            if (status == WatchStatus.WATCHING) MediaType.tvshow else MediaType.movie
 
         /** Tabs named after the title-page toggles: To watch, Watching, Seen, Dropped. */
         fun tabLabelKey(status: WatchStatus) = "watchlist.tab.${status.apiName}"

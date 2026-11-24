@@ -1,5 +1,6 @@
 package org.ratelog.customlist
 
+import org.ratelog.MediaType
 import org.ratelog.user.User
 
 /** A list as a card: name, owner, size and the first posters for the cover (fork, used by /lists and the home page). */
@@ -35,4 +36,7 @@ interface ListSummaryRepository {
 
     /** Every public official list (any owner, empty ones too), most recently active first. Hidden (private) ones are left out. */
     fun findOfficial(): List<ListSummary>
+
+    /** [findOfficial], keeping only lists with at least one title of this type (Discover's Movies / TV row). */
+    fun findOfficialContaining(mediaType: MediaType): List<ListSummary>
 }

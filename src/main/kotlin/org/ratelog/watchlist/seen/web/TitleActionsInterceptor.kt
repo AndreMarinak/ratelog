@@ -62,7 +62,8 @@ class TitleActionsInterceptor(
                         tmdbId = show.tmdbId,
                         status = status,
                         // Seen = at least one rated season (the list progress rule), not just an empty rating row.
-                        rated = show.seasons.any { it.hasRating },
+                        // Fork (2026-11-23): or a whole-show score.
+                        rated = show.seasons.any { it.hasRating } || show.showScore != null,
                         releaseDate = local?.firstAirDate,
                         tmdbStatus = local?.status?.value,
                         followed = show.isFollowed,

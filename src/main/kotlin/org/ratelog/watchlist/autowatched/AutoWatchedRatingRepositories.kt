@@ -34,10 +34,15 @@ class AutoWatchedTvRatingRepository(
 ) : TvRatingRepository by delegate {
     override fun save(rating: TvRating) {
         // Deleting a season is also a save (with fewer seasons); only adding or editing one counts as a rating.
-        val seasonsBefore = delegate.findByTvShowIdAndUserId(rating.tvShowId, rating.userId)?.seasonRatings?.size ?: 0
+        val before = delegate.findByTvShowIdAndUserId(rating.tvShowId, rating.userId)
+        val seasonsBefore = before?.seasonRatings?.size ?: 0
         delegate.save(rating)
-        if (rating.seasonRatings.isNotEmpty() && rating.seasonRatings.size >= seasonsBefore) {
-            val ratedSeasons = rating.seasonRatings.map { it.seasonNumber.value }.toSet()
+        val ratedSeasons = rating.seasonRatings.map { it.seasonNumber.value }.toSet()
+        // Fork: a whole-show score set or changed means the show was seen; deleting it (a save without one) is a delete.
+        if (rating.showScore == null && before?.showScore != null) return
+        if (rating.showScore != null && rating.showScore != before?.showScore) {
+            markWatched.handle(MarkWatchedOnRating(rating.userId, MediaType.tvshow, rating.tvShowId.value, ratedSeasons, wholeShow = true))
+        } else if (rating.seasonRatings.isNotEmpty() && rating.seasonRatings.size >= seasonsBefore) {
             markWatched.handle(MarkWatchedOnRating(rating.userId, MediaType.tvshow, rating.tvShowId.value, ratedSeasons))
         }
     }

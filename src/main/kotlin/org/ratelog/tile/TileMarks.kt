@@ -23,15 +23,23 @@ class TileMarks(
 
     private val listed: Set<TileKey> by lazy { load("lists") { repository.findListedTitles(it) } }
     private val detailedMovies: Set<Int> by lazy { load("detailed ratings") { repository.findDetailedMovieRatings(it) } }
+    private val seasonRatedShows: Set<Int> by lazy { load("season ratings") { repository.findSeasonRatedShows(it) } }
 
     fun inList(type: MediaType, tmdbId: Int): Boolean = TileKey(type, tmdbId) in listed
 
     /** The tile's title is in at least one of the viewer's own lists. */
     fun inList(a: TileActionsView): Boolean = typeOf(a)?.let { inList(it, a.tmdbId) } ?: false
 
-    /** A rated movie whose rating has all five categories (shows are rated per season: never). */
+    /** A rated movie whose rating has all five categories (shows: never, see [ratedBySeason]). */
     fun detailed(a: TileActionsView): Boolean =
         a.ratingDetailed || (a.isMovie && a.score != null && a.tmdbId in detailedMovies)
+
+    /**
+     * Fork: a show with at least one rated season, so its score is their average and the ★ picker offers "Rate seasons"
+     * instead of a whole-show score (which would not be used).
+     */
+    fun ratedBySeason(a: TileActionsView): Boolean =
+        !a.isMovie && a.type == "tv" && a.score != null && a.tmdbId in seasonRatedShows
 
     private fun <T> load(what: String, query: (User.Id) -> Set<T>): Set<T> {
         val userId = currentUser()?.id ?: return emptySet()

@@ -19,6 +19,8 @@ data class MarkWatchedOnRating(
     val mediaId: Long,
     /** Shows: every season the user has rated, after this save. */
     val ratedSeasons: Set<Int> = emptySet(),
+    /** Fork: a show rated as a whole (one score, no seasons): it was seen, like a rated movie. */
+    val wholeShow: Boolean = false,
 )
 
 /**
@@ -46,6 +48,8 @@ object AiredSeasons {
  * - **Movies:** no status, Want to watch and Watching become Watched. Watched and Dropped are left as they are.
  * - **Shows** (rated per season): rating a season makes the show Watching; it becomes Watched only once every aired
  *   season ([AiredSeasons]) is rated. A Watched show is never downgraded and a Dropped one is never touched.
+ * - **Shows rated as a whole** (fork, [MarkWatchedOnRating.wholeShow]): like a movie, no status, Want to watch and
+ *   Watching become Watched; Dropped is left alone.
  * Deleting a rating never calls this (see AutoWatchedRatingRepositories).
  */
 @Component
@@ -62,10 +66,14 @@ class MarkWatchedOnRatingHandler(
             MediaType.movie -> if (current == null || current.isUnfinished) WatchStatus.WATCHED else return false
             MediaType.tvshow -> {
                 if (current == WatchStatus.WATCHED || current == WatchStatus.DROPPED) return false
-                val aired = tvShowRepository.findById(TvShow.Id(command.mediaId))
-                    ?.let { AiredSeasons.of(it, LocalDate.now(clock)) }
-                    .orEmpty()
-                if (aired.isNotEmpty() && command.ratedSeasons.containsAll(aired)) WatchStatus.WATCHED else WatchStatus.WATCHING
+                if (command.wholeShow) {
+                    WatchStatus.WATCHED
+                } else {
+                    val aired = tvShowRepository.findById(TvShow.Id(command.mediaId))
+                        ?.let { AiredSeasons.of(it, LocalDate.now(clock)) }
+                        .orEmpty()
+                    if (aired.isNotEmpty() && command.ratedSeasons.containsAll(aired)) WatchStatus.WATCHED else WatchStatus.WATCHING
+                }
             }
         }
         if (next == current) return false

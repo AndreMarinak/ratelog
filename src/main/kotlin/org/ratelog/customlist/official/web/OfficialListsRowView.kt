@@ -16,23 +16,24 @@ data class OfficialListsRowView(
     val total: Int,
     /** The section's HTML id. */
     val id: String,
+    /** Discover's row opens the same Movies / TV subset (`/lists/official?type=tv`). */
+    val seeAllHref: String = SEE_ALL_HREF,
 ) {
-    val seeAllHref: String get() = SEE_ALL_HREF
-
     companion object {
         const val ROW_LIMIT = 20
         const val SEE_ALL_HREF = "/lists/official"
 
         /** Null when there are no official lists: the row is left out instead of showing an empty state. */
-        fun of(lists: List<OfficialListProgress>, id: String): OfficialListsRowView? =
-            of(lists.map { it.list }, lists.associate { it.list.id to it.seen }, id)
+        fun of(lists: List<OfficialListProgress>, id: String, seeAllHref: String = SEE_ALL_HREF): OfficialListsRowView? =
+            of(lists.map { it.list }, lists.associate { it.list.id to it.seen }, id, seeAllHref)
 
-        fun of(lists: List<ListSummary>, seen: Map<CustomList.Id, Int>, id: String): OfficialListsRowView? {
+        fun of(lists: List<ListSummary>, seen: Map<CustomList.Id, Int>, id: String, seeAllHref: String = SEE_ALL_HREF): OfficialListsRowView? {
             if (lists.isEmpty()) return null
             return OfficialListsRowView(
                 cards = lists.take(ROW_LIMIT).map { it.toOfficialCard(seen[it.id] ?: 0) },
                 total = lists.size,
                 id = id,
+                seeAllHref = seeAllHref,
             )
         }
     }

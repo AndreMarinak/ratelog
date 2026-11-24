@@ -128,6 +128,21 @@ class SeenWebTest {
     }
 
     @Test
+    fun `a show rated as a whole counts as rated, so it is seen with no status`() {
+        // Fork (2026-11-23): a whole-show score, no season rated.
+        val show = shows.save(TvShowFactory.aTvShow(tmdbId = 1399, originalName = "Game of Thrones", firstAirDate = LocalDate.parse("2011-04-17"), status = Status.ENDED))
+        val response = showResponse(show.id!!.value, 1399, listOf(season(1, rated = false))).copy(showScore = 8.0, hasRating = true)
+        val mav = ModelAndView("tvshow-detail", mapOf("show" to response))
+
+        titles.postHandle(MockHttpServletRequest("GET", "/tv/1399"), MockHttpServletResponse(), Any(), mav)
+
+        val a = mav.model["titleActions"] as TitleActionsView
+        assertTrue(a.seen)
+        assertFalse(a.seenLocked, "shows are never locked")
+        assertFalse(response.ratedBySeason)
+    }
+
+    @Test
     fun `nothing is added when the page failed, for other views or for posts`() {
         val failed = ModelAndView("movie-detail", mapOf("error" to "error.load.movie"))
         titles.postHandle(get(), MockHttpServletResponse(), Any(), failed)

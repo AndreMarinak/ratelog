@@ -72,10 +72,12 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **The add-to-list sheet shows a title's rank only on numbered lists** (2026-11-23, after list order merged): on a plain list
   the row has the tick but no "#3", the remove question uses the no-rank wording, and the API's `inLists[].rank` is `null`.
 - **Order: most recently active first** (created, or a title added), the rule every other list section uses. Empty official lists
-  are shown, unlike empty public lists, because an admin picked them.
+  are shown, unlike empty public lists, because an admin picked them. *(Except on Discover since 2026-11-23: an empty list has
+  neither a movie nor a show, so it is in neither mode's row; see "Discover's Official lists follow Movies / TV".)*
 - **Discover: the Official lists row comes right after "Popular now"**, not at the end. At 1440x900 it is fully above the fold;
   after the 13 genre rows (most of them loaded on scroll) hardly anyone would reach it. "Popular now" stays first as the "what's new"
-  row. The same row shows on the Movies and TV landings (lists mix both) and never on the filtered grid. It needs no TMDB, so it
+  row. The same row shows on the Movies and TV landings (lists mix both) and never on the filtered grid. *(Superseded 2026-11-23:
+  each mode only shows the lists with that type of title, see "Discover's Official lists follow Movies / TV".)* It needs no TMDB, so it
   still shows when every TMDB row failed. The model value is a Thymeleaf `LazyContextVariable`, loaded only when the landing renders
   the row, so the grid, "Load more" fragments and the many `/discover/row` fetches run no extra queries.
 - **One include per template**: `lists.html` (the row), `list-detail.html` (badge + admin switch under the title; since the
@@ -91,7 +93,7 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **The follow bell only where it does something** (user, 2026-11-23: it "wouldn't do anything for most" titles). Following only adds release dates to the Premieres box on the Ratings page (no notifications), so the bell shows for movies whose release date is after today or unknown, and for shows that are Returning Series / In Production / Planned. A title already followed always keeps it (on) so a follow can't be stranded. Labelled "Notify me · Adds release dates to Premieres"; small and secondary, not a heart (a heart may later mean "like").
 - **"Rate it?" after Seen, never forced** (user decision 2026-11-23). After tapping Seen on a movie page with no rating, a small inline prompt offers 1-10 (one tap saves a quick rating through the Rate modal's own `POST /movie/rate`) or Skip. Not on tiles, the watchlist page or tick-off (bulk marking stays fast), not for shows (rated per season), and not without JS (Seen just saves). Saving reloads the page, like the Rate modal, because the rating card, the Rate button and Seen all change. *(Tiles and tick-off got their own optional prompt on 2026-11-23, see "Rate it? after Seen on tiles" below.)*
 - **Poster quick actions:** a stack in the poster's top-right corner: the watchlist bookmark (or a Watching / Dropped badge where the bookmark can't toggle), then the Seen eye. The Watched badge became the eye. The bookmark is rendered hidden rather than left out when it can't toggle, so un-seeing can bring it back in place. With a mouse, controls that are off appear on hover / focus; on touch screens and at 900px and below they're always visible; anything on is always visible. Status icons changed so the eye means Seen everywhere: Watched = `eye`, Watching = `circle-play`. *(Since 2026-11-23 there is a second group bottom right: Add to list and ★, see "Rate and add to list from any poster" below.)*
-- **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). *(Layout and the Dropped order changed 2026-11-23, see "Watchlist buttons line up on every tile" below.)* Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter).
+- **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). *(Layout and the Dropped order changed 2026-11-23, see "Watchlist buttons line up on every tile" below.)* Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter). *(Since 2026-11-23 the page opens on Movies and the filter is Movies | TV, no All: see "Watchlist opens on Movies".)*
 - **List tick-off mode** ("Mark what you've seen", `?mark=1`): tapping a poster toggles Seen instead of opening the title; seen posters get a green check and outline, unseen an empty ring; a bar fixed above the phone tab bar shows the live count and Done (the same view without `mark`). The mode lives in the URL and every tab link keeps it, so master's in-place tab switch (`list-filter.js`) re-renders the grid in the same mode; all handlers are delegated from `document`. Without JS the posters stay links and each poster's eye is the per-poster form. Rated movies stay checked (a tap explains), upcoming titles have no toggle.
 - **Explicit `back` on form posts.** The new endpoints (`/seen/toggle`, `/watchlist/item`) take a `back` field and fall back to the Referer, then `/watchlist`; only a local path (+ query, + #fragment for `back`) is ever used, so a crafted value can't redirect off-site (`BackPath`). Since 2026-11-23 the older Referer redirects (follow buttons, deleting a rating, `/status`) use it too.
 - **Manager role** (user request, 2026-11-23: "there's two types of accounts, admins and users, I want a third called managers, whose only diff between a normal user is that they can add accounts"). `Role.MANAGER` (stored as text in `users.role`, no migration needed) has the USER and MANAGER authorities, never ADMIN. Managers get an "Add account" entry (header icon and the phone menu sheet) leading to `/accounts/new`, a plain form (username, email, password) that always creates a USER account: `CreateUserHandler` refuses any other role from a manager, whatever the request says. Nothing else changes for them: no user list, no editing or deleting other accounts, no configuration, no official lists (those checks use `isAdminLike`). Admins and superadmins give or take the role in the existing admin create and edit forms (labelled "Manager"); an ADMIN may switch accounts only between USER and MANAGER, and may edit or delete managers like users. Role changes apply to open sessions at once (session revalidation). `GET /api/v1/me` reports `MANAGER`.
@@ -271,7 +273,9 @@ buttons as well, aka anywhere I see a movie tile".
   (passing the stored review back, so changing the score keeps it) and `DeleteRatingHandler`, so validation, the DB rules and the
   auto-Watched repository decorator apply unchanged. Upcoming movies are refused, like Seen. `fetch` gets JSON, a plain post
   (the picker's fallback) redirects back with a flash message.
-- **Shows: ★ goes to the show's seasons** (`/tv/{id}#seasons`, the same as the title page's "Rate seasons") and the chip shows
+- *(Superseded 2026-11-23 by "TV: rate a show as a whole, or by season" below: ★ on a show now opens the picker for a
+  whole-show score, and only a show rated by season links to its seasons.)*
+  **Shows: ★ goes to the show's seasons** (`/tv/{id}#seasons`, the same as the title page's "Rate seasons") and the chip shows
   the show's score, the average of your rated seasons. Shows are rated per season, so the tile can't rate "the show"; a season
   picker on the tile was left out because TMDB rows don't carry the season list and the title page already shows it with each
   season's rating.
@@ -313,6 +317,7 @@ Requested by the user on 2026-11-23: "there's a mass mark what you've seen but i
   in a try/catch so blocked storage just means "on"). While it's off the switch also shows in the ★ picker, so it can be turned
   back on.
 - **Movies only:** shows are rated per season, and a "Rate seasons" link after every ticked show would only slow tick-off down.
+  *(Since 2026-11-23 a show can be rated as a whole from the same picker, so the prompt covers unrated shows too.)*
   Not after the watchlist page's Seen button either: that tile leaves the tab at once.
 
 ### To rate: seen but not rated (2026-11-23)
@@ -660,6 +665,70 @@ Actions sat left, centre and right with no grouping.
   (`list-order :: sort`), the official badge and switch two (`official-lists :: listHeader` / `toggle`), and the progress line
   `list-progress :: line` (`list-tick.js` finds the bar by `data-list-progress-bar`).
 
+### Watchlist opens on Movies; Discover's Official lists follow Movies / TV (2026-11-23)
+
+- **The watchlist opens on Movies** (user, 2026-11-23: *"watchlist tab should default to movies like everything else"*).
+  `/watchlist` without a `type` shows Movies, like Ratings (`/ratings` opens `/movies`) and Discover (`type` defaults to movie);
+  the header and bottom-bar links land there. The type switch is now **Movies | TV**, a two-way switch like the other pages'
+  (the "All" option is gone; an unknown `type`, e.g. `all`, also shows Movies). Every status tab link carries the type, so To
+  watch · Watching · Seen · Dropped keep it, and both switches still apply in place (`view-swap.js`).
+- **Watching stays a TV thing.** A bare `/watchlist?status=watching` (Home's "Continue watching → See all") opens on **TV**,
+  since only shows can be Watching; landing on an empty Movies tab would look broken. The Watching tab stays on Movies too (the
+  tabs don't jump when switching type): empty, it says "Only TV shows can be Watching. Switch to TV for the shows you're in the
+  middle of."; a movie that still has Watching from before (or set through the API) is listed with Seen and Remove, under a hint
+  that says so. `WatchlistController.defaultType`.
+- **Discover's Official lists row follows Movies / TV** (user chose "Only lists with TV" for TV mode, 2026-11-23). Movies mode
+  shows official lists with at least one movie, TV mode those with at least one show; a mixed list shows in both, an empty one
+  in neither, and with none to show there is no row (TV mode on the live site: just "Best TV Shows of All Time"). The filter is
+  an `EXISTS (... media_type = :mediaType)` in the same lists query (`ListSummaryDAO.findOfficialContaining`), so the row is
+  still three queries, and still lazy (the grid and `/discover/row` fetches run none). Its "See all N" opens
+  `/lists/official?type=movie|tv`, the same subset, so the count matches; `/lists/official` alone, the Lists tab's row and
+  `GET /api/v1/lists/official` still list every official list. `type` is parsed like Discover's (`OfficialListsType`, aliases
+  such as `shows`).
+
+### TV: rate a show as a whole, or by season; seasons save in place (2026-11-23)
+
+Requested by the user on 2026-11-23: "on a tv show rating when im rating mult seasons it reloads the page after each rating"
+and "for tv shows I should be able to rate show as a whole and then if u rate any season at all then the overall rating
+becomes the average".
+
+- **Season ratings save in place.** The season rate modal and the delete confirmation post through inplace.js
+  (`data-inplace="#seasons, .title-panel"`): the modal closes, a toast confirms, the season cards and the action panel (your
+  overall score, Seen) are swapped in from the page. Rating several seasons in a row never leaves or scrolls the page. Card
+  clicks are delegated (`static/tv-seasons.js`, an open card stays open) and `breakdown.js` redraws category bars in
+  swapped-in regions (`inplace:swapped`, fired by inplace.js after a swap). Without JS: a post and a redirect, as before.
+- **One score for the whole show.** A show can get one 0-10 score (the quick-rating slider on the page, 1-10 on a poster's
+  picker), without rating any season. Stored in `tv_ratings.show_score` (`V1140`, with `show_rated_at_epoch_ms` for the feed and
+  "Recently rated"), not as a fake season 0: TMDB uses season 0 for Specials.
+- **The rule: rated seasons win.** A show's score is the average of its rated seasons (quick and detailed alike, as before)
+  when at least one is rated, else its whole-show score. `tv_ratings.score` keeps holding the show's score under this rule
+  (`TvRating.updateScore`), so every reader that already used it (Ratings TV ranking and its filters, home rows, poster chips,
+  watchlist, tags, list progress, the API) gets the rule without a second code path. Category rankings only use detailed
+  seasons, so a whole-show-only show is left out of them, like a show rated only quickly.
+- **The whole-show score is kept, not dropped, once a season is rated** (unused while any season is rated). Deleting every
+  season rating brings it back as the show's score; the page says so ("Your whole-show score (8.00) is replaced by the season
+  average. It comes back if you delete every season rating.") and offers "Delete whole-show score" there. Dropping it silently
+  would lose a score the user gave on purpose; a rating row is only deleted when it has neither seasons nor a whole-show score.
+- **TV page:** the panel's fourth button is "Rate" / "Edit rating" with your whole-show score while no season is rated (it
+  opens the Rate show modal, like a movie), and "Rate seasons" with the season average once any is rated (it jumps to them).
+  The season list starts with a "Whole show" card: Rate show / Edit and a hint that rating a season replaces it, or
+  "Average of N seasons" with the average and the explanation above. Edit mode of the modal has "Delete rating" (asks first).
+  `?rate=1` opens the modal (or scrolls to the seasons of a show rated by season): that is where a poster's ★ goes without JS.
+- **Posters:** a show's ★ (and the "⋯" chooser's Rate row) opens the same picker as movies: one tap sets the whole-show score,
+  "Delete rating" removes it (`POST /movie/rate/tile` with `type=tv`, `TvTileRateHandler`). A show rated by season shows its
+  average in the picker ("Average of your seasons") with "Rate seasons" to its page instead of score buttons, like a movie's
+  detailed rating; the server refuses a whole-show score there too (`409`, `seasons: true`). `TileMarks.ratedBySeason` (one
+  query per page) tells the tile which shows those are. The "Rate it?" prompt after Seen now covers shows too.
+- **Rated means seen, like movies:** a whole-show score marks the show Watched (from no status, Want to watch or Watching;
+  Dropped and Watched are left alone, `MarkWatchedOnRating.wholeShow`). Rating a season still only makes it Watching until
+  every aired season is rated. "Rated" everywhere (Seen state, To rate / "Seen, not rated", list progress, Discover's
+  hide-rated) means a rated season or a whole-show score. Deleting never touches the status.
+- **Feed / profile:** a whole-show rating appears as one entry without a season label, only while no season is rated (once one
+  is, the season entries stand for the show).
+- **API:** `PUT` / `DELETE /api/v1/ratings/tv/{tmdbId}` set and delete the whole-show score; `TvRating` gains `scoreSource`
+  (`seasons` / `show`) and `showScore` ([api.md](api.md#ratings)).
+*(This replaces "Shows: ★ goes to the show's seasons" in "Rate and add to list from any poster" above.)*
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -701,12 +770,15 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
 | List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |
-| Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
+| Rate / edit / delete rating (modals) | reload | **reload kept** for movies: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
+| TV page: rate / edit / delete a season (modals) | reload | in place (2026-11-23, user: "it reloads the page after each rating"): `data-inplace="#seasons, .title-panel"`, the modal closes, toast, the season cards and the panel's overall score and Seen are swapped in; rating several seasons in a row never leaves the page |
+| TV page: Rate show (whole-show score), edit, delete, "Delete whole-show score" | — | in place (2026-11-23): same regions as the seasons, toast |
+| Poster ★ / "⋯" Rate on a show: whole-show score, change, delete | — (★ went to the seasons) | in place, like movies (`tile-rate.js`, `type=tv`); a show rated by season shows its average and "Rate seasons", a **page load** (its seasons) |
 | Poster ★: rate, change or delete a quick rating (every poster) | — (title page only) | in place (`tile-rate.js`, `POST /movie/rate/tile`, JSON): every copy's chip and eye update, list progress counts, toast |
 | Poster ★ on a detailed rating, "Detailed rating…" | — | **page load**: the title page opens its rate modal (`?rate=edit` / `?rate=detailed`); five categories need the full form |
 | Poster Add to list (every poster) | — (title page only) | in place: the title page's sheet loads on the page (`GET /tile/lists`), ticks save in place, the poster's button ticks; New list stays on the page |
 | "Rate it?" after Seen on a poster / in tick-off | — | in place, optional prompt on that tile; Skip or the next tap closes it |
-| Poster "⋯" chooser on touch screens: Watchlist, Seen, Rate, Add to list | — | in place: opening it is local (no request); each row saves exactly like the poster button it stands for (toast, every copy updates); Rate and Add to list open the same picker / sheet; a show's Rate seasons is a **page load** (its seasons) |
+| Poster "⋯" chooser on touch screens: Watchlist, Seen, Rate, Add to list | — | in place: opening it is local (no request); each row saves exactly like the poster button it stands for (toast, every copy updates); Rate and Add to list open the same picker / sheet (since 2026-11-23 shows too; only a show rated by season links to its seasons, a **page load**) |
 | To rate view: rate a title | — | in place: the tile leaves, counts drop |
 | Watchlist poster ★ | — | in place: the tile leaves To watch (rating marks it seen), tab counts move |
 | Bulk "add unseen to watchlist" on a list | reload | in place since the compact header (2026-11-23, `data-inplace="#listRegion"`): the whole list region refreshes like "All seen", toast with the count; was "reload kept" |

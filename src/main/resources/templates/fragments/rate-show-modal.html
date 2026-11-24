@@ -1,0 +1,38 @@
+<!--/*
+  Fork (2026-11-23): rate a TV show as a whole, without rating seasons (user: "I should be able to rate show as a whole
+  and then if u rate any season at all then the overall rating becomes the average").
+  One score, the quick-rating slider. Saves in place (inplace.js): the season list (its "Whole show" card) and the action
+  panel are swapped in. Edit mode (data-modal-mode="edit" on the trigger) shows "Delete rating". Opened from the panel's
+  Rate button and the "Whole show" card while no season is rated. Behaviour in static/tv-seasons.js.
+*/-->
+<div th:fragment="rateShowModal(show)" th:if="${show != null}" id="rateShowModal" class="modal medium" data-modal="rateShowModal">
+    <div>
+        <div class="flex separate top">
+            <h2 th:text="${show.name}">TV Show Title</h2>
+            <button type="button" data-close-modal th:aria-label="#{modal.close}">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <p class="rate-show-hint" th:text="#{tv.show.rate.modal.hint}">One score for the whole show.</p>
+
+        <form th:action="@{/tv/rate/show}" method="post" class="rate-show-form" data-inplace="#seasons, .title-panel">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="tvShowId" th:value="${show.id}">
+            <input type="hidden" name="tmdbId" th:value="${show.tmdbId}">
+            <div th:replace="~{fragments/rate-slider :: rateSlider('score', 'tv.show.rate.score')}"></div>
+            <button class="primary w-100" type="submit" th:text="#{profile.save}">Save</button>
+        </form>
+
+        <form th:action="@{/tv/rate/show/delete}" method="post" class="rate-show-delete" data-rate-show-delete hidden
+              data-inplace="#seasons, .title-panel" th:data-confirm="#{tv.show.rate.delete.confirm}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="tvShowId" th:value="${show.id}">
+            <input type="hidden" name="tmdbId" th:value="${show.tmdbId}">
+            <button type="submit" class="secondary w-100">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span th:text="#{rating.delete.title}">Delete rating</span>
+            </button>
+        </form>
+    </div>
+</div>

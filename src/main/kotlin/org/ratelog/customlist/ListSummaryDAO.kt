@@ -95,6 +95,20 @@ interface ListSummaryDAO : Repository<ListSummaryMarker, Long> {
     )
     fun findOfficial(): List<ListSummaryRow>
 
+    /** [findOfficial], keeping only lists with at least one title of this media type (`movie` / `tvshow`): Discover's row. */
+    @Query(
+        """
+        SELECT $SUMMARY_COLUMNS
+        FROM official_lists ol
+        JOIN custom_lists cl ON cl.id = ol.list_id
+        JOIN users u ON u.id = cl.user_id
+        WHERE cl.is_public = true
+          AND EXISTS (SELECT 1 FROM custom_list_items i WHERE i.list_id = cl.id AND i.media_type = :mediaType)
+        ORDER BY last_activity DESC, id DESC
+        """
+    )
+    fun findOfficialContaining(mediaType: String): List<ListSummaryRow>
+
     /** The first posters of each list, in list order, skipping titles without one. */
     @Query(
         """

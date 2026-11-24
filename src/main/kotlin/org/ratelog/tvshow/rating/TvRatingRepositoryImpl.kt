@@ -55,6 +55,8 @@ class TvRatingRepositoryImpl(
             createdAt = Instant.ofEpochMilli(createdAtEpochMs),
             seasonRatings = seasonRatings,
             score = score?.let(::Score),
+            showScore = showScore?.let(::Score),
+            showRatedAt = showRatedAtEpochMs?.let(Instant::ofEpochMilli),
         )
     }
 
@@ -67,6 +69,8 @@ class TvRatingRepositoryImpl(
             createdAt = Instant.ofEpochMilli(createdAtEpochMs),
             seasonRatings = seasonRatings,
             score = score?.let(::Score),
+            showScore = showScore?.let(::Score),
+            showRatedAt = showRatedAtEpochMs?.let(Instant::ofEpochMilli),
         )
     }
 
@@ -77,6 +81,8 @@ class TvRatingRepositoryImpl(
             userId = userId.value,
             createdAtEpochMs = createdAt.toEpochMilli(),
             score = score?.value,
+            showScore = showScore?.value,
+            showRatedAtEpochMs = showRatedAt?.toEpochMilli(),
         )
     }
 

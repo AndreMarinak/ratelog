@@ -74,6 +74,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Discover's TV mode showed movie lists in its Official lists row** (user, 2026-11-23): `DiscoverOfficialListsAdvice` loaded
+  every official list whatever the mode, so `/discover?type=tv` showed "AFI 100" and the other film lists. It now passes Discover's
+  `type` to the lists query, which keeps only lists with at least one title of that type (`findOfficialContaining`); none = no
+  row. See design-decisions ("Watchlist opens on Movies; Discover's Official lists follow Movies / TV").
+
 - **User search was case-sensitive, and `_` was a wildcard** (upstream, found 2026-11-23 building Community's People list):
   `UserDAO` searched `username LIKE CONCAT('%', :username, '%')`, so "Mari" missed "marisol", and since usernames may contain
   `_`, "a_b" also matched "axb". Now `LOWER(username) LIKE LOWER(:pattern) ESCAPE '!'` with `_`, `%` and `!` escaped in the
@@ -82,6 +87,14 @@ Problems found while building and running the fork: what happened, the cause, an
 - **The profile follow button was an unlabeled icon** (user, 2026-11-23: "its not very clear"): a user-round-check icon to
   follow and user-round-x to unfollow, with no text and only a tooltip. Replaced by the labelled Follow / Following button; see
   design-decisions ("Community: People and Follow buttons").
+- **Rating several seasons of a show reloaded the TV page after each one** (user, 2026-11-23: "on a tv show rating when im
+  rating mult seasons it reloads the page after each rating"): the season rate modal and the delete confirmation were plain
+  form posts that redirected back to `/tv/{id}`, so every season cost a full page load (and a TMDB call) and the scroll
+  jumped. Both forms now save in place (`data-inplace="#seasons, .title-panel"`, `static/inplace.js`): the modal closes, a
+  toast confirms, the season cards and the action panel (your overall score, Seen) are swapped in from the page. The cards'
+  expand handler moved from an inline script to a delegated `static/tv-seasons.js` (an open card stays open after the swap),
+  and `breakdown.js` redraws category bars in swapped-in regions (`inplace:swapped` event). Without JS it is still a post and
+  a redirect.
 - **Two search boxes on the search results page** (user, phone, 2026-11-23): the earlier fix removed the Browse bar's field on
   Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see design-decisions.
 - **Going back to Discover's grid or search results only showed the first page again** (found building the back links,

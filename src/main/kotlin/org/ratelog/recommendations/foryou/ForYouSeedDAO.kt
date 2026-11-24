@@ -16,7 +16,8 @@ class ForYouSeedMarker
 
 /*
  * The viewer's rated titles (same title fallback as the home rows: metadata language, English, original title).
- * A show is rated when its show row has a score; it was rated at its latest season rating (like "Recently rated").
+ * A show is rated when its show row has a score (its seasons' average, or a whole-show score); it was rated at its
+ * latest season rating, else its whole-show rating (like "Recently rated").
  */
 @SpringRepository
 interface ForYouSeedDAO : Repository<ForYouSeedMarker, Long> {
@@ -69,6 +70,7 @@ interface ForYouSeedDAO : Repository<ForYouSeedMarker, Long> {
                    COALESCE(
                        (SELECT MAX(sr.created_at_epoch_ms) FROM season_ratings sr
                          WHERE sr.tv_show_id = r.tv_show_id AND sr.user_id = r.user_id),
+                       r.show_rated_at_epoch_ms,
                        r.created_at_epoch_ms) AS rated_at
             FROM tv_ratings r
             JOIN tv t ON t.id = r.tv_show_id
@@ -92,6 +94,7 @@ interface ForYouSeedDAO : Repository<ForYouSeedMarker, Long> {
                    COALESCE(
                        (SELECT MAX(sr.created_at_epoch_ms) FROM season_ratings sr
                          WHERE sr.tv_show_id = r.tv_show_id AND sr.user_id = r.user_id),
+                       r.show_rated_at_epoch_ms,
                        r.created_at_epoch_ms) AS rated_at
             FROM tv_ratings r
             JOIN tv t ON t.id = r.tv_show_id

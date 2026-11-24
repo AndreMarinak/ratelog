@@ -33,6 +33,9 @@ class InMemoryListSummaryRepository(
     override fun findOfficial(): List<ListSummary> =
         all().filter { it.isOfficial && it.isPublic }
 
+    override fun findOfficialContaining(mediaType: MediaType): List<ListSummary> =
+        findOfficial().filter { summary -> lists.findById(summary.id)?.items.orEmpty().any { it.mediaType == mediaType } }
+
     private fun all(): List<ListSummary> =
         users.findAll()
             .flatMap { owner -> lists.findByUserId(owner.id!!).map { it.toSummary(owner) } }
