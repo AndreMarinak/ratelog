@@ -86,6 +86,10 @@ does not create yet.
 
 ## Status
 
+Updated for the searchyear branch (2026-11-24, `feat/searchyear`): `home` gains "search Year menu" and "person page: Show
+appearances switch" (64 steps). Run on a fresh `ratelog_searchyear` database, port 8121, desktop / 390 / 360: **280/280**
+(home 64, seen 53, tilerate 54, title 27, recs 25, backnav 39, savedlists 18).
+
 Updated for master `5a03f3d` (2026-11-23): Classics is checked on Discover (it left Home), the Ratings step no longer expects the
 count select (rankings load as you scroll), and the phone menu sheet has 5 items (Stats added). Run against the main session's
 port 8110 app on `5a03f3d`: home 58/58 (after the update), seen 50/50, tilerate 54/54, title 21/21, recs 25/25, backnav 39/39.
