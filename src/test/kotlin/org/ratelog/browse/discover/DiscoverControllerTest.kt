@@ -27,6 +27,10 @@ import org.ratelog.browse.web.BrowseTileView
 import org.ratelog.browse.web.DiscoverRowView
 import org.ratelog.browse.web.DiscoverRowViews
 import org.ratelog.browse.web.SeenToggleView
+import org.ratelog.home.DiscoverError
+import org.ratelog.home.DiscoverFeed
+import org.ratelog.home.DiscoverTitle
+import org.ratelog.home.TmdbDiscoverClient
 import org.ratelog.test.InMemoryBrowseLibraryRepository
 import org.ratelog.test.MovieFactory
 import org.ratelog.test.MutableClock
@@ -46,10 +50,12 @@ class DiscoverControllerTest {
     private val library = InMemoryBrowseLibraryRepository()
     private val browseHandler = BrowseHandler(client, library, clock)
     private val barViews = BrowseBarViews(BrowseBarViewsTest.testMessageSource(), client, clock)
+    /** Fork: the Classics row's TMDB list (moved from Home on 2026-11-23). */
+    private val feeds: TmdbDiscoverClient = mock()
     private val controller = DiscoverController(
         browseHandler,
         // One row at a time on the test thread: deterministic request order.
-        GetDiscoverRowsHandler(browseHandler, eagerRows = 4, parallelRows = 1, waitMs = 1_000),
+        GetDiscoverRowsHandler(browseHandler, eagerRows = 4, parallelRows = 1, waitMs = 1_000, feedRows = DiscoverFeedRows(feeds, library)),
         barViews,
         DiscoverRowViews(BrowseBarViewsTest.testMessageSource(), barViews),
         clock,
@@ -60,6 +66,8 @@ class DiscoverControllerTest {
     init {
         LocaleContextHolder.setLocale(Locale.ENGLISH)
         whenever(client.providers(any(), any(), any())).thenReturn(listOf(BrowseProvider(8, "Netflix", null, 0)).right())
+        val classics = (1..20).map { i -> DiscoverTitle(900 + i, MediaType.movie, "Classic $i", 1950, "/c$i.jpg", LocalDate.parse("1950-01-01"), 8.4) }
+        whenever(feeds.fetch(org.mockito.kotlin.eq(DiscoverFeed.CLASSICS), any(), any())).thenReturn(classics.right())
     }
 
     @AfterEach
@@ -97,7 +105,7 @@ class DiscoverControllerTest {
     // --- Landing ---
 
     @Test
-    fun `given no filter then shows Popular now and genre rows, the first four loaded and the rest left to the page`() {
+    fun `given no filter then shows Popular now, Classics and genre rows, the first four loaded and the rest left to the page`() {
         serve()
         val model = ConcurrentModel()
 
@@ -107,20 +115,24 @@ class DiscoverControllerTest {
         assertEquals(true, model.getAttribute("landing"))
         val rows = model.rows()
         assertEquals(
-            listOf("popular", "horror", "comedy", "action", "animation", "drama", "science-fiction", "thriller", "romance", "crime",
+            listOf("popular", "classics", "horror", "comedy", "action", "animation", "drama", "science-fiction", "thriller", "romance", "crime",
                 "fantasy", "mystery", "family", "documentary").map { "discover-row-$it" },
             rows.map { it.id },
         )
-        assertEquals(listOf("Popular now", "Horror", "Comedy", "Action"), rows.take(4).map { it.title })
+        assertEquals(listOf("Popular now", "Classics", "Horror", "Comedy"), rows.take(4).map { it.title })
         assertTrue(rows.take(4).none { it.pending })
         assertTrue(rows.drop(4).all { it.pending && it.tiles.isEmpty() })
         assertEquals(20, rows[0].tiles.size)
         assertEquals("/discover?type=movie&popular=now", rows[0].moreHref)
-        assertEquals("/discover?type=movie&popular=alltime&minRating=7&genre=horror", rows[1].moreHref)
-        assertEquals("/discover/row?type=movie&row=drama", rows[5].srcHref)
+        // Classics (Home's list of acclaimed pre-2000 films): "More" opens highest rated, as it did on Home.
+        assertEquals(20, rows[1].tiles.size)
+        assertEquals("8.4", rows[1].tiles[0].tmdbScore)
+        assertEquals("/discover?type=movie&sort=rating", rows[1].moreHref)
+        assertEquals("/discover?type=movie&popular=alltime&minRating=7&genre=horror", rows[2].moreHref)
+        assertEquals("/discover/row?type=movie&row=drama", rows[6].srcHref)
 
-        // Popular now, Horror, Comedy, Action: one TMDB page each, the same requests their "More" grids make.
-        assertEquals(listOf(null, "27", "35", "28"), requests.map { it.params["with_genres"] })
+        // Popular now, Horror, Comedy: one TMDB page each, the same requests their "More" grids make (Classics is a feed).
+        assertEquals(listOf(null, "27", "35"), requests.map { it.params["with_genres"] })
         assertTrue(requests.all { it.path == "/discover/movie" && it.params["page"] == "1" })
         // "Popular now" is what's current; genre rows are well-known, well-rated titles from every era.
         assertEquals("popularity.desc", requests.first().params["sort_by"])
@@ -172,7 +184,7 @@ class DiscoverControllerTest {
         assertEquals(true, model.getAttribute("landing"), "showing seen titles is a view setting, not a filter")
         assertEquals(SeenToggleView(on = false, href = "/discover?type=tv"), model.toggle())
         val rows = model.rows()
-        assertTrue(rows.all { it.moreHref.endsWith("&hideSeen=0") }, rows.map { it.moreHref }.toString())
+        assertTrue(rows.all { it.moreHref!!.endsWith("&hideSeen=0") }, rows.map { it.moreHref }.toString())
         assertEquals("/discover/row?type=tv&row=reality&hideSeen=0", rows.first { it.id == "discover-row-reality" }.srcHref)
         val bar = model.bar()
         assertEquals("/discover?type=movie&hideSeen=0", bar.typeLinks[0].href)
@@ -189,13 +201,14 @@ class DiscoverControllerTest {
 
         val ids = model.rows().map { it.id }
         assertFalse("discover-row-horror" in ids)
-        assertEquals(listOf("discover-row-popular", "discover-row-comedy", "discover-row-action", "discover-row-animation"), ids.take(4))
+        assertEquals(listOf("discover-row-popular", "discover-row-classics", "discover-row-comedy", "discover-row-action"), ids.take(4))
         assertFalse(model.containsAttribute("errorKey"))
     }
 
     @Test
     fun `given every row fails then the landing shows the TMDB message instead of rows`() {
         whenever(client.page(any())).thenReturn(TmdbBrowseError.Failed("IOException").left())
+        whenever(feeds.fetch(any(), any(), any())).thenReturn(DiscoverError.Unavailable.left())
         val model = ConcurrentModel()
 
         val view = controller.discover(user, BrowseParams(), null, model)
@@ -206,6 +219,7 @@ class DiscoverControllerTest {
         assertEquals("/discover?type=movie", model.getAttribute("retryHref"))
 
         whenever(client.page(any())).thenReturn(TmdbBrowseError.ApiKeyMissing.left())
+        whenever(feeds.fetch(any(), any(), any())).thenReturn(DiscoverError.NotConfigured.left())
         controller.discover(user, BrowseParams(), null, model)
         assertEquals("browse.error.not.configured", model.getAttribute("errorKey"))
 

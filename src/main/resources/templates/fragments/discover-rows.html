@@ -12,6 +12,8 @@
 <div th:fragment="rows" class="discover-rows" id="discoverRows" th:aria-label="#{discover.rows.aria}" role="region">
     <th:block th:each="row, rowStat : ${rows}">
         <section th:replace="~{fragments/discover-rows :: row(row=${row})}"></section>
+        <!--/* Fork: "Recommended for you" (fragments/for-you.html) goes right after "Popular now", before Official lists. */-->
+        <th:block th:if="${rowStat.first}"><th:block th:replace="~{fragments/for-you :: discoverRow}"></th:block></th:block>
         <!--/* Fork: the Official lists row (fragments/official-lists.html) goes right after "Popular now". */-->
         <th:block th:if="${rowStat.first}"><th:block th:replace="~{fragments/official-lists :: discoverRow}"></th:block></th:block>
     </th:block>
@@ -31,7 +33,7 @@
          th:aria-labelledby="${row.id + '-title'}">
     <div class="home-row-head">
         <h2 th:id="${row.id + '-title'}" th:text="${row.title}">Horror</h2>
-        <a class="home-row-more" th:href="${row.moreHref}">
+        <a th:if="${row.moreHref != null}" class="home-row-more" th:href="${row.moreHref}">
             <span th:text="#{home.row.more}">More</span>
             <i data-lucide="arrow-right" aria-hidden="true"></i>
         </a>

@@ -20,6 +20,10 @@ import org.ratelog.browse.LibraryMark
 import org.ratelog.browse.TmdbBrowseClient
 import org.ratelog.browse.TmdbBrowseError
 import org.ratelog.browse.TmdbListRequest
+import org.ratelog.home.DiscoverError
+import org.ratelog.home.DiscoverFeed
+import org.ratelog.home.DiscoverTitle
+import org.ratelog.home.TmdbDiscoverClient
 import org.ratelog.test.InMemoryBrowseLibraryRepository
 import org.ratelog.test.MovieFactory
 import org.ratelog.test.MutableClock
@@ -46,8 +50,15 @@ class GetDiscoverRowsHandlerTest {
         override fun findMarks(userId: User.Id, type: MediaType, tmdbIds: Collection<Int>): Map<Int, LibraryMark> = emptyMap()
     }
 
+    /** Fork: the Classics row (index 1 on movies) is a TMDB list, not a browse page. */
+    private val feeds: TmdbDiscoverClient = mock<TmdbDiscoverClient>().also { feeds ->
+        val classics = (1..20).map { DiscoverTitle(900 + it, MediaType.movie, "Classic $it", 1950, "/c$it.jpg", LocalDate.parse("1950-01-01")) }
+        whenever(feeds.fetch(org.mockito.kotlin.eq(DiscoverFeed.CLASSICS), any(), any())).thenReturn(classics.right())
+    }
+
     private fun handler(eagerRows: Int = 4, parallelRows: Int = 1, waitMs: Long = 1_000, marks: BrowseLibraryRepository = library) =
-        GetDiscoverRowsHandler(BrowseHandler(client, marks, MutableClock()), eagerRows, parallelRows, waitMs).also { handlers += it }
+        GetDiscoverRowsHandler(BrowseHandler(client, marks, MutableClock()), eagerRows, parallelRows, waitMs, DiscoverFeedRows(feeds, marks))
+            .also { handlers += it }
 
     @AfterEach
     fun tearDown() = handlers.forEach { it.shutdown() }
@@ -78,8 +89,8 @@ class GetDiscoverRowsHandlerTest {
 
         assertNull(landing.error)
         assertEquals(DiscoverRows.forType(MediaType.movie, hideSeen = true), landing.rows.map { it.spec })
-        assertEquals(listOf(false, false, false) + List(11) { true }, landing.rows.map { it.pending })
-        assertEquals(3, requests.size)
+        assertEquals(listOf(false, false, false) + List(12) { true }, landing.rows.map { it.pending })
+        assertEquals(2, requests.size, "Popular now and Horror; Classics comes from its TMDB list")
         assertTrue(landing.rows.take(3).all { it.tiles!!.size == 20 })
     }
 
@@ -89,7 +100,7 @@ class GetDiscoverRowsHandlerTest {
         serve { _, p -> (1..20).map { title(p * 100 + it, poster = !(p == 1 && it in 18..20)) } }
         (101..110).forEach(::rate)
 
-        val tiles = handler().row(query, DiscoverRows.forType(MediaType.movie, true)[1]).getOrNull()!!
+        val tiles = handler().row(query, DiscoverRows.find(MediaType.movie, "horror", true)!!).getOrNull()!!
 
         assertEquals(GetDiscoverRowsHandler.ROW_LIMIT, tiles.size)
         assertEquals((111..117).toList() + (201..213).toList(), tiles.map { it.title.tmdbId })
@@ -126,12 +137,13 @@ class GetDiscoverRowsHandlerTest {
         val landing = handler().landing(query)
 
         assertNull(landing.error)
-        assertEquals(listOf("popular", "action", "animation"), landing.rows.take(3).map { it.spec.id })
+        assertEquals(listOf("popular", "classics", "action"), landing.rows.take(3).map { it.spec.id })
         assertEquals(listOf(false, false, true), landing.rows.take(3).map { it.pending })
     }
 
     @Test
     fun `given every loaded row fails then reports a key problem before a network one, with no rows`() {
+        whenever(feeds.fetch(any(), any(), any())).thenReturn(DiscoverError.Unavailable.left())
         whenever(client.page(any())).thenAnswer { invocation ->
             val request = invocation.getArgument<TmdbListRequest>(0)
             if (request.params["with_genres"] == "35") TmdbBrowseError.ApiKeyRejected.left() else TmdbBrowseError.Failed("x").left()
@@ -144,6 +156,20 @@ class GetDiscoverRowsHandlerTest {
 
         whenever(client.page(any())).thenReturn(TmdbBrowseError.Failed("x").left())
         assertEquals(BrowseError.TmdbUnavailable, handler().landing(query).error)
+    }
+
+    @Test
+    fun `given the Classics row then it shows its TMDB list without the titles you have seen`() {
+        rate(901)
+        rate(902)
+        val classics = DiscoverRows.find(MediaType.movie, DiscoverRows.CLASSICS, true)!!
+
+        val tiles = handler().row(query, classics).getOrNull()!!
+
+        assertEquals((903..920).toList(), tiles.map { it.title.tmdbId })
+        assertEquals(20, handler().row(query.copy(hideSeen = false), DiscoverRows.find(MediaType.movie, DiscoverRows.CLASSICS, false)!!).getOrNull()!!.size)
+        assertTrue(requests.isEmpty(), "no browse page")
+        assertNull(DiscoverRows.find(MediaType.tvshow, DiscoverRows.CLASSICS, true), "movies only")
     }
 
     @Test
@@ -187,8 +213,8 @@ class GetDiscoverRowsHandlerTest {
 
             val tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)
             assertTrue(tookMs < 4_000, "waited ${tookMs}ms")
-            assertEquals(listOf("popular", "horror", "comedy", "action"), landing.rows.take(4).map { it.spec.id })
-            assertEquals(listOf(false, true, false, false), landing.rows.take(4).map { it.pending })
+            assertEquals(listOf("popular", "classics", "horror", "comedy"), landing.rows.take(4).map { it.spec.id })
+            assertEquals(listOf(false, false, true, false), landing.rows.take(4).map { it.pending })
         } finally {
             release.countDown()
         }

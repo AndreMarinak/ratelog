@@ -41,7 +41,7 @@ class HomeDashboardViewTest {
     fun `TMDB rows show your status, personal rows show the media type instead`() {
         val dashboard = view(
             HomeRow(HomeRowKind.UP_NEXT, titles = listOf(title(1, status = WatchStatus.WANT_TO_WATCH))),
-            HomeRow(HomeRowKind.POPULAR_TV, titles = listOf(title(2, MediaType.tvshow, status = WatchStatus.WATCHING))),
+            HomeRow(HomeRowKind.TRENDING_TV, titles = listOf(title(2, MediaType.tvshow, status = WatchStatus.WATCHING))),
         )
 
         val upNext = dashboard.rows[0].tiles.single()
@@ -113,9 +113,20 @@ class HomeDashboardViewTest {
     }
 
     @Test
+    fun `Recommended for you is fetched by the page and has no More link`() {
+        val row = view(HomeRow(HomeRowKind.RECOMMENDED, lazy = true)).rows.single()
+
+        assertEquals("row-recommended", row.id)
+        assertEquals("home.row.recommended", row.titleKey)
+        assertEquals("/for-you/row", row.srcHref)
+        assertEquals(null, row.moreHref)
+        assertTrue(view(HomeRow(HomeRowKind.TRENDING_MOVIES, titles = listOf(title(1)))).rows.single().srcHref == null)
+    }
+
+    @Test
     fun `every TMDB row's More link is a Discover grid the page fully understands`() {
         HomeRowKind.entries.filter { !it.isPersonal }.forEach { kind ->
-            val href = kind.moreHref
+            val href = kind.moreHref!!
             assertTrue(href.startsWith("/discover?"), href)
             val query = href.substringAfter('?').split('&').associate { it.substringBefore('=') to it.substringAfter('=') }
             val parsed = BrowseParamParser.parse(

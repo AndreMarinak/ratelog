@@ -59,6 +59,8 @@ class GetDiscoverRowsHandler(
     @Value("\${ratelog.discover.eager-rows:4}") private val eagerRows: Int = 4,
     @Value("\${ratelog.discover.parallel-rows:4}") parallelRows: Int = 4,
     @Value("\${ratelog.discover.wait-ms:2500}") private val waitMs: Long = 2500,
+    /** Fork: rows from a fixed TMDB list (Classics). Without it those rows are empty, so they are left out. */
+    private val feedRows: DiscoverFeedRows? = null,
 ) {
     private val logger = LoggerFactory.getLogger(GetDiscoverRowsHandler::class.java)
 
@@ -87,9 +89,13 @@ class GetDiscoverRowsHandler(
     }
 
     /** One row's tiles (posters only, at most [ROW_LIMIT]); empty when everything was hidden. */
-    fun row(query: GetDiscoverRows, spec: DiscoverRowSpec): Either<BrowseError, List<BrowseTile>> =
-        browse.handle(BrowseQuery(query.userId, query.lang, query.region, spec.filters, page = 1))
-            .map { result -> result.tiles.filter { it.title.posterPath != null }.take(ROW_LIMIT) }
+    fun row(query: GetDiscoverRows, spec: DiscoverRowSpec): Either<BrowseError, List<BrowseTile>> {
+        val tiles = when (val feed = spec.feed) {
+            null -> browse.handle(BrowseQuery(query.userId, query.lang, query.region, spec.filters, page = 1)).map { it.tiles }
+            else -> feedRows?.tiles(query, feed, spec.filters.hideSeen) ?: Either.Right(emptyList())
+        }
+        return tiles.map { list -> list.filter { it.title.posterPath != null }.take(ROW_LIMIT) }
+    }
 
     /** Null when the pool is saturated: the row is left for the page to fetch. */
     private fun start(task: () -> Either<BrowseError, List<BrowseTile>>): CompletableFuture<Either<BrowseError, List<BrowseTile>>>? {

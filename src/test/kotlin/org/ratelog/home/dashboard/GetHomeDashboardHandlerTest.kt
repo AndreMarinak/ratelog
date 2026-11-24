@@ -80,7 +80,7 @@ class GetHomeDashboardHandlerTest {
         customLists.save(CustomList(id = null, userId = owner, name = ListName(name), isPublic = isPublic, createdAtEpochMs = 1))
 
     @Test
-    fun `rows come in order, trending and theaters first, then personal, then popular TV`() {
+    fun `rows come in order, trending and theaters first, then personal with Recommended for you after Up next`() {
         home.setStatusTitles(me, WatchStatus.WATCHING, listOf(local(1, "Severance", MediaType.tvshow)))
         home.setStatusTitles(me, WatchStatus.WANT_TO_WATCH, listOf(local(2, "Heat")))
         home.setRecentlyRated(me, listOf(local(3, "Alien", score = 9.0)))
@@ -89,8 +89,6 @@ class GetHomeDashboardHandlerTest {
         feed(DiscoverFeed.TRENDING_TV, tmdb(11, "Pluribus", MediaType.tvshow))
         feed(DiscoverFeed.NOW_PLAYING, tmdb(12, "Zootopia 2"))
         feed(DiscoverFeed.UPCOMING, tmdb(13, "Avatar: Fire and Ash", releaseDate = today.plusDays(25)))
-        feed(DiscoverFeed.POPULAR_TV, tmdb(14, "Stranger Things", MediaType.tvshow))
-        feed(DiscoverFeed.CLASSICS, tmdb(15, "Casablanca"))
 
         val dashboard = handle()
 
@@ -99,11 +97,33 @@ class GetHomeDashboardHandlerTest {
             listOf(HomeRowKind.TRENDING_MOVIES, HomeRowKind.TRENDING_TV, HomeRowKind.IN_THEATERS, HomeRowKind.COMING_SOON, HomeRowKind.CONTINUE_WATCHING),
             dashboard.rows.take(5).map { it.kind },
         )
-        assertEquals(HomeRowKind.POPULAR_TV, dashboard.rows.last().kind)
+        // User decision 2026-11-23: Recommended for you after Up next; Classics and Popular TV moved to Discover.
+        assertEquals(
+            listOf(HomeRowKind.CONTINUE_WATCHING, HomeRowKind.UP_NEXT, HomeRowKind.RECOMMENDED, HomeRowKind.RECENTLY_RATED, HomeRowKind.YOUR_LISTS),
+            dashboard.rows.drop(4).map { it.kind },
+        )
+        assertTrue(dashboard.rows.single { it.kind == HomeRowKind.RECOMMENDED }.lazy, "the page loads it")
+        verify(discover, org.mockito.kotlin.never()).fetch(eq(DiscoverFeed.CLASSICS), any(), any())
+        verify(discover, org.mockito.kotlin.never()).fetch(eq(DiscoverFeed.POPULAR_TV), any(), any())
         assertEquals(DiscoverState.OK, dashboard.discover)
         assertTrue(dashboard.hasPersonalRows)
         assertEquals(listOf("Heists"), dashboard.rows.single { it.kind == HomeRowKind.YOUR_LISTS }.lists.map { it.name })
         assertEquals(listOf("Alien"), dashboard.rows.single { it.kind == HomeRowKind.RECENTLY_RATED }.titles.map { it.title })
+    }
+
+    @Test
+    fun `Recommended for you needs a rating and a TMDB key`() {
+        home.setStatusTitles(me, WatchStatus.WATCHING, listOf(local(1, "Severance", MediaType.tvshow)))
+        assertTrue(handle().rows.none { it.kind == HomeRowKind.RECOMMENDED }, "nothing rated yet")
+
+        home.setRecentlyRated(me, listOf(local(3, "Alien", score = 9.0)))
+        assertEquals(
+            listOf(HomeRowKind.CONTINUE_WATCHING, HomeRowKind.RECOMMENDED, HomeRowKind.RECENTLY_RATED),
+            handle().rows.map { it.kind },
+        )
+
+        whenever(discover.fetch(any(), any(), any())).thenReturn(DiscoverError.NotConfigured.left())
+        assertTrue(handle().rows.none { it.kind == HomeRowKind.RECOMMENDED }, "no TMDB key")
     }
 
     @Test
@@ -140,12 +160,12 @@ class GetHomeDashboardHandlerTest {
     @Test
     fun `a failing TMDB feed only drops its own row`() {
         feed(DiscoverFeed.TRENDING_MOVIES, tmdb(10, "Wicked: For Good"))
-        feed(DiscoverFeed.POPULAR_TV, tmdb(14, "Stranger Things", MediaType.tvshow))
+        feed(DiscoverFeed.TRENDING_TV, tmdb(14, "Stranger Things", MediaType.tvshow))
         whenever(discover.fetch(eq(DiscoverFeed.NOW_PLAYING), any(), any())).thenReturn(DiscoverError.Unavailable.left())
 
         val dashboard = handle()
 
-        assertEquals(listOf(HomeRowKind.TRENDING_MOVIES, HomeRowKind.POPULAR_TV), dashboard.rows.map { it.kind })
+        assertEquals(listOf(HomeRowKind.TRENDING_MOVIES, HomeRowKind.TRENDING_TV), dashboard.rows.map { it.kind })
         assertEquals(DiscoverState.OK, dashboard.discover)
     }
 
@@ -245,13 +265,15 @@ class GetHomeDashboardHandlerTest {
             val first = realHandler.handle(GetHomeDashboard(me, Lang.en))
             val second = realHandler.handle(GetHomeDashboard(me, Lang.en))
 
-            assertEquals(DiscoverFeed.entries.size, tmdb.requests.size) // one call per feed, then none
+            // One call per Home feed, then none (Classics and Popular TV moved to Discover on 2026-11-23).
+            assertEquals(HomeRowKind.entries.count { it.feed != null }, tmdb.requests.size)
+            assertEquals(4, tmdb.requests.size)
             assertEquals(first.rows.map { it.kind }, second.rows.map { it.kind })
             assertEquals(
                 "The Hunger Games: Sunrise on the Reaping",
                 second.rows.single { it.kind == HomeRowKind.TRENDING_MOVIES }.titles.single().title,
             )
-            assertEquals(5, second.rows.size)
+            assertEquals(4, second.rows.size)
         }
     }
 }
