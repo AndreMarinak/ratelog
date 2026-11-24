@@ -17,9 +17,6 @@ import org.ratelog.customlist.saved.set.SetListSavedController
 import org.ratelog.customlist.saved.set.SetListSavedHandler
 import org.ratelog.customlist.saved.web.ListSavedModelAdvice
 import org.ratelog.customlist.saved.web.ListSavedView
-import org.ratelog.customlist.saved.web.SavedListsHomeInterceptor
-import org.ratelog.home.dashboard.HomeDashboardView
-import org.ratelog.home.dashboard.HomeRowView
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.http.HttpStatus
@@ -30,7 +27,7 @@ import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
 import java.util.Locale
 
-/** The Save toggle's endpoints (form + fetch), the list page state, the home row and the API. */
+/** The Save toggle's endpoints (form + fetch), the list page state and the API. */
 class SavedListsWebTest {
 
     private val f = OfficialListsFixture()
@@ -109,62 +106,6 @@ class SavedListsWebTest {
         advice.addListSaved(f.andre, afi.id!!.value, model)
         assertEquals("/list/${afi.id!!.value}/saved", (model["listSaved"] as ListSavedView).href)
         assertTrue((model["listSaved"] as ListSavedView).saved)
-    }
-
-    // --- Home "Your lists" ---
-
-    private fun card(name: String) = ListCardView("/list/1", name, 3, true, null, listOf(null, null, null, null))
-
-    private fun home(vararg rows: HomeRowView, welcome: Boolean = false) = HomeDashboardView(rows.toList(), welcome, false, false)
-
-    private fun listsRow(vararg names: String) = HomeRowView("row-your-lists", "home.row.your.lists", "/lists", "home.row.see.all", true, emptyList(), names.map(::card))
-
-    private fun titlesRow() = HomeRowView("row-trending-movies", "home.row.trending.movies", null, "home.row.more", false, emptyList(), emptyList())
-
-    @Test
-    fun `saved lists go after your own in the Your lists row, without toggles`() {
-        val saved = card("AFI 100").copy(isOfficial = true, seenCount = 1, saved = true)
-
-        val result = SavedListsHomeInterceptor.withSaved(home(titlesRow(), listsRow("Mine")), listOf(saved))
-
-        assertEquals(listOf("Mine", "AFI 100"), result.rows[1].lists.map { it.name })
-        assertNull(result.rows[1].lists[1].saved, "home cards are a plain shelf")
-        assertTrue(result.rows[1].lists[1].isOfficial)
-    }
-
-    @Test
-    fun `without lists of your own the row is added at the end, and the welcome note goes`() {
-        val result = SavedListsHomeInterceptor.withSaved(home(titlesRow(), welcome = true), listOf(card("AFI 100")))
-
-        assertEquals(2, result.rows.size)
-        assertEquals(SavedListsHomeInterceptor.ROW_ID, result.rows[1].id)
-        assertEquals("/lists", result.rows[1].moreHref)
-        assertFalse(result.showWelcome)
-    }
-
-    @Test
-    fun `the row keeps its limit`() {
-        val own = (1..19).map { "Mine $it" }.toTypedArray()
-        val result = SavedListsHomeInterceptor.withSaved(home(listsRow(*own)), listOf(card("A"), card("B")))
-        assertEquals(20, result.rows[0].lists.size)
-        assertEquals("A", result.rows[0].lists.last().name)
-    }
-
-    @Test
-    fun `the interceptor adds the viewer's saved lists to the home view only`() {
-        f.saved.save(f.andre.id!!, afi.id!!, 1)
-        val interceptor = SavedListsHomeInterceptor(savedHandler) { f.andre }
-        val mav = ModelAndView("search").apply { addObject("home", home(titlesRow())) }
-
-        interceptor.postHandle(MockHttpServletRequest("GET", "/"), MockHttpServletResponse(), Any(), mav)
-
-        val rows = (mav.model["home"] as HomeDashboardView).rows
-        assertEquals(listOf("AFI 100"), rows.last().lists.map { it.name })
-        assertEquals(0, rows.last().lists.single().seenCount)
-
-        val search = ModelAndView("search")
-        interceptor.postHandle(MockHttpServletRequest("GET", "/"), MockHttpServletResponse(), Any(), search)
-        assertFalse(search.model.containsKey("home"), "search results have no dashboard")
     }
 
     // --- API ---

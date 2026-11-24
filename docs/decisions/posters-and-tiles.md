@@ -166,3 +166,21 @@ the movie already" / "also the green eye is a bit bright/stands out little too m
   search grid (~105px) get a 24px "⋯" and 22px marks tucked 4px into the corners (tap areas stay 44px), and a rated title shows
   only "★ 7.0": rated already means seen, so the eye said the same thing twice and, with the score, covered three quarters of
   the poster's bottom. Lists, the watchlist and the rankings keep the larger chips; mouse devices are unchanged.
+
+### A rated poster shows only its score; Safari corner fix (2026-11-24)
+
+The user: "maybe on a tile we should show the rating and not the eye (if there's a rating) and the eye if it's watched but no
+rating, because we know we watched it if there's a rating", and "ALSO CHECK MOBILE - Discover and homepage the 3 dots ... are
+NOT at the top right".
+
+- **One mark per poster:** "★ 7.0" when you rated it, the eye when you've seen it without a rating, nothing otherwise. On every
+  poster (Home, Discover, search, lists, person pages, title-page rows), phone and mouse, at rest and on hover: a rating already
+  says you've seen it, and a rated title can't be un-seen anyway (the eye was locked). The "⋯" chooser still has its Seen row,
+  and list tick-off mode still shows its check on every poster. One rule in `tile-actions.css`
+  (`.tile-actions:has(.tile-rate.is-on) .tile-seen`); rating or un-rating in place flips it with no script, since it follows
+  the ★ chip's `is-on` class. *(Replaces "the eye when you've seen it and ★ 8.5 when you've rated it, both" above, and the
+  phones-only Home / Discover version of this rule.)*
+- **The overlay is sized with `width: 100%`, not `left: 0; right: 0`.** On iPhone (Safari / WebKit) the Home and Discover
+  overlays came out 8px narrower than the poster, so "⋯" sat 12px in from the right edge and the eye / ★ 16px up from the
+  bottom. Chrome's phone emulation drew them in the corners, which is why the earlier fix and the suite missed it (see
+  [bugs-and-issues.md](../bugs-and-issues.md#fixed)).

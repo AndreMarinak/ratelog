@@ -9,6 +9,8 @@ import org.ratelog.customlist.create.CreateListHandler
 import org.ratelog.customlist.order.numbered.ListNumberedForm
 import org.ratelog.customlist.order.numbered.NumberedField
 import org.ratelog.user.User
+import jakarta.servlet.http.HttpServletRequest
+import org.ratelog.watchlist.seen.BackPath
 import org.springframework.stereotype.Controller
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.PostMapping
@@ -34,6 +36,7 @@ class CreateListWithItemController(
         @RequestParam mediaId: Long,
         @RequestParam mediaType: String,
         redirectAttributes: RedirectAttributes,
+        request: HttpServletRequest,
     ): String {
         val list = createListHandler.handle(CreateListCommand(user.id!!, name, isPublic)).fold(
             { error ->
@@ -44,7 +47,7 @@ class CreateListWithItemController(
                         CreateListError.ListLimitExceeded -> "list.error.limit.exceeded"
                     }
                 )
-                return "redirect:/profile"
+                return "redirect:" + BackPath.resolve(null, request.getHeader("Referer"), "/lists")
             },
             { it }
         )

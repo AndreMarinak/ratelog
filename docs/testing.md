@@ -104,6 +104,14 @@ Last verification (2026-11-23, master `7addbcf`, fresh `ratelog_uitests` databas
 full runs in a row, both **247/247** (home 58, seen 50, tilerate 54, title 21, recs 25, backnav 39), no retries, nothing
 skipped; each run's cleanup left the account with no ratings, statuses or `uitest` lists (the next run's snapshot read 0).
 
+## Safari (iPhone) is not covered
+
+The suite drives Chrome; its phone viewports emulate an iPhone's size, touch and user agent, not Safari's layout engine. On
+2026-11-24 a WebKit-only layout bug (the poster "⋯" 12px from the corner, see [bugs-and-issues.md](bugs-and-issues.md#fixed))
+passed every check here and reached the user's iPhone. Until the suite gets a WebKit pass, check layout changes to posters,
+sheets and sticky bars in WebKit too: Playwright's WebKit with `devices['iPhone 13']` measures the same boxes (log in from Node
+and hand WebKit the session cookie with `addCookies`: WebKit on Windows drops the app's Secure cookie over plain http).
+
 ## Add a step
 
 Suites are `tools/uitest/suites/<name>.js` modules: `{ name, description, setup(env), reset(env, data), run(t) }`. Inside

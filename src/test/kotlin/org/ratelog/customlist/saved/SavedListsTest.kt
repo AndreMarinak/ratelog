@@ -179,10 +179,10 @@ class SavedListsTest {
         assertTrue(movies.id != null)
     }
 
-    // --- "Your lists": own lists, then saved ones with badge, progress and toggle ---
+    // --- "My lists": only the lists you made (2026-11-24); saved ones lead the Official row instead ---
 
     @Test
-    fun `My lists shows your lists, then the saved ones with progress`() {
+    fun `My lists shows only your own lists, saved official lists lead the Official row with your progress`() {
         val (a, b) = fourOfficial()
         f.list(f.andre, "Mine", createdAt = 500)
         val first = f.reload(a)!!.items.first()
@@ -192,15 +192,13 @@ class SavedListsTest {
 
         val cards = myCards()
 
-        assertEquals(listOf("Mine", "B", "A"), cards.map { it.name })
+        assertEquals(listOf("Mine"), cards.map { it.name })
         assertNull(cards[0].saved, "your own list has no Save toggle")
-        assertTrue(cards[1].isOfficial && cards[1].saved == true)
-        assertEquals(1, cards[2].seenCount, "your progress, as on other cards")
-        assertNull(cards[2].ownerUsername, "official cards never show the owner")
+        assertEquals(listOf("B", "A"), officialRowNames().take(2))
     }
 
     @Test
-    fun `an admin's own saved official list is not listed twice`() {
+    fun `an admin's own saved official list is listed once, as their own`() {
         val (a) = fourOfficial()
         save(a, user = f.admin)
 

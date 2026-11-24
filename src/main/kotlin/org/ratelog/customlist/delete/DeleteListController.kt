@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
+/**
+ * Fork (user, 2026-11-24: "deleting a list takes me to the community page?"): a deleted list sends you to the Lists tab
+ * (where your lists are) with "List deleted.", not to your profile, whose activity feed looks like Community.
+ */
 @Controller
 class DeleteListController(
     private val handler: DeleteListHandler
@@ -26,9 +30,14 @@ class DeleteListController(
                     is DeleteListError.NotOwner -> "list.error.not.owner"
                 }
                 redirectAttributes.addFlashAttribute("error", message)
-                "redirect:/profile/" + user.id.value
+                "redirect:$LISTS"
             },
-            { "redirect:/profile/" + user.id.value }
+            {
+                redirectAttributes.addFlashAttribute("success", "list.deleted")
+                "redirect:$LISTS"
+            }
         )
     }
 }
+
+private const val LISTS = "/lists"

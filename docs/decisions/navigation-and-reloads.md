@@ -121,7 +121,21 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Ratings filters (genre, score type, name; a count select until the ranking scroll) | page load on Search | in place, **URL replaced** (`ratings-filters.js`, 2026-11-23): a dropdown applies on change, the name after a 450 ms pause or Enter; ✕ clears one filter; the new ranking starts at its first page. Pushed an entry per filter until the same day's "one Back leaves the page" change |
 | Ratings ranking: the next 30 as you scroll, "Show more" | — (a count select, page load) | appends in place (`ranking-scroll.js`, 2026-11-23), **URL replaced** with the loaded count (`?limit=60`); no JS = the link loads the same view with one more page |
 | To rate view All / Movies / TV tabs | page load (pushed) | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
-| Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
+| Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes. Deleting a list lands on the Lists tab with "List deleted." (2026-11-24; it went to your profile); a list name that isn't allowed goes back to the page you were on |
 | Person page department / All, Movies, TV / Newest, Most popular / Show all | — | in place, **URL replaced** (`view-swap.js`, 2026-11-24) |
 | Search Year box | — | **page load** like the Any / Movies / TV select (a new result set) |
 | Title page back link ("← Discover", "› Toy Story 3") | — | **navigation**: `history.back()` when that page is the previous entry, else a page load of its URL with the scroll put back (`back-nav.js`) |
+
+### Where actions land (audit 2026-11-24)
+
+The user: "deleting a list takes me to the community page? check what actions take you to other pages that shouldn't". Every
+`redirect:` in the controllers and every form in the templates was checked:
+
+- **Delete list** went to `/profile/{you}`. Your profile is your activity feed, which looks like Community. It now goes to
+  `/lists`, where your lists are, with "List deleted." (`DeleteListController`).
+- **New list errors** (an empty name, or the list limit) went to your profile from the Lists tab and from a title page's "Create
+  & add". They now go back to the page the form was on (the Referer through `BackPath`, else `/lists`).
+- **Everything else lands where it should:** quick actions (watchlist, seen, ratings, follow, save, membership, suggestions)
+  save in place or come back to their page through `back` / the Referer; edit list, remove from list, official, mark all seen,
+  reorder go back to the list; settings, language, tokens and admin forms stay on their page; the Letterboxd import (a profile
+  modal) returns to the profile; creating a list opens the new list (from a title page's sheet it stays in place with JS).

@@ -4,6 +4,10 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **An admin can "Save" their own official list, and it doesn't stick on screen** (found 2026-11-24): the toggle is offered
+  on every official card, the save is stored and the toast says "first in Official lists now", but pages leave out your own
+  saved lists (`GetSavedListsHandler(includeOwn = false)`), so after a reload the card reads "Save" again and keeps its usual
+  place. Admins only (only they own official lists). Fix: no Save toggle on your own lists, or count your own saves on pages.
 - **A Watching show with rated seasons, moved to To watch from its title page, counts as seen** (rewatch, 2026-11-24): adding
   to the watchlist replaces Watching / Dropped (as before), and a show with rated seasons and no status is seen by the old
   rule for shows rated before statuses existed, so it shows as a Rewatch. Rare (the poster bookmark doesn't touch Watching
@@ -81,6 +85,17 @@ Problems found while building and running the fork: what happened, the cause, an
   answers with the saved order (then it catches up) or the page reloads.
 
 ## Fixed
+
+- **"⋯" not in the corner on iPhone, eye / ★ too high** (user, 2026-11-24: "the 3 dots ... are NOT at the top right" on Home
+  and Discover, after the 2026-11-23 fix): Safari (WebKit) sizes an absolutely positioned box with `left: 0; right: 0`, an
+  `aspect-ratio` and padding 8px too narrow (90px on a 98px poster), so the overlay holding "⋯" and the marks was smaller than
+  the poster: "⋯" 12px from the right edge, the marks 16px from the bottom. Chrome (and its phone emulation, which every check
+  used) draws it correctly. Found with Playwright's WebKit on an emulated iPhone 13; fixed by `width: 100%` in `.tile-actions`
+  (the Ratings cards, positioned from the right, reset it to `auto`). Lists and the watchlist were fine: their overlay has a
+  fixed height, no aspect-ratio.
+- **Deleting a list went to your profile** (user, 2026-11-24: "deleting a list takes me to the community page?"): it now goes
+  to the Lists tab with "List deleted."; new-list errors go back to the page you were on, not the profile. See
+  [navigation-and-reloads.md](decisions/navigation-and-reloads.md#where-actions-land-audit-2026-11-24).
 
 - **"Rate it?" after Seen on a movie page reloaded the page** (left from the movie in-place rating fix, fixed 2026-11-24): the
   prompt's form in `fragments/title-actions.html` had no `data-inplace`; it now swaps `#your-rating, .title-panel` like the Rate

@@ -2,7 +2,6 @@ package org.ratelog.customlist.browse
 
 import org.ratelog.annotations.CurrentUser
 import org.ratelog.customlist.official.web.OfficialListsRowView
-import org.ratelog.customlist.official.web.toOfficialCard
 import org.ratelog.customlist.progress.GetListProgressHandler
 import org.ratelog.user.User
 import org.springframework.stereotype.Controller
@@ -34,12 +33,9 @@ class ListsPageController(
             "officialLists",
             OfficialListsRowView.of(page.official, seen, id = "official-lists", saved = savedIds, baseOrder = page.officialBaseOrder),
         )
-        // Your own lists, then the official lists you saved (badge, progress and toggle, like their Official card).
-        model.addAttribute(
-            "myLists",
-            page.mine.map { it.toCard(showOwner = false, seenCount = seen[it.id]) } +
-                page.saved.map { it.toOfficialCard(seen[it.id] ?: 0, saved = true) },
-        )
+        // Your own lists only. Fork (user, 2026-11-24: "if I pin an official list I don't think it needs to show up under
+        // my lists, it being pinned under official lists is fine"): saved official lists lead the Official row above.
+        model.addAttribute("myLists", page.mine.map { it.toCard(showOwner = false, seenCount = seen[it.id]) })
         model.addAttribute("followedLists", page.followed.map { it.toCard(showOwner = true, seenCount = seen[it.id]) })
         model.addAttribute("otherLists", page.others.map { it.toCard(showOwner = true, seenCount = seen[it.id]) })
         model.addAttribute("moreHref", "/lists?limit=${page.limit + GetListsPageHandler.PAGE_SIZE}#more-lists".takeIf { page.hasMoreOthers })

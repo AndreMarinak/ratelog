@@ -159,6 +159,12 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 
 ## Fixes and housekeeping done
 
+- [x] **iPhone poster corners, one mark per poster, cast photos link, list delete lands on Lists, saved lists out of My lists**
+  (asked 2026-11-24): the "⋯" sat 12px in from the corner in Safari only (overlay `width: 100%` now); a rated poster shows only
+  "★ 7.0", the eye only when seen and unrated; the whole cast entry opens the person page; deleting a list goes to `/lists`
+  ("List deleted.") instead of your profile; saved official lists stay in the Official rows only. No migration, no API change.
+  Details in [decisions/posters-and-tiles.md](decisions/posters-and-tiles.md#a-rated-poster-shows-only-its-score-safari-corner-fix-2026-11-24)
+  and [decisions/navigation-and-reloads.md](decisions/navigation-and-reloads.md#where-actions-land-audit-2026-11-24).
 - [x] **Movie ratings save in place** (asked 2026-11-24, "also does editing the rating when clicked on movie cause a refresh?"): the movie page's Rate modal
   (quick / detailed, create / edit) and the delete confirmation no longer reload the page; toast, "Your rating" and the action
   panel update in place, like the TV seasons. No migration, no API change.

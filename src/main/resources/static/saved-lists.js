@@ -1,7 +1,7 @@
 // Fork: saved lists (2026-11-24). The Save toggle on official list cards and list pages saves in place: a POST to
 // /list/{id}/saved with `X-Requested-With: fetch` answers JSON, then every toggle of that list on the page flips, a card
-// moves to the front of its Official section (saved) or back to its place (un-saved), and the Lists tab's "My lists"
-// section is refreshed from the page so the saved card shows there with its progress. Without JS (or on any error before
+// moves to the front of its Official section (saved) or back to its place (un-saved). (Saved lists stay out of "My lists"
+// since 2026-11-24, so nothing else on the page changes.) Without JS (or on any error before
 // the save) the form posts normally and the page comes back with a flash message. Markup in fragments/saved-lists.html.
 (function () {
   if (window.__ratelogSavedLists || !window.fetch) return;
@@ -26,7 +26,6 @@
     toastTimer = setTimeout(() => toast.classList.remove('visible'), 3200);
   }
 
-  const refreshIcons = () => { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); };
 
   function setState(form, data) {
     form.classList.toggle('is-saved', data.saved);
@@ -62,16 +61,6 @@
       // A row scrolls sideways: bring the front back into view so the move is seen.
       if (saved && container.scrollLeft > 0 && container.scrollTo) container.scrollTo({ left: 0, behavior: 'smooth' });
     });
-  }
-
-  // The Lists tab's "My lists": swapped in from a fresh copy of the page (cards, empty state and progress stay right).
-  async function refreshMine() {
-    const mine = document.querySelector('[data-saved-mine]');
-    if (!mine || !mine.id || !window.DOMParser) return;
-    const response = await fetch(window.location.href, { credentials: 'same-origin', headers: { Accept: 'text/html' } });
-    if (!response.ok) return;
-    const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').getElementById(mine.id);
-    if (fresh) { mine.replaceWith(document.importNode(fresh, true)); refreshIcons(); }
   }
 
   document.addEventListener('submit', async (event) => {
@@ -111,6 +100,5 @@
     forms.forEach((f) => setState(f, data));
     if (key) reorder(key, data.saved);
     showToast(data.message, false);
-    try { await refreshMine(); } catch (e) { /* the section catches up on the next visit */ }
   });
 })();

@@ -66,10 +66,9 @@ and said *"I'll tell you if I like it"*, so every rule sits in one small, easy-t
   `SavedFirst.order`, applied after Discover's Movies / TV filter, so that filter still decides which lists are in the row.
   Saving from a card moves it to the front in place (a short accent glow; a row scrolled sideways scrolls back to the start);
   un-saving puts it back at its place in the usual order (`data-base-order`).
-- **"Your lists" includes them.** The Lists tab's My lists shows your own lists, then your saved official lists (newest save
-  first) with the Official badge, your "3/10 seen" and the toggle. The home "Your lists" row adds them after your own (badge
-  and progress, no toggle), still at most 20, and adds the row when you have no lists of your own
-  (`SavedListsHomeInterceptor`, so the home slice is untouched). An admin's own official list is never listed twice.
+- ~~**"Your lists" includes them.**~~ *(Superseded 2026-11-24, below: saved lists stay out of My lists and the home row.)*
+  The Lists tab's My lists showed your own lists, then your saved official lists, and the home "Your lists" row added them
+  after your own (`SavedListsHomeInterceptor`, removed).
 - **Title page: "Official lists" chips** under the scores (both layouts): every public official list that has the title,
   not just saved ones, as "#12 in IMDb Top 250" on a numbered list and just the name on a plain one, each a link to the list.
   Order (`OfficialTitleListsOrder`): saved first (accent chips with a check, newest save first), then numbered lists by the
@@ -91,3 +90,11 @@ and said *"I'll tell you if I like it"*, so every rule sits in one small, easy-t
 - **API:** `PUT` / `DELETE /api/v1/lists/{id}/saved`, `GET /api/v1/lists/saved`, `saved` on official lists and `officialLists`
   on title details ([api.md](../api.md#saved-lists)). The JSON home (`GET /api/v1/home`) is unchanged: its `your_lists` row is
   still only your own lists.
+
+### Saved lists stay in Official lists only (2026-11-24)
+
+The user: "if I pin an official list I don't think it needs to show up under my lists, it being pinned under official lists is
+fine". My lists (Lists tab) and the home "Your lists" row show only lists you made. A saved list leads the Official lists row
+on the Lists tab, on Discover and on `/lists/official` (unchanged), with your progress and the Saved toggle; the title page
+chips and the add-to-list sheet's "Also in your saved lists" line are unchanged too. An admin's own official list is in My
+lists because they made it. `saved-lists.js` no longer refreshes My lists after a save (nothing there changes).

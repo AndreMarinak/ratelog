@@ -5,7 +5,7 @@
    Watching / Dropped badge). Bottom right, where your score badge used to be: Add to list, the Seen eye, then ★ /
    "★ 8.5"; that badge is hidden wherever the ★ is shown.
    Fork (tile menu, 2026-11-23, "these buttons cover a lot of the tiles"): at rest a poster shows only two quiet
-   marks, the eye when you've seen it and "★ 8.5" when you've rated it.
+   marks: "★ 8.5" when you've rated it, else the eye when you've seen it (2026-11-24: never both).
    - Mouse (hover: hover): the four buttons appear while the tile is hovered or has keyboard focus.
    - Touch (hover: none): the four buttons never show; one "⋯" button top right opens the chooser (styles at the end
      of this file). Tapping a mark opens the chooser too. */
@@ -24,11 +24,15 @@
   --tile-act-size: 28px;
 }
 
+/* Fork (user, 2026-11-24: "the 3 dots are NOT at the top right" on Home / Discover, on an iPhone): the overlay takes the
+   poster's width from `width: 100%`, not `left: 0; right: 0`. Safari sizes an absolutely positioned box with both insets
+   and an aspect-ratio 8px too narrow when it has padding (90px on a 98px poster), which put the "⋯" 12px in from the edge
+   and the eye / ★ 16px up from the bottom; Chrome got it right, so the Chrome-only checks missed it. */
 .tile-actions {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  width: 100%;
   z-index: 3;
   aspect-ratio: 2 / 3;
   box-sizing: border-box;
@@ -522,6 +526,7 @@ body:has(.list-tick-bar) .tile-toast {
     left: auto;
     right: 14px;
     bottom: 12px;
+    width: auto;
     aspect-ratio: auto;
     flex-direction: row;
     align-items: center;
@@ -788,8 +793,8 @@ button.tile-menu-item {
 /* Fork (user, 2026-11-23: "on the lists it looks perfect but homepage and discover not so much", then "the 3 dots and even the
    eye and rating look off"): on phones the row posters on Home and Discover (~98px wide) and the Discover / search grid
    (~105px) are too narrow for the list-size chips: the "⋯" read as sitting left of the corner and the eye + score covered
-   three quarters of the poster's bottom (its title art). There: smaller chips tucked 4px into the corners, and a rated title
-   shows only "★ 7.0" (rated already means seen, so the eye was saying the same thing twice). Tap areas stay 44px. Lists,
+   three quarters of the poster's bottom (its title art). There: smaller chips tucked 4px into the corners. (A rated title
+   showing only "★ 7.0" started here and now applies to every poster, below.) Tap areas stay 44px. Lists,
    the watchlist and the rankings keep the larger chips (the user: those look right). Mouse devices are unchanged. */
 @media (hover: none) {
   :is(.home-tile-wrap, .browse-tile) .tile-actions {
@@ -821,8 +826,12 @@ button.tile-menu-item {
     font-size: 0.75rem;
     padding: 0 6px 0 5px;
   }
+}
 
-  :is(.home-tile-wrap, .browse-tile) .tile-actions:has(.tile-rate.is-on) .tile-seen {
-    display: none;
-  }
+/* Fork (user, 2026-11-24: "show the rating and not the eye if there's a rating, and the eye if it's watched but not
+   rated, because we know we watched it if there's a rating"): on every poster, phone and mouse, at rest and on hover, a
+   rated title shows only "★ 7.0". The eye is for seen-but-unrated. (A rated title can't be un-seen anyway; the "⋯"
+   chooser still lists Seen, and list tick-off mode's `display: block !important` still shows its check.) */
+.tile-actions:has(.tile-rate.is-on) .tile-seen {
+  display: none;
 }

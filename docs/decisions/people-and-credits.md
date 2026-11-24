@@ -99,3 +99,11 @@ with it. Code: `org.ratelog.person` (`TmdbPersonClient`, `Person.kt`, `Filmograp
 - **Person links are on** (2026-11-24, merged together with person pages): `ratelog.features.people` is `true` in
   `application.yml`, so cast and crew names on title pages link to `/person/{id}`; `RATELOG_FEATURES_PEOPLE=false` hides the
   links again without a code change.
+
+### Cast photos open the person page (2026-11-24)
+
+The user: "should be able to click their picture to be taken to their [page]". The whole cast entry (photo, name and
+character) opens the person page, on the desktop Cast card and the phone cast row: the name's link is stretched over the entry
+(`::after`, `title-credits.css`), so there is still one link per person for screen readers and the keyboard, with the focus
+ring around the whole entry. Hovering an entry underlines the name and rings the photo in the accent colour. Names in the
+Directed by / Written by lines were links already.
