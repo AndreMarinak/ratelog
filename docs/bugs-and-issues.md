@@ -4,6 +4,10 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **"Rate it?" after Seen on a movie page still reloads the page** (left from the movie in-place rating fix, 2026-11-24): the
+  prompt's form in `fragments/title-actions.html` has no `data-inplace` (that file was being edited on another branch). Fix:
+  add `data-inplace="#your-rating, .title-panel"` to `.title-nudge-form` and change the `seen` suite's nudge step from a
+  navigation to the in-place wait.
 - **The "Add N unseen to watchlist" count in a list's "⋯" menu can lag behind a poster tap** (compact header, 2026-11-23):
   ticking a poster Seen or Watchlist in place updates the progress line and the tab counts (`list-tick.js`) but not N, until
   the next tab / Sort switch or reload. Pre-existing (the old orange button had the same count); harmless because the server
@@ -83,6 +87,13 @@ Problems found while building and running the fork: what happened, the cause, an
   Discover, Ratings, Lists, Community and search results at 1440 and 390; `#seasons` and Tab focus still land below the header.
   The Ratings name filter and Community user search only scroll to bring an off-screen box into view (normal browser behaviour).
 
+- **Saving or deleting a movie rating reloaded the whole title page** (user, 2026-11-24: "also does editing the rating when clicked on movie cause a refresh?"): the
+  Rate modal (quick and detailed, create and edit) and the delete confirmation were plain posts that redirected back to
+  `/movie/{id}`. Both now save in place like the TV seasons (`data-inplace="#your-rating, .title-panel"`): toast, "Your
+  rating" and the action panel are swapped in. The unrated page renders an empty `hidden` `#your-rating` stand-in so the card
+  has a region to land in (inplace.js reloads when a region's count differs). Without JS still a post and redirect. Covered by
+  `MovieRatingTemplatesTest` and the `title` browser suite (create, edit quick, edit detailed, delete, `?rate=edit`, each
+  with the page marker surviving).
 - **"Recommended for you" never loaded after switching Discover between Movies and TV in place** (found in the browser check
   while building the row, 2026-11-23, never shipped): the row's placeholder carried `<noscript><style>...is-pending { display:
   none }</style></noscript>`. `view-swap.js` parses the new view with `DOMParser`, which runs without scripting, so the

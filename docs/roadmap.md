@@ -121,6 +121,9 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 
 ## Fixes and housekeeping done
 
+- [x] **Movie ratings save in place** (asked 2026-11-24, "also does editing the rating when clicked on movie cause a refresh?"): the movie page's Rate modal
+  (quick / detailed, create / edit) and the delete confirmation no longer reload the page; toast, "Your rating" and the action
+  panel update in place, like the TV seasons. No migration, no API change.
 - [x] **Watchlist opens on Movies; Discover's Official lists follow Movies / TV** (requested 2026-11-23, "watchlist tab should
   default to movies like everything else"; TV mode shows "only lists with TV"): `/watchlist` lands on Movies with a Movies | TV
   switch (no All; a bare Watching link opens on TV), and Discover's Official lists row only shows lists with a movie (Movies) or
