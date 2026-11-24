@@ -125,7 +125,18 @@ async function makeContext(browser, opts) {
     async navClick(selectorOrHandle, p = page) {
       const h = typeof selectorOrHandle === 'string' ? await p.$(selectorOrHandle) : selectorOrHandle;
       t.assert(h, `missing ${selectorOrHandle}`);
+      // Pages save their scroll position with history.replaceState as a link is clicked, which puppeteer also reports as a
+      // navigation. Done once the URL changed or a new document replaced this one (the per-click token is gone), e.g. a
+      // form post that redirects back to the same URL.
+      const start = p.url();
+      const token = `nav${Math.random()}`;
+      await p.evaluate((v) => { window.__navClick = v; }, token).catch(() => {});
+      const sameDoc = () => p.evaluate((v) => window.__navClick === v, token).catch(() => false);
+      const deadline = Date.now() + 90000;
       await Promise.all([p.waitForNavigation({ waitUntil: 'networkidle2', timeout: 90000 }), h.click()]);
+      while (p.url() === start && (await sameDoc()) && Date.now() < deadline) {
+        await p.waitForNavigation({ waitUntil: 'networkidle2', timeout: Math.min(15000, deadline - Date.now()) }).catch(() => {});
+      }
     },
 
     /** Tap on touch viewports, a real mouse click otherwise (hover first makes hover-only controls appear). */
@@ -167,9 +178,10 @@ async function makeContext(browser, opts) {
           break;
         } catch (e) {
           error = e;
-          const timeout = e && (e.name === 'TimeoutError' || /Waiting failed|timeout|exceeded/i.test(e.message || ''));
-          if (attempt === 1 && timeout && stepOpts.retry !== false) {
-            retried = `retried after timeout: ${String(e.message).split('\n')[0]}`;
+          // A busy laptop shows up as timeouts, or as a navigation landing while a check was reading the old page.
+          const flaky = e && (e.name === 'TimeoutError' || /Waiting failed|timeout|exceeded|Execution context was destroyed|detached Frame/i.test(e.message || ''));
+          if (attempt === 1 && flaky && stepOpts.retry !== false) {
+            retried = `retried after: ${String(e.message).split('\n')[0]}`;
             problems.length = before;
             continue;
           }

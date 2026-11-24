@@ -71,13 +71,27 @@ Every suite must pass on a fresh database, on a database full of leftover data, 
 | `home` | home rows, poster sharpness, row scroll, bookmark in place, header search (`/`), Discover rows / grid / load more / `/browse` redirect, title page actions + rate modal, add / remove from a list in place, official list mark / Lists tab / Discover row / unmark, Lists tab, list page back link + progress + tabs in place, phone bottom nav + menu sheet, nav links, Ratings tab switch + filters, tags hidden | two lists (Toy Story rated, Inside Out + WALL-E unseen; one public for the official step) |
 | `seen` | Upcoming badge (home, search, title page, list), home / Discover / search tiles Seen + Watchlist in place, Lion King's four actions, Seen -> "Rate it?" -> Skip, Watchlist replacing Seen, quick rating from the nudge + locked Seen, Rate / Add to list sheets, follow bell (upcoming movie, returning vs ended show), TV Watching / Seen, /watchlist Remove + Undo, Seen / Watching move tiles, list tick-off mode across tab swaps | watchlist (Up, Dune: Part Two, The Bear, The Last of Us, the upcoming movie), show statuses, two lists |
 | `tilerate` | tile star picker (sheet on phones), every copy updates, tiles fit their actions, Coming soon tiles have no star, add to list from a tile, edit / delete a quick rating from search, detailed rating -> title page edit modal, `?rate=detailed`, TV tile score links to seasons, Discover grid, watchlist rows + rating from the star, list page rate in place + progress, tick-off "Rate it?" prompt moving, ranking cards, To rate view, no-JS star link | Matrix 8.5, Interstellar 9, Heat detailed, Toy Story + Inception seen unrated, The Bear S1 8, watchlist titles, a 10-title list and a one-title list |
+| `title` | trailer thumbnail size on a movie and a show (fills the column on desktop, HD image or fallback; compact on phones), trailer modal, Delete rating in the movie editor (confirmation, API says gone, create mode has no delete), Delete rating for a TV season, 404 pages instead of a JSON 500 | The Incredibles rated 7.5, Breaking Bad season 1 rated 9 |
+| `recs` | series row and More like this: skeleton in the first HTML, lazy rows, order and current tile, poster sizes, Seen on a series tile and the page Seen button move the progress (desktop), bookmark in place + Seen hides it next visit (desktop), no series row for a film outside a collection, the upcoming movie's series entry, TV rows after the seasons, phone rows scroll inside | the Toy Story films unseen |
+| `backnav` | back link on title pages: Home for a direct open, Discover grid (URL + scroll restored), Discover row -> related -> related with the previous-title step, reload keeps it, browser Back restores the row, Search results, a list's name (tab + scroll kept), each page's own label, pending state from a title, no-JS Referer link, long names on one line | a 20-title Disney list with six titles unseen |
 
-Not ported yet from the old scratchpad scripts (still to do; each needs its own seeding first): trailer / Delete rating / 404 checks, `recs`, `backnav`, `inlists` (the add-to-list
+Not ported yet from the old scratchpad scripts (still to do; each needs its own seeding first): `inlists` (the add-to-list
 sheet in depth: ranks, rapid taps, cancel, many lists), `listorder` (sort menu, reorder by drag / arrows / number, numbered vs
 plain lists, non-owner view), `listsuggest` (Suggested for this list row: + Add, More suggestions, Not interested, official
 lists of other users), `smallfixes` (Ratings filters applying in place, the page loader, hidden official lists seen by a second
 user) and `secfix` (security headers / rate-limit / lockout checks). Several of them need a second user account, which the runner
 does not create yet.
+
+## Status (2026-11-23)
+
+- Verified against master `fa3e842` on a fresh database (port 8125): `home`, `seen`, `tilerate` 162 steps at desktop / 390 / 360
+  (one 360px tick-off failure, fixed and re-run clean); `title`, `recs`, `backnav` at desktop and 390 (all pass; not yet run at 360).
+  Two full back-to-back runs and a run against the long-lived 8110 app are still to do.
+- Master `561d98c` (smoothnav + tilemenu) changed poster buttons (a "⋯" chooser on touch, hover-only with a mouse) and made filters
+  use `replaceState`. Steps that tap poster buttons will need updating: `seen` (home / Discover / search tile Seen + Watchlist),
+  `tilerate` (tile star picker, tile add to list, watchlist / list / To rate stars), `home` (bookmark; clicked by script, may still
+  work) and `recs` (series tile Seen, More like this bookmark; clicked by script). The list-tab Back checks in `home` and `backnav`
+  assume tab switches push a history entry.
 
 ## Add a step
 
@@ -90,7 +104,7 @@ Suites are `tools/uitest/suites/<name>.js` modules: `{ name, description, setup(
 - `t.toast(text?)`, `t.noOverflow()`, `t.shot(name, fullPage?)`, `t.assert(cond, msg)`
 - `t.api.must(method, path, body)` / `t.api.call(...)` (the run's token), `t.data` (what `setup` returned, plus `prefix`), `t.mobile`, `t.vp`
 
-Rules: wait on events (`waitFor`, `waitForNavigation`), not fixed sleeps; the laptop is often busy. A step that times out is
-retried once and the report says so; pass `{ retry: false }` when a step can't be repeated safely. If the step needs data, seed it
+Rules: wait on events (`waitFor`, `waitForNavigation`), not fixed sleeps; the laptop is often busy. A step that times out (or
+reads a page that a navigation just replaced) is retried once and the report says so; pass `{ retry: false }` when a step can't be repeated safely. If the step needs data, seed it
 in `reset()` (or at the start of the step) through the API, by the ids or names you created. Register a new suite name in
 `ORDER` in `run.js`.

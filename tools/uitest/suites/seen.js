@@ -300,8 +300,10 @@ module.exports = {
     });
 
     // ---------- Watchlist page ----------
-    const itemByTitle = (name) => page.evaluateHandle((n) => [...document.querySelectorAll('.watchlist-item')]
-      .find((i) => (i.querySelector('h3')?.innerText || '').trim().startsWith(n)), name);
+    // A watchlist tile by its title id (its tile actions carry data-key="movie:14160"), so a database with "Upgrade" or
+    // another "Up..." title on the watchlist can't confuse it.
+    const itemByKey = (key, title) => page.evaluateHandle((k, n) => document.querySelector(`.watchlist-item [data-key="${k}"]`)?.closest('.watchlist-item')
+      || [...document.querySelectorAll('.watchlist-item')].find((i) => i.querySelector('h3 > span')?.textContent.trim() === n), key, title);
     const count = (status) => page.$eval(`.watchlist-tabs [data-status="${status}"] .status-count`, (e) => Number(e.innerText));
 
     await t.step('watchlist: Remove in place with Undo, counts move', async () => {
@@ -314,7 +316,7 @@ module.exports = {
       assert(removeVisible, 'a tile without a visible Remove');
       await t.shot('watchlist');
       const token = await t.mark();
-      const upItem = await itemByTitle(titles.up);
+      const upItem = await itemByKey(`movie:${M.up}`, titles.up);
       assert(await upItem.evaluate((i) => !!i), `${titles.up} not on the watchlist`);
       await t.press(await upItem.$('.watchlist-act.is-remove'));
       await t.waitFor(() => document.querySelector('.watchlist-toast.visible'));
@@ -337,13 +339,13 @@ module.exports = {
       const token = await t.mark();
       const seen0 = await count('watched');
       const watching0 = await count('watching');
-      const dune = await itemByTitle(titles.dune2);
+      const dune = await itemByKey(`movie:${M.dune2}`, titles.dune2);
       assert(await dune.evaluate((i) => !!i), `${titles.dune2} not on the watchlist`);
       await t.press(await dune.$('.watchlist-act.is-seen'));
       await t.waitFor(() => /seen/i.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
       assert(await dune.evaluate((i) => i.hidden), `${titles.dune2} still on To watch`);
       assert((await count('watched')) === seen0 + 1, 'Seen count did not move');
-      const tlou = await itemByTitle(titles.tlou);
+      const tlou = await itemByKey(`tv:${TV.tlou}`, titles.tlou);
       assert(await tlou.evaluate((i) => !!i), `${titles.tlou} not on the watchlist`);
       await t.press(await tlou.$('.watchlist-act.is-watching'));
       await t.waitFor(() => /Watching/.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
