@@ -10,8 +10,20 @@ body {
   overflow-x: clip;
 }
 
-html {
-  scroll-padding-top: 88px;
+/*
+ * Keep jump targets and keyboard focus clear of the sticky header (88px). Fork fix (user, 2026-11-24: "as I type in search bar
+ * it scrolls me up"): this used to be `html { scroll-padding-top: 88px }`, but Chrome then treats the search box INSIDE the
+ * sticky header as hidden under that padding and scrolls up ~64px on every keystroke (the box moves with the page, so it never
+ * "arrives"). A scroll margin on the targets themselves gives the same offset for anchors (#seasons, #rank-pos-31…) and for
+ * Tab focus, and the header's own controls opt out. `:where()` keeps specificity at zero so feature rules still win.
+ */
+:where(:target, [id], a, button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin-top: 88px;
+}
+
+.site-header,
+.site-header * {
+  scroll-margin-top: 0;
 }
 
 .site-header {

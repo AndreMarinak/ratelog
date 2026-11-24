@@ -74,6 +74,15 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Typing in the header search scrolled the page up** (user, laptop, 2026-11-24: "as I type in search bar it scrolls me up,
+  check all the search bars"): every keystroke moved the page up ~64px on every page, laptop and phone. Cause:
+  `html { scroll-padding-top: 88px }` (meant to keep anchor jumps clear of the sticky header) made Chrome treat the search box
+  inside that sticky header as hidden under the padding, so it scrolled to reveal it on each keystroke; the box moves with the
+  page, so it never got there. Fix: the 88px offset is now a zero-specificity `scroll-margin-top` on jump/focus targets
+  (`:target`, `[id]`, links, buttons, inputs…) with the header's own controls at 0 (`nav.css`). Checked: no jump on Home,
+  Discover, Ratings, Lists, Community and search results at 1440 and 390; `#seasons` and Tab focus still land below the header.
+  The Ratings name filter and Community user search only scroll to bring an off-screen box into view (normal browser behaviour).
+
 - **"Recommended for you" never loaded after switching Discover between Movies and TV in place** (found in the browser check
   while building the row, 2026-11-23, never shipped): the row's placeholder carried `<noscript><style>...is-pending { display:
   none }</style></noscript>`. `view-swap.js` parses the new view with `DOMParser`, which runs without scripting, so the
