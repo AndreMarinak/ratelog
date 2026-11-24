@@ -47,6 +47,8 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
     /**
      * Ranked by score, or by one category when `ratingCategory` is set. Quick ratings have no
      * categories, so they are left out of a category ranking (they still rank by overall score).
+     * Fork (ranking scroll): ties rank by rating id (the earlier rating first) so pages of `limit` from `offset`
+     * never repeat or skip a title; the Ratings tab loads 30 at a time as you scroll.
      */
     @Query(
         """
@@ -61,7 +63,7 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
                            WHEN 'soundtrack' THEN r.soundtrack
                            WHEN 'screenplay' THEN r.screenplay
                            ELSE r.score
-                       END DESC NULLS LAST
+                       END DESC NULLS LAST, r.id
                    ) AS rank
             FROM movie_ratings r
             WHERE r.user_id = :userId
@@ -82,8 +84,8 @@ interface RatingDAO : CrudRepository<RatingEntity, Long> {
           AND (:tagId IS NULL OR EXISTS (SELECT 1 FROM tag_assignments ta INNER JOIN tags tg ON tg.id = ta.tag_id
                WHERE ta.tag_id = :tagId AND tg.user_id = :userId AND ta.media_type = 'movie' AND ta.media_id = m.id))
         ORDER BY ranked.rank
-        LIMIT :limit
+        LIMIT :limit OFFSET :offset
         """
     )
-    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?, tagId: Long?): List<RatedMovieRow>
+    fun findRankedRows(userId: Long, genreId: String?, name: String?, limit: Int, ratingCategory: String?, tagId: Long?, offset: Int): List<RatedMovieRow>
 }

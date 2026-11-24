@@ -48,7 +48,8 @@
   }
 }
 
-/* Phones: the ranking filters in two rows (genre | score type, then name | count | search) instead of four. */
+/* Phones: the ranking filters in two rows (genre | score type, then name | search) instead of four. (The count select
+   is gone since the ranking loads as you scroll, 2026-11-23.) */
 @media (max-width: 720px) {
   .ratings-switch ~ .grid form.filter {
     display: grid;
@@ -62,9 +63,8 @@
       min-width: 0;
     }
 
-    > select#limit,
     > button {
-      grid-column: span 1;
+      grid-column: span 2;
       width: 100%;
     }
 
@@ -168,8 +168,7 @@
   transition: opacity 0.15s ease 0.12s;
 }
 
-/* Phones, live: still two rows, genre | score type, then name | count. Flex instead of the no-JS grid's quarter
-   columns: the count gets a fixed 96px so "100" and its ✕ fit at 360px (a quarter is ~76px), the name takes the rest. */
+/* Phones, live: still two rows, genre | score type, then the name across (no count select since 2026-11-23). */
 @media (max-width: 720px) {
   .ratings-switch ~ .grid form.filter.is-live {
     display: flex;
@@ -179,13 +178,65 @@
     > .filter-field {
       flex: 1 1 calc(50% - 4px);
     }
-
-    > .filter-field[data-filter="limit"] {
-      flex: 0 0 96px;
-
-      > select {
-        padding-left: 14px;
-      }
-    }
   }
+}
+
+/* Ranking scroll (2026-11-23, templates/fragments/ranking-scroll.html, ranking-scroll.js): the footer under the ranking.
+   "Show more" stays visible as the fallback (it reads "Loading…" while the next 30 come in as you scroll); after the
+   last title a quiet "That's all 45". */
+.ratings-switch ~ .grid .ranking-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 8px;
+}
+
+.ratings-switch ~ .grid .ranking-more-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 180px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  transition: border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &[aria-busy="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.ratings-switch ~ .grid .ranking-end,
+.ratings-switch ~ .grid .ranking-more-error {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+/* The no-JS "Show more" opens at the first new card (#rank-pos-31): leave a little room above it. */
+.ratings-switch ~ .grid .rank-item {
+  scroll-margin-top: 16px;
 }

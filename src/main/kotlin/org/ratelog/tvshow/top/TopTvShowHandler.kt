@@ -21,6 +21,8 @@ data class TopTvShow(
     val name: String?,
     val lang: Lang,
     val tagId: Tag.Id? = null,
+    /** Fork (ranking scroll): ranked titles to skip, for the next page as you scroll. */
+    val offset: Int = 0,
 )
 
 data class TopTvShowItem(
@@ -42,7 +44,7 @@ class TopTvShowHandler(
      */
     @Transactional
     fun handle(query: TopTvShow): List<TopTvShowItem> =
-        tvRatingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, RatingCategory.parse(query.ratingCategory)?.name, query.tagId)
+        tvRatingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, RatingCategory.parse(query.ratingCategory)?.name, query.tagId, query.offset)
             .mapNotNull { toItem(it, query.lang) }
 
     private fun toItem(item: Pair<Rank, TvRating>, lang: Lang) =

@@ -7,7 +7,9 @@
 //   replaced (history.replaceState, keeping the entry's state such as back-nav.js's id), so it still describes the
 //   view for reload and sharing, but filters add no history entries: one Back leaves Ratings (user feedback
 //   2026-11-23: "the back button thing is REAL annoying on the phone"). Rule: filters replace, navigation pushes.
-// - The URL only carries filters that are set (no "?category=&name=&limit=10").
+// - The URL only carries filters that are set (no "?category=&name="). A changed filter shows the new ranking from its
+//   first page: the `limit` that ranking-scroll.js puts in the URL after loading more pages is dropped.
+// - `ratings:swapped` (on document) tells ranking-scroll.js to watch the new ranking's footer.
 // - Progressive enhancement: without JS the form and its Search button work as before; with JS the button is hidden
 //   (.is-live) and any failed fetch falls back to loading the URL.
 (function () {
@@ -16,7 +18,8 @@
   const FORM = '.ratings-switch ~ .grid form.filter';
   const DEBOUNCE_MS = 450;
   // What the server uses when a parameter is missing; a control at its default is "not set" (no ✕, not in the URL).
-  const DEFAULTS = { limit: '10' };
+  // (The count select is gone since the ranking loads as you scroll, fork 2026-11-23; kept for any future control.)
+  const DEFAULTS = {};
 
   const form = document.querySelector(FORM);
   if (!form) return;
@@ -108,6 +111,7 @@
 
       replaceUrl(url);
       if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+      document.dispatchEvent(new CustomEvent('ratings:swapped', { detail: { url } }));
     } catch (err) {
       if (err && err.name === 'AbortError') return;
       if (mine !== seq) return;

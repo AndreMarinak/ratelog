@@ -97,6 +97,10 @@ accounts and roles `V1130–1139`.
   Follow buttons on Community and profiles are labelled: "+ Follow" / "✓ Following" (reads "Unfollow" on hover; touch screens
   ask before unfollowing), same size in every state, in place, and they post the state they show (`POST /user/follow/set`).
   User search is case-insensitive. Admins are listed like everyone else. No migration, no API change.
+- [x] **28. Ratings load as you scroll** (requested 2026-11-23, "can we just have it load more as u scroll?"): the Movies and TV
+  rankings show 30, then the next 30 as you near the end (ranks continue, filters apply to every page, "That's all 45" at the
+  end), with a "Show more" link as the fallback (works without JS). No history entry per page; a reload or Back shows what you
+  had loaded. The count select is gone. The To rate tabs also switch in place now. No migration, no API change.
 
 ## Fixes and housekeeping done
 

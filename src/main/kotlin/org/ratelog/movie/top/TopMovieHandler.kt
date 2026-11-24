@@ -21,6 +21,8 @@ data class TopMovie(
     val name: String?,
     val lang: Lang,
     val tagId: Tag.Id? = null,
+    /** Fork (ranking scroll): ranked titles to skip, for the next page as you scroll. */
+    val offset: Int = 0,
 )
 
 data class TopMovieItem(
@@ -42,7 +44,7 @@ class TopMovieHandler(
      */
     @Transactional
     fun handle(query: TopMovie): List<TopMovieItem> =
-        ratingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, RatingCategory.parse(query.ratingCategory)?.name, query.tagId)
+        ratingRepository.findRankedByUserIdWithFilters(query.userId, query.genreId, query.limit, query.name, RatingCategory.parse(query.ratingCategory)?.name, query.tagId, query.offset)
             .mapNotNull { toItem(it, query.lang) }
 
     private fun toItem(item: Pair<Rank, Rating>, lang: Lang) =

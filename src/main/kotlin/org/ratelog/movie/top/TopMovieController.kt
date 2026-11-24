@@ -1,7 +1,7 @@
 package org.ratelog.movie.top
 
 import org.ratelog.annotations.CurrentUser
-import org.ratelog.system.PageLimits
+import org.ratelog.ratings.scroll.RankingScroll
 import org.ratelog.movie.premieres.MoviePremieresHandler
 import org.ratelog.movie.premieres.MoviePremieresQuery
 import org.ratelog.tag.Tag
@@ -35,23 +35,32 @@ class TopMovieController(
         @CurrentUser user: User,
         @RequestParam("category", required = false) genreId: String?,
         @RequestParam("ratingCategory", required = false) ratingCategory: String?,
-        @RequestParam("limit", required = false, defaultValue = "10") requestedLimit: Int,
+        @RequestParam("limit", required = false) requestedLimit: Int?,
         @RequestParam("name", required = false) name: String?,
         @RequestParam("tag", required = false) tagId: Long?,
+        // Fork (ranking scroll): `offset` + `partial` answer the next page's cards only (static/ranking-scroll.js).
+        @RequestParam("offset", required = false) requestedOffset: Int?,
+        @RequestParam("partial", required = false) partial: Boolean?,
         model: Model
     ): String {
-        val limit = PageLimits.clamp(requestedLimit)
-        val tops = TopMovie(
+        val window = RankingScroll.window(requestedOffset, requestedLimit)
+        val limit = window.limit
+        val fetched = TopMovie(
             userId = user.id!!,
             genreId = genreId,
             ratingCategory = ratingCategory,
-            limit = limit,
+            limit = window.fetch,
             name = name,
             lang = user.metadataLang,
             tagId = tagId?.let(Tag::Id),
+            offset = window.offset,
         ).let(handler::handle)
+        val tops = fetched.take(limit)
 
         model.addAttribute("tops", tops.map { toResponse(it) })
+        model.addAttribute("rankingPage", RankingScroll.page("/movies", window, fetched.size,
+            listOf("category" to genreId, "tag" to tagId, "ratingCategory" to ratingCategory, "name" to name)))
+        if (partial == true) return "movies :: ranking"
         model.addAttribute("selectedCategory", genreId)
         model.addAttribute("selectedRatingCategory", ratingCategory)
         model.addAttribute("selectedLimit", limit)
