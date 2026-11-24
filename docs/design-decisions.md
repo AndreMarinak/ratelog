@@ -928,7 +928,7 @@ popup it kinda glitches real quick … I'd have to click back on year to then se
 - **"Show all services (N)"** is a `<details>` under the featured rows with the rest of the region's ~280 services in TMDB's
   priority order and a "Find a service" box (shown by `browse-bar.js`; without JS the list just opens). It opens by itself
   when it holds a ticked service. The box keeps its text when the menu comes back after a pick. The ticks are CSS (no icon per
-  row) and logos load lazily, so the long list stays cheap. On phones rows are 44px and the list is one column.
+  row) and logos load lazily, so the long list stays cheap. On phones rows are 44px, the full list is one column, and the featured rows' checkbox sits on the logo's corner so names like "Prime Video" aren't cut at 360px.
 - **Picking a decade keeps the Year menu open on its years** (the glitch: the in-place swap redrew the bar and closed the
   menu, so the "Years in the 2020s" row only showed on a second tap). Options can carry `data-keep-open` (a decade, a service):
   `view-swap.js` keeps that menu open while loading, re-opens it on the new bar, focuses the same option (`data-option`),
