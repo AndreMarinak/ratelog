@@ -19,6 +19,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 - [ ] **6. CSV export and more imports**: full export, plus imports from IMDb (ratings/watchlist CSV), Trakt, and a generic CSV format (title, year, tmdb_id, rating, status, date, tags, list).
 - [ ] **7. Smart lists**: lists that fill themselves from rules (e.g. "Sci-fi rated 8+", "Watched in 2026", tag = X).
 - [ ] **8. Stats page**: hours watched, watches per month, rating distribution, top genres and tags, streaks.
+  **Mostly covered (2026-11-23, #31):** `/stats` per year. Still open: tags, streaks (needs the diary, #5), TV hours.
 - [x] **9. External scores and trailers on title pages**: TMDB score, runtime and click-to-load trailers from TMDB; IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores via MDBList (optional `MDBLIST_API_KEY`), cached in `title_extras`. Also `GET /api/v1/titles/{type}/{tmdbId}`.
 - [x] **10. Home dashboard + Lists tab + Browse**: scrollable rows (Continue watching, Up next, Recently rated, Your lists, Trending movies/TV, In theaters, Coming soon, Popular TV; Popular TV moved to Discover in 29) with one-click watchlist bookmarks; Lists tab (`/lists`: mine, people I follow, other public lists); sticky header search (`/` shortcut) and "Ratelog" wordmark; `/browse` with the Letterboxd-style "Browse by" bar (also on the home page). API: `/api/v1/home`, `/api/v1/browse`.
 - [ ] **11. Finish the series** (home row): for movies you've watched/rated that belong to a TMDB collection (e.g. Toy Story),
@@ -108,6 +109,15 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   rankings show 30, then the next 30 as you near the end (ranks continue, filters apply to every page, "That's all 45" at the
   end), with a "Show more" link as the fallback (works without JS). No history entry per page; a reload or Back shows what you
   had loaded. The count select is gone. The To rate tabs also switch in place now. No migration, no API change.
+- [x] **31. Stats: your year in movies** (picked 2026-11-23 from the later-features list: "go with the stats"): `/stats`
+  (profile, phone menu sheet, desktop header icon) for your own ratings, with a year switcher (this year, earlier years with
+  data, All time; it switches in place and replaces the URL). Movies, TV shows (and seasons rated), ratings, average score,
+  hours watched (movies only, from the cached runtimes, looked up in the background: "based on N of M movies" until
+  complete), a 1-10 rating distribution, month by month (year by year for All time) split into movies and TV, top genres
+  with your average (plus most generous / harshest genre), release decades, your 10 highest rated as posters, and an empty
+  state. API: `GET /api/v1/stats?year=YYYY|all` ([docs/api.md](api.md#stats)). No migration. Follow-ups: other people's
+  stats, TV hours (episode counts), tags, streaks. Details in
+  [design-decisions.md](design-decisions.md#stats-your-year-in-movies-2026-11-23).
 
 ## Fixes and housekeeping done
 
