@@ -89,7 +89,11 @@ module.exports = {
       await t.waitFor((sel) => !document.querySelector(sel)?.classList.contains('is-saved'), form);
       await t.go('/lists/official');
       const order = await names('.official-grid');
-      assert(order[0] === nameB && order[1] !== nameA, `order ${order.slice(0, 3).join(' | ')}`);
+      // B is still saved (first); A is back among the rest, in their usual order, with a plain "Save".
+      assert(order[0] === nameB, `order ${order.slice(0, 3).join(' | ')}`);
+      assert((await isSaved(`.official-grid [data-list-key="/list/${a}/saved"] .list-save`)) === false, 'A still shows as saved');
+      const saved = (await t.api.must('GET', '/lists/saved')).map((l) => l.id);
+      assert(!saved.includes(a) && saved.includes(b), `API saved ${JSON.stringify(saved)}`);
       return 'back in place';
     });
   },
