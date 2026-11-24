@@ -38,6 +38,7 @@
                 <div class="stats-stat" data-stat="movies">
                     <span class="stats-stat-label" th:text="#{stats.movies}">Movies</span>
                     <strong class="stats-stat-value" th:text="${h.moviesSeen}">45</strong>
+                    <span class="stats-stat-hint" th:text="#{stats.movies.rated(${h.moviesRated})}">44 rated</span>
                 </div>
                 <div class="stats-stat" data-stat="shows">
                     <span class="stats-stat-label" th:text="#{stats.shows}">TV shows</span>

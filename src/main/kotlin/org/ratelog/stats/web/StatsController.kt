@@ -48,6 +48,7 @@ data class StatsYearLink(val label: String?, val labelKey: String?, val href: St
 
 data class StatsHeadline(
     val moviesSeen: Int,
+    val moviesRated: Int,
     val showsSeen: Int,
     val seasonsRated: Int,
     val ratings: Int,
@@ -176,6 +177,7 @@ class StatsController(
             val t = stats.totals
             val headline = StatsHeadline(
                 moviesSeen = t.moviesSeen,
+                moviesRated = t.moviesRated,
                 showsSeen = t.showsSeen,
                 seasonsRated = t.seasonsRated,
                 ratings = t.ratings,

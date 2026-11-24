@@ -42,6 +42,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | DELETE | `/api/v1/lists/{id}/items/{type}/{tmdbId}` | | `204` |
 | GET | `/api/v1/lists/{id}/suggestions` | optional `limit`, `skip` | titles that fit your list, best first (see [List suggestions](#list-suggestions)). Your own lists only |
 | GET | `/api/v1/recommendations` | optional `type` (`movie`, `tv`, `all`), `limit` | "Recommended for you" from your ratings (see [Recommended for you](#recommended-for-you)) |
+| GET | `/api/v1/stats` | optional `year` (`2025`, `all`; default this year) | your stats, the numbers of the Stats page (see [Stats](#stats)) |
 
 **Item**: `{"tmdbId": 949, "type": "movie"}` or `{"title": "Heat", "year": 1995, "type": "movie"}`. Unknown extra fields are ignored.
 Optional `"tags": ["heist", "comfort watch"]` adds those tags to the title (see [Tags](#tags)), whether it was just added or already in the list.
@@ -565,4 +566,59 @@ How the list is made:
 ```bash
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/recommendations"
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/recommendations?type=tv&limit=40"
+```
+
+## Stats
+
+`GET /api/v1/stats?year=YYYY|all`: the numbers of the Stats page (`/stats`) for the token's own user, with the same rules.
+No `year`: this year. Years are calendar years in the server's time zone (`timeZone`); a rating at 23:30 on Dec 31 counts
+in that year.
+
+What counts (a period is a year, or everything with `all`):
+
+- **A movie** counts when you rated it in the period, or, unrated, when you marked it Watched in the period. It counts once,
+  at its rating's time.
+- **A show** counts when you rated seasons in the period: its score is the average of those seasons (the TV rule, limited to
+  the period; with `all` it is the show's usual score) and it counts at its last rated season. A show with no rated season
+  counts through its whole-show score, when you gave it in the period (a whole-show score is unused while any season is
+  rated, so then it never counts). Unrated, a show counts when you marked it Watched in the period.
+- `ratings` = movie ratings + season ratings + whole-show ratings (those in use) in the period. `averageScore` is over the
+  rated titles (a show once, with its period score). `distribution` buckets those scores to the nearest point (7.5 counts as
+  8; under 1.5 counts as 1).
+- `hours` are movies only: TV episode counts aren't stored. Runtimes come from the cached title details; movies whose runtime
+  isn't cached yet are looked up in the background (`pending`), so ask again a minute later for the full total.
+- `genres` (most titles first): a title counts in each of its TMDB genres; movie and TV genres are separate ids (e.g. 878
+  Science Fiction, 10765 Sci-Fi & Fantasy). `generousGenre` / `harshestGenre`: highest and lowest average among genres with
+  at least 3 rated titles (both `null` unless two such genres differ). `decades` by release year, oldest first.
+- `top`: your 10 highest rated titles of the period (score, then the most recent first).
+
+```json
+{
+  "year": "2026",
+  "years": [2026, 2025],
+  "timeZone": "America/New_York",
+  "totals": {"moviesSeen": 27, "moviesRated": 26, "showsSeen": 4, "showsRated": 3, "seasonsRated": 3, "ratings": 30, "averageScore": 8.39},
+  "hours": {"hours": 61.5, "minutes": 3690, "moviesWithRuntime": 27, "pending": 0, "includesTv": false},
+  "distribution": [{"score": 1, "count": 0}, "...", {"score": 10, "count": 4}],
+  "timeline": [{"month": 1, "year": null, "movies": 2, "shows": 0, "total": 2}, "..."],
+  "genres": [{"id": 18, "name": "Drama", "count": 14, "rated": 14, "averageScore": 8.65}, "..."],
+  "decades": [{"decade": 1960, "count": 1, "rated": 1, "averageScore": 8.0}, "..."],
+  "generousGenre": {"id": 80, "name": "Crime", "count": 9, "rated": 8, "averageScore": 9.06},
+  "harshestGenre": {"id": 27, "name": "Horror", "count": 5, "rated": 5, "averageScore": 7.5},
+  "top": [{"tmdbId": 278, "type": "movie", "title": "The Shawshank Redemption", "year": 1994,
+           "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/278", "score": 10.0,
+           "ratedAt": "2026-04-23T00:00:00Z"}, "..."]
+}
+```
+
+- `timeline` has the 12 months of the year (`month`), or with `all` every year from the first to the last with data
+  (`year`, empty years included).
+- `years` lists the years that have something, newest first (the page's year switcher adds this year and "All time").
+- A year with nothing: `200` with zeros, `averageScore: null`, empty `genres` / `decades` / `top`.
+- Only your own stats; there is no way to read another user's (a possible follow-up).
+- Errors: `invalid_year` (400: not `all` or a year from 1900 to this year).
+
+```bash
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/stats"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/stats?year=all"
 ```
