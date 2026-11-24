@@ -19,6 +19,11 @@ class RateLimitBackoff(private val clock: Clock) {
 
     fun isBlocked(): Boolean = blockedUntil() != null
 
+    /** Lifts any pause, e.g. after the admin saved a new key (a rejected key pauses calls for an hour). */
+    fun clear() {
+        blockedUntil.set(null)
+    }
+
     /** Blocks for the time the headers ask (never shortening an existing block) and returns the resume instant. */
     fun block(retryAfter: String?, rateLimitReset: String?, fallback: Duration = DEFAULT_BLOCK): Instant {
         val now = clock.instant()

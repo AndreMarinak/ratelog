@@ -784,3 +784,26 @@ button.tile-menu-item {
 .tile-menu-item[data-menu-act="rate"].is-on .tile-menu-icon {
   color: var(--rate-star);
 }
+
+/* Fork (user, 2026-11-23: "on the lists it looks perfect but homepage and discover not so much"): the row posters on Home and
+   Discover are ~98px wide, so a 30px "⋯" with the 6px inset read as sitting left of the corner. There: a 26px chip tucked 4px
+   from the corner (the eye / score marks follow), tap area still 44px. Lists, the grid and the watchlist keep the larger chip. */
+@media (hover: none) {
+  .home-tile-wrap .tile-actions {
+    padding: 4px;
+  }
+
+  .home-tile-wrap .tile-menu-btn {
+    width: 26px;
+    height: 26px;
+
+    &::before {
+      inset: -9px;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}

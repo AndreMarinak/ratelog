@@ -306,7 +306,7 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 ```
 
 - `runtimeMinutes` is set for movies, `episodeRuntimeMinutes` + `numberOfSeasons` for shows.
-- `externalScores` is `null` when the server has no `MDBLIST_API_KEY`, MDBList has nothing for the title, or it is
+- `externalScores` is `null` when no MDBList key is set (Admin → Configuration, or the `MDBLIST_API_KEY` variable), MDBList has nothing for the title, or it is
   rate limited; any single score inside it can be `null` too. Rotten Tomatoes and Metacritic are 0-100, IMDb 0-10, Letterboxd 0-5.
 - `userRating` is `null` when you haven't rated the title. For shows, `score` is the average of your season ratings and
   `seasons` lists them: `[{season, score, reviewTitle, reviewText}]`.

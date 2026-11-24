@@ -14,7 +14,7 @@ import org.ratelog.user.listusers.ListUsersHandler
 import org.springframework.ui.ExtendedModelMap
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
 
-/** Fork: the admin page never sends stored secrets to the browser, and its form only sets the TMDB key. */
+/** Fork: the admin page never sends stored secrets to the browser, and its forms only set the TMDB and MDBList keys. */
 class ConfigurationControllerTest {
 
     private val configs = InMemoryGeneralConfigRepository()
@@ -36,7 +36,7 @@ class ConfigurationControllerTest {
 
         assertEquals(true, model["tmdbApiKeyConfigured"])
         assertEquals("…cdef", model["tmdbApiKeyHint"])
-        val everything = model.values.joinToString(" ") { it.toString() }
+        val everything = model.values.joinToString(" ") { "$it" }
         assertFalse(everything.contains(tmdbKey))
         assertFalse(everything.contains("remember-secret-value"))
     }
@@ -79,6 +79,33 @@ class ConfigurationControllerTest {
 
         assertEquals("config.general.error.invalid.key", flash.flashAttributes["error"])
         assertEquals("original", configs.findByKey(ConfigKey.REMEMBER_ME_KEY)!!.value)
+    }
+
+    @Test
+    fun `the MDBList key is pasted the same way and only its last 4 characters come back`() {
+        val mdbKey = "abcdefghijklmnopqrstuvwx1234"
+        val flash = RedirectAttributesModelMap()
+
+        controller.updateGeneral(admin, "mdblist_api_key", " $mdbKey ", flash)
+
+        assertEquals("config.general.success.saved", flash.flashAttributes["success"])
+        assertEquals(mdbKey, configs.findByKey(ConfigKey.MDBLIST_API_KEY)!!.value)
+        val model = page()
+        assertEquals(true, model["mdblistApiKeyConfigured"])
+        assertEquals("…1234", model["mdblistApiKeyHint"])
+        assertEquals(false, model["mdblistApiKeyFromEnv"])
+        assertFalse(model.values.joinToString(" ") { "$it" }.contains(mdbKey))
+    }
+
+    @Test
+    fun `a key that only comes from the environment is mentioned but never shown`() {
+        val envKey = "env-mdblist-key-value-9999"
+        val withEnv = ConfigurationController(ListUsersHandler(users), GetGeneralConfigHandler(configs), UpdateGeneralConfigHandler(configs), envKey)
+        val model = ExtendedModelMap().also { withEnv.dashboard(admin, it, RedirectAttributesModelMap()) }
+
+        assertEquals(false, model["mdblistApiKeyConfigured"])
+        assertEquals(true, model["mdblistApiKeyFromEnv"])
+        assertFalse(model.values.joinToString(" ") { "$it" }.contains(envKey))
     }
 
     @Test

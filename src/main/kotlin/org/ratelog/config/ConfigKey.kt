@@ -6,7 +6,10 @@ import org.ratelog.ParseError
 
 enum class ConfigKey(val value: String) {
     REMEMBER_ME_KEY("remember_me_key"),
-    TMDB_API_KEY("tmdb_api_key");
+    TMDB_API_KEY("tmdb_api_key"),
+
+    /** Fork (2026-11-23): MDBList key for IMDb / RT / Metacritic / Letterboxd scores, pasted on the admin page like the TMDB key. */
+    MDBLIST_API_KEY("mdblist_api_key");
 
     fun allowsBlankValue(): Boolean = when (this) {
         TMDB_API_KEY -> true

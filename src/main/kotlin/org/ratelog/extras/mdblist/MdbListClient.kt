@@ -16,7 +16,7 @@ import java.time.Duration
 import java.time.Instant
 
 sealed interface MdbListError {
-    /** `MDBLIST_API_KEY` is not set: scores are simply not shown. */
+    /** No key saved on the admin page and no `MDBLIST_API_KEY`: scores are simply not shown. */
     data object NotConfigured : MdbListError
     data class RateLimited(val until: Instant) : MdbListError
     data object NotFound : MdbListError
@@ -25,17 +25,29 @@ sealed interface MdbListError {
 
 /**
  * IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores by TMDB id from MDBList
- * (`GET https://api.mdblist.com/tmdb/{movie|show}/{id}?apikey=...`). The key comes from `MDBLIST_API_KEY`.
+ * (`GET https://api.mdblist.com/tmdb/{movie|show}/{id}?apikey=...`). The key comes from [MdbListKeySource]: the one pasted on
+ * Admin → Configuration, else `MDBLIST_API_KEY`. It is read on every call, so a newly saved key works without a restart.
  */
 @Component
 class MdbListClient(
-    @Value("\${MDBLIST_API_KEY:}") apiKey: String,
+    private val keySource: MdbListKeySource,
     @Value("\${ratelog.mdblist.base-url:https://api.mdblist.com}") baseUrl: String = "https://api.mdblist.com",
     clock: Clock = Clock.systemUTC(),
 ) {
     private val logger = LoggerFactory.getLogger(MdbListClient::class.java)
-    private val apiKey = apiKey.trim()
     private val backoff = RateLimitBackoff(clock)
+
+    /** The key the current pause (if any) was earned with; a different key lifts it. */
+    @Volatile private var lastKey: String? = null
+
+    private fun currentKey(): String {
+        val key = keySource.current().trim()
+        if (key != lastKey) {
+            if (lastKey != null) backoff.clear()
+            lastKey = key
+        }
+        return key
+    }
 
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(baseUrl)
@@ -50,13 +62,14 @@ class MdbListClient(
         )
         .build()
 
-    fun isConfigured(): Boolean = apiKey.isNotEmpty()
+    fun isConfigured(): Boolean = currentKey().isNotEmpty()
 
     /** True while a 429 (or a rejected key) has paused all MDBList calls. */
     fun isPaused(): Boolean = backoff.isBlocked()
 
     fun fetch(type: MediaType, tmdbId: TmdbId): Either<MdbListError, ExternalScores> {
-        if (!isConfigured()) return MdbListError.NotConfigured.left()
+        val apiKey = currentKey()
+        if (apiKey.isEmpty()) return MdbListError.NotConfigured.left()
         backoff.blockedUntil()?.let { return MdbListError.RateLimited(it).left() }
 
         val mdbType = when (type) {
