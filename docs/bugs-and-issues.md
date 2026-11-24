@@ -4,6 +4,10 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **On touch screens the poster's "⋯" needs JS** (poster chooser, 2026-11-23): without JS it is a plain button that does
+  nothing, and the four controls it stands for stay hidden; the title page still has every action. Showing the four until the
+  script runs would flash them on every page load. A Watching / Dropped status and "on your watchlist" are no longer visible on
+  posters at rest (by design: only Seen and your score are), only on hover or in the chooser's header and rows.
 - **Without JS, the phone title page's "Play trailer" pill overlaps a "Watch the trailer on YouTube" link** (seen in the
   back-link no-JS check at 360px, 2026-11-23): the no-JS fallback link of the trailer is drawn over the pill. Cosmetic and
   only without JS; pre-existing (`fragments/title-info.html` / `title-info.css`).
@@ -79,6 +83,20 @@ Problems found while building and running the fork: what happened, the cause, an
   before leaving the page. They now replace the URL (keeping back-nav.js's state); Discover, the list Sort menu and the watchlist
   tabs switch in place too instead of loading a page. Housekeeping in the same change: `browse.js` still had a grid bookmark
   handler for `form.browse-bookmark`, which no template renders since the poster quick actions (`tile-actions.js`); removed.
+- **Poster buttons kept their hover look after a tap on phones** (found building the poster chooser, 2026-11-23): touch
+  browsers keep `:hover` on the last element tapped, so a tapped bookmark / eye / ★ stayed enlarged and recoloured, and the
+  new "⋯" turned orange-on-orange (dots invisible) while its chooser was open. Hover styles on poster buttons now only apply
+  under `@media (hover: hover)`.
+- **Tapping the dimmed page around the phone rating picker opened the poster under it** (tile rating, found in the poster
+  chooser's browser check at 360px, 2026-11-23): `tile-rate.js` closed the picker on `pointerdown`, which hid the backdrop
+  before the tap's `click`, so the click landed on whatever poster was underneath and opened that title. The backdrop now
+  closes the picker on its own click (the chooser's backdrop works the same way).
+- **The rating picker and the tile list sheet gave the focus back to a hidden button** (2026-11-23): on touch screens the ★ and
+  list buttons are now hidden (the chooser opens them), and `focus()` on a hidden element does nothing, so the focus was lost.
+  On touch screens `tile-rate.js` now returns it to the poster's "⋯" (the button the chooser was opened from), and points
+  the picker at "⋯" while the ★ is hidden. A score tapped on a phone doesn't always take the focus either, so a focus left on
+  nothing is also given back.
+
 - **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
   visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").
   `/fonts/**` is now public like the stylesheets.

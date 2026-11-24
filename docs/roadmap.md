@@ -97,6 +97,10 @@ accounts and roles `V1130–1139`.
 
 - [x] **24. "All seen" in list tick-off mode** (requested 2026-11-23): one tap (after a confirmation) marks every unseen,
   released title in the list as seen, with the same rules as the poster eye. No migration.
+- [x] **25. Poster actions that don't cover the poster** (requested 2026-11-23, "these buttons cover a lot of the tiles"): at
+  rest a poster only shows the Seen eye (when seen) and "★ 8.5" (when rated), small, bottom right. Phones and tablets get one
+  "⋯" button per poster that opens a chooser (Watchlist, Seen, Rate, Add to list; a bottom sheet on phones); with a mouse the
+  four quick buttons appear on hover / keyboard focus. The Seen green is a quiet sage everywhere. No server change.
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.

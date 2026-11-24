@@ -196,7 +196,7 @@
   gap: 12px;
   width: min(560px, calc(100vw - 32px));
   padding: 10px 10px 10px 16px;
-  border: 1px solid hsl(138 40% 60% / 0.45);
+  border: 1px solid hsl(140 16% 70% / 0.45);
   border-radius: 14px;
   background: var(--surface-strong);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
@@ -206,7 +206,7 @@
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    color: hsl(138 40% 60%);
+    color: hsl(140 16% 70%);
   }
 }
 
