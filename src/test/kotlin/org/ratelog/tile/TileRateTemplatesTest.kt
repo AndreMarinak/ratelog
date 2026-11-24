@@ -206,14 +206,17 @@ class TileRateTemplatesTest {
     }
 
     @Test
-    fun `the chooser template - four rows and every label the page script fills in`() {
+    fun `the chooser template - five rows and every label the page script fills in`() {
         val html = render("fragments/tile-rate", setOf("assets"), emptyMap())
 
         assertTrue(html.contains("<template id=\"tileMenu\""), html)
-        listOf("watchlist", "seen", "rate", "lists").forEach { act ->
+        // Fork (2026-11-24, rewatch log): "Watched again" (rewatch) before Seen, shown on seen titles only.
+        listOf("watchlist", "rewatch", "seen", "rate", "lists").forEach { act ->
             assertEquals(1, Regex("""data-menu-act="$act"""").findAll(html).count(), act)
         }
-        assertEquals(4, Regex("""<button type="button" class="tile-menu-item"""").findAll(html).count())
+        assertEquals(5, Regex("""<button type="button" class="tile-menu-item"""").findAll(html).count())
+        assertTrue(html.contains("data-label-rewatch=\"Watched again\""))
+        assertTrue(html.contains("data-label-seen-unmark=\"Mark as not seen\""))
         assertTrue(html.contains("role=\"dialog\" data-menu-pop hidden"))
         assertTrue(html.contains("data-label-aria=\"Actions for {0}\""), "filled in by tile-actions.js")
         assertTrue(html.contains("data-label-watch-add=\"Add to watchlist\""))
