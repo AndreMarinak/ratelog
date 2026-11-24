@@ -1,0 +1,111 @@
+/* Fork: People in search (templates/fragments/search-people.html): round photos above the title results.
+   One row; on phones it scrolls sideways. */
+
+.search-people {
+  margin: 4px 0 26px;
+}
+
+.search-people-title {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+}
+
+.search-people-list {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    flex: 0 0 auto;
+    width: 132px;
+  }
+}
+
+.search-person {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: 12px;
+  color: var(--text);
+  text-align: center;
+  text-decoration: none;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--surface-muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.search-person-photo {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  box-shadow: var(--shadow-soft);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+  }
+}
+
+.search-person-initial {
+  color: var(--text-soft);
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.search-person-name {
+  max-width: 100%;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.search-person-known {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+@media (max-width: 600px) {
+  .search-people-list {
+    gap: 6px;
+    margin: 0 -16px;
+    padding: 0 16px 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    li {
+      width: 108px;
+    }
+  }
+
+  .search-person-photo {
+    width: 72px;
+    height: 72px;
+  }
+}

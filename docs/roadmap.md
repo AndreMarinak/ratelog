@@ -149,6 +149,13 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   and phone: a "Directed by · Written by" line, a sideways cast row and a collapsed "More details". Names link to person pages
   only behind `ratelog.features.people` (off until those pages exist). API: `credits` on `GET /api/v1/titles/{type}/{tmdbId}`.
   Details in [design-decisions.md](design-decisions.md#credits-on-title-pages-director-writers-cast-age-rating-tagline-2026-11-24).
+- [x] **36. People: person pages and People in search** (asked 2026-11-24: "am I able to click on a name like tom hanks and
+  see his movies by search"): `/person/{id}` with photo, known for, dates, a short bio (More), and the filmography as poster
+  tiles with quick actions: department tabs (Acting, Directing, ...), All / Movies / TV, Newest / Most popular, applied in
+  place. Search shows a People row above the titles (Any type), and a Year box next to Any / Movies / TV. One cached TMDB
+  request per person. API: `GET /api/v1/people/{id}`, `people=true` on `GET /api/v1/search`
+  ([docs/api.md](api.md#people)). No migration. Title-page credits link here when `ratelog.features.people` is on. Details in
+  [design-decisions.md](design-decisions.md#people-person-pages-and-people-in-search-2026-11-24).
 
 ## Fixes and housekeeping done
 

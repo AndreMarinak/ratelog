@@ -65,6 +65,14 @@ class BackNavPagesTest {
     }
 
     @Test
+    fun `person pages take part in the back links like a title`() {
+        assertTrue(BackNavPages.isTitle("/person/31"))
+        assertFalse(BackNavPages.isTitle("/person/31/credits"))
+        val link = BackNavPages.titleLink("http://localhost/person/31", "localhost", me, names, "Forrest Gump")
+        assertTrue(link.pending)
+    }
+
+    @Test
     fun `a list is named after itself only when the viewer can open it`() {
         assertEquals(BackNavLabel.list("Best Disney Movies"), BackNavPages.label("/list/7", null, me, names))
         assertEquals(BackNavLabel.list("Marisol's 2010s"), BackNavPages.label("/list/8", "show=unseen", me, names))

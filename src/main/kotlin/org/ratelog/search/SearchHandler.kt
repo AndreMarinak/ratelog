@@ -14,6 +14,8 @@ data class SearchQuery(
     val lang: Lang,
     val mediaType: MediaType?,
     val page: Int = 1,
+    /** Fork (2026-11-24): only titles released (movies) / first aired (TV) in this year; null = any year. */
+    val year: Int? = null,
 )
 
 data class SearchResult(
@@ -42,18 +44,18 @@ class SearchHandler(
 
         when (query.mediaType) {
             MediaType.movie -> {
-                val movies = searchMovies(query.query, query.lang, query.page).bind()
+                val movies = searchMovies(query.query, query.lang, query.page, query.year).bind()
                 val items = movies.first.take(PAGE_SIZE)
                 SearchResult(items, movies.first.size > PAGE_SIZE || movies.second > query.page)
             }
             MediaType.tvshow -> {
-                val shows = searchTvShows(query.query, query.lang, query.page).bind()
+                val shows = searchTvShows(query.query, query.lang, query.page, query.year).bind()
                 val items = shows.first.take(PAGE_SIZE)
                 SearchResult(items, shows.first.size > PAGE_SIZE || shows.second > query.page)
             }
             null -> {
-                val movies = searchMovies(query.query, query.lang, query.page).bind()
-                val shows = searchTvShows(query.query, query.lang, query.page).bind()
+                val movies = searchMovies(query.query, query.lang, query.page, query.year).bind()
+                val shows = searchTvShows(query.query, query.lang, query.page, query.year).bind()
                 val interleaved = interleave(movies.first, shows.first)
                 val items = interleaved.take(PAGE_SIZE)
                 SearchResult(items, interleaved.size > PAGE_SIZE || movies.second > query.page || shows.second > query.page)
@@ -75,9 +77,9 @@ class SearchHandler(
         return result
     }
 
-    private fun searchMovies(query: String, lang: Lang, page: Int): Either<SearchHandlerError, Pair<List<SearchResultItem>, Int>> =
+    private fun searchMovies(query: String, lang: Lang, page: Int, year: Int?): Either<SearchHandlerError, Pair<List<SearchResultItem>, Int>> =
         either {
-            val (movies, totalPages) = tmdbClient.searchMovies(query, lang, page).bind()
+            val (movies, totalPages) = (if (year == null) tmdbClient.searchMovies(query, lang, page) else tmdbClient.searchMovies(query, lang, page, year)).bind()
             val items = movies.map {
                 SearchResultItem(
                     tmdbId = it.id,
@@ -92,9 +94,9 @@ class SearchHandler(
             items to totalPages
         }
 
-    private fun searchTvShows(query: String, lang: Lang, page: Int): Either<SearchHandlerError, Pair<List<SearchResultItem>, Int>> =
+    private fun searchTvShows(query: String, lang: Lang, page: Int, year: Int?): Either<SearchHandlerError, Pair<List<SearchResultItem>, Int>> =
         either {
-            val (tvshows, totalPages) = tmdbClient.searchTvShows(query, lang, page).bind()
+            val (tvshows, totalPages) = (if (year == null) tmdbClient.searchTvShows(query, lang, page) else tmdbClient.searchTvShows(query, lang, page, year)).bind()
             val items = tvshows.map {
                 SearchResultItem(
                     tmdbId = it.id,

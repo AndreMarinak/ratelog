@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  Fork: People in search (org.ratelog.person.search.SearchPeopleInterceptor, static/search-people.css;
+  docs/design-decisions.md "People: person pages and People in search"). A row above the title results, on the first
+  page for Any type, when TMDB finds people worth showing (up to 6). Each links to the person page.
+
+    <section th:replace="~{fragments/search-people :: people(${searchPeople})}"></section>
+*/-->
+<section th:fragment="people(people)" th:if="${people != null and !#lists.isEmpty(people)}" class="search-people"
+         aria-labelledby="searchPeopleTitle" data-search-people>
+    <link rel="stylesheet" href="/search-people.css">
+    <h2 id="searchPeopleTitle" class="search-people-title" th:text="#{search.people.title}">People</h2>
+    <ul class="search-people-list">
+        <li th:each="person : ${people}">
+            <a th:href="${person.href}" class="search-person" th:attr="data-person-id=${person.id}">
+                <span class="search-person-photo">
+                    <img th:if="${person.photoUrl != null}" th:src="${person.photoUrl}"
+                         th:srcset="${person.photoUrl + ' 185w, ' + person.photoUrl2x + ' 632w'}" sizes="80px"
+                         alt="" loading="lazy" decoding="async">
+                    <span th:unless="${person.photoUrl != null}" class="search-person-initial" aria-hidden="true" th:text="${person.initial}">T</span>
+                </span>
+                <span class="search-person-name" th:text="${person.name}">Tom Hanks</span>
+                <span class="search-person-known"
+                      th:with="dept=${person.knownForKey != null} ? #{${person.knownForKey}} : ${person.knownForLabel}"
+                      th:text="${dept != null and person.knownFor != null} ? #{search.people.known(${dept}, ${person.knownFor})} : (${dept != null} ? ${dept} : ${person.knownFor})"
+                      th:title="${person.knownFor}">Acting · Forrest Gump, Toy Story</span>
+            </a>
+        </li>
+    </ul>
+</section>
+</body>
+</html>

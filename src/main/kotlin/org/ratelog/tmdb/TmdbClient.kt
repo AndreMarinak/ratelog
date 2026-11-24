@@ -48,7 +48,11 @@ class TmdbClient(
         )
         .build()
 
-    fun searchMovies(query: String, lang: Lang, page: Int = 1): Either<TmdbError, Pair<List<TmdbMovieResponse>, Int>> {
+    fun searchMovies(query: String, lang: Lang, page: Int = 1): Either<TmdbError, Pair<List<TmdbMovieResponse>, Int>> =
+        searchMovies(query, lang, page, year = null)
+
+    /** Fork (2026-11-24): [year] narrows the search to movies released that year (TMDB `primary_release_year`). */
+    fun searchMovies(query: String, lang: Lang, page: Int, year: Int?): Either<TmdbError, Pair<List<TmdbMovieResponse>, Int>> {
         if (query.isBlank()) return (emptyList<TmdbMovieResponse>() to 1).right()
         return either {
             requireApiKey().bind()
@@ -62,7 +66,8 @@ class TmdbClient(
                         .queryParam("include_adult", false)
                         .queryParam("page", page)
                         .queryParam("query", query)
-                        .build()
+                    if (year != null) builder.queryParam("primary_release_year", year)
+                    builder.build()
                 }
                 .retrieve()
                 .body(TmdbSearchResponse::class.java)
@@ -89,7 +94,11 @@ class TmdbClient(
         response.toDomain()
     }
 
-    fun searchTvShows(query: String, lang: Lang, page: Int = 1): Either<TmdbError, Pair<List<TmdbTvShowResponse>, Int>> {
+    fun searchTvShows(query: String, lang: Lang, page: Int = 1): Either<TmdbError, Pair<List<TmdbTvShowResponse>, Int>> =
+        searchTvShows(query, lang, page, year = null)
+
+    /** Fork (2026-11-24): [year] narrows the search to shows first aired that year (TMDB `first_air_date_year`). */
+    fun searchTvShows(query: String, lang: Lang, page: Int, year: Int?): Either<TmdbError, Pair<List<TmdbTvShowResponse>, Int>> {
         if (query.isBlank()) return (emptyList<TmdbTvShowResponse>() to 1).right()
         return either {
             requireApiKey().bind()
@@ -103,7 +112,8 @@ class TmdbClient(
                         .queryParam("include_adult", false)
                         .queryParam("page", page)
                         .queryParam("query", query)
-                        .build()
+                    if (year != null) builder.queryParam("first_air_date_year", year)
+                    builder.build()
                 }
                 .retrieve()
                 .body(TmdbTvShowSearchResponse::class.java)
