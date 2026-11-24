@@ -110,6 +110,11 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   rankings show 30, then the next 30 as you near the end (ranks continue, filters apply to every page, "That's all 45" at the
   end), with a "Show more" link as the fallback (works without JS). No history entry per page; a reload or Back shows what you
   had loaded. The count select is gone. The To rate tabs also switch in place now. No migration, no API change.
+- [x] **34. Discover: several streaming services, Year menu fixes** (requested 2026-11-24): the Service menu is multi-select
+  (`provider=8|15|1899`, OR'ed; old single-id links keep working) and opens on Netflix, Prime Video, Disney+, HBO Max, Hulu,
+  Apple TV+, Peacock and Paramount+ with logos, then "Show all services" with a search box; the chip reads "Netflix + 2".
+  The Year menu gets "This year" / "Last year" and stays open on a decade's years after picking the decade. No migration;
+  API: `providers` in `filters`. See design-decisions "Discover: several streaming services".
 - [x] **31. Stats: your year in movies** (picked 2026-11-23 from the later-features list: "go with the stats"): `/stats`
   (profile, phone menu sheet, desktop header icon) for your own ratings, with a year switcher (this year, earlier years with
   data, All time; it switches in place and replaces the URL). Movies, TV shows (and seasons rated), ratings, average score,

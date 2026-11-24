@@ -146,6 +146,18 @@ class ApiBrowseControllerTest {
     }
 
     @Test
+    fun `given several services then filters by any of them and lists them all`() {
+        serve()
+
+        val response = controller.browse(user, BrowseParams(provider = "15|8"))
+
+        assertEquals(listOf(8, 15), response.filters.providers)
+        assertEquals(8, response.filters.provider)
+        assertEquals("8|15", requests.single().params["with_watch_providers"])
+        assertEquals(null, controller.browse(user, BrowseParams()).filters.provider)
+    }
+
+    @Test
     fun `given combinations then reports what was ignored`() {
         serve()
 

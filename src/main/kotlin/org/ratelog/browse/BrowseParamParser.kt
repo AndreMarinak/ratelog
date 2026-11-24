@@ -10,6 +10,10 @@ data class BrowseParams(
     val year: String? = null,
     val minRating: String? = null,
     val genre: String? = null,
+    /**
+     * One or more TMDB watch provider ids: `8`, `8|15|337` (what the bar writes), `8,15`, or the parameter
+     * repeated (`provider=8&provider=15`, which Spring binds as `8,15`).
+     */
     val provider: String? = null,
     val language: String? = null,
     val runtime: String? = null,
@@ -36,6 +40,9 @@ data class ParsedBrowse(
 
 object BrowseParamParser {
     const val MAX_PAGE = 500
+    /** More services than anyone ticks; keeps URLs and TMDB requests bounded. */
+    const val MAX_PROVIDERS = 30
+    private val PROVIDER_SEPARATORS = Regex("[|,\\s]+")
     private const val FIRST_FILM_YEAR = 1874
     private val LANGUAGE = Regex("^[a-z]{2}$")
     private val DECADE = Regex("^(\\d{3}0)s?$")
@@ -104,9 +111,15 @@ object BrowseParamParser {
             BrowseGenres.parse(raw, type) ?: bad("genre", raw, "unknown ${BrowseFilters.typeParam(type)} genre")
         }
 
-        val provider = params.provider.clean()?.let { raw ->
-            raw.toIntOrNull()?.takeIf { it > 0 } ?: bad("provider", raw, "provider must be a TMDB watch provider id")
-        }
+        val providers = params.provider.clean()?.let { raw ->
+            val ids = raw.split(PROVIDER_SEPARATORS).filter { it.isNotEmpty() }.map { it.toIntOrNull()?.takeIf { id -> id > 0 } }
+            when {
+                ids.isEmpty() -> emptyList()
+                null in ids -> bad("provider", raw, "provider must be TMDB watch provider ids, e.g. 8 or 8|15|337")
+                ids.distinct().size > MAX_PROVIDERS -> bad("provider", raw, "provider takes at most $MAX_PROVIDERS services")
+                else -> BrowseFilters.normalizeProviders(ids.filterNotNull())
+            }
+        }.orEmpty()
 
         val language = params.language.clean()?.let { raw ->
             raw.lowercase().takeIf { LANGUAGE.matches(it) } ?: bad("language", raw, "language must be a 2-letter ISO 639-1 code")
@@ -141,7 +154,7 @@ object BrowseParamParser {
                 year = year,
                 minRating = minRating,
                 genre = genre,
-                provider = provider,
+                providers = providers,
                 language = language,
                 runtime = runtime,
                 popular = popular,

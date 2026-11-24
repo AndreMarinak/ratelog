@@ -24,6 +24,9 @@ import java.time.Clock
 import java.time.LocalDate
 import java.util.Locale
 
+/** A service the Service menu shows first under its everyday name; [ids] are all its TMDB providers (plans). */
+data class FeaturedService(val key: String, val label: String, val ids: List<Int>)
+
 /** Streaming services for the Service menu; [failed] when TMDB couldn't list them. */
 data class ProviderOptions(
     val region: WatchRegion,
@@ -122,6 +125,11 @@ class BrowseBarViews(
 
     // --- menus ---
 
+    /**
+     * Shortcuts (Any, This year, Last year, Upcoming), the decades, then the chosen decade's years. Picking a decade
+     * keeps the menu open on its years (fork, user 2026-11-24: the menu used to close on the swap, so the years
+     * were never seen).
+     */
     private fun yearMenu(f: BrowseFilters, today: LocalDate, m: Messages): BarMenu {
         val currentDecade = BrowseFilters.decadeOf(today.year).startYear
         val effective = f.effectiveDecade
@@ -130,31 +138,44 @@ class BrowseBarViews(
             is BrowseDecade.Of -> effective.startYear <= BrowseDecade.Earlier.LAST_YEAR
             null -> false
         }
-        val top = buildList {
+        fun single(year: Int) = f.copy(decade = null, year = BrowseYear.Of(year))
+        val shortcuts = buildList {
             add(BarLink(m("browse.year.any"), f.withDecade(null).href(), active = f.decade == null && f.year == null))
+            add(BarLink(m("browse.year.this"), single(today.year).href(), active = f.year == BrowseYear.Of(today.year), hint = today.year.toString(), option = "this-year"))
+            add(BarLink(m("browse.year.last"), single(today.year - 1).href(), active = f.year == BrowseYear.Of(today.year - 1), hint = (today.year - 1).toString(), option = "last-year"))
             if (f.isMovie) add(BarLink(m("browse.year.upcoming"), f.withYear(BrowseYear.Upcoming).href(), active = f.year == BrowseYear.Upcoming))
+        }
+        val decades = buildList {
             for (start in currentDecade downTo 1960 step 10) {
-                add(BarLink(decadeLabel(start), f.withDecade(BrowseDecade.Of(start)).href(), active = (effective as? BrowseDecade.Of)?.startYear == start))
+                add(
+                    BarLink(
+                        decadeLabel(start), f.withDecade(BrowseDecade.Of(start)).href(),
+                        active = (effective as? BrowseDecade.Of)?.startYear == start,
+                        keepOpen = true, option = "decade-$start",
+                    ),
+                )
             }
-            add(BarLink(m("browse.year.earlier"), f.withDecade(BrowseDecade.Earlier).href(), active = earlierActive))
+            add(BarLink(m("browse.year.earlier"), f.withDecade(BrowseDecade.Earlier).href(), active = earlierActive, keepOpen = true, option = "decade-earlier"))
         }
         val sub: BarSection? = when {
             f.year == BrowseYear.Upcoming -> null
             effective == BrowseDecade.Earlier -> BarSection(
                 heading = m("browse.year.older.decades"),
                 links = (1950 downTo 1900 step 10).map { start ->
-                    BarLink(decadeLabel(start), f.withDecade(BrowseDecade.Of(start)).href(), active = false)
+                    BarLink(decadeLabel(start), f.withDecade(BrowseDecade.Of(start)).href(), active = false, keepOpen = true, option = "decade-$start")
                 },
                 layout = "grid",
+                reveal = true,
             )
             effective is BrowseDecade.Of -> {
                 val last = minOf(effective.endYear, today.year + 1)
                 BarSection(
                     heading = m("browse.year.in.decade", decadeLabel(effective.startYear)),
                     links = (effective.startYear..last).map { y ->
-                        BarLink(y.toString(), f.copy(decade = effective, year = BrowseYear.Of(y)).href(), active = f.year == BrowseYear.Of(y))
+                        BarLink(y.toString(), f.copy(decade = effective, year = BrowseYear.Of(y)).href(), active = f.year == BrowseYear.Of(y), option = "year-$y")
                     },
                     layout = "years",
+                    reveal = true,
                 )
             }
             else -> null
@@ -164,7 +185,11 @@ class BrowseBarViews(
             label = m("browse.menu.year"),
             icon = "calendar-days",
             value = yearValue(f, m),
-            sections = listOfNotNull(BarSection(null, top, "grid"), sub),
+            sections = listOfNotNull(
+                BarSection(null, shortcuts, "grid"),
+                BarSection(m("browse.year.decades"), decades, "grid"),
+                sub,
+            ),
         )
     }
 
@@ -223,24 +248,48 @@ class BrowseBarViews(
         )
     }
 
+    /**
+     * Multi-select (fork, user 2026-11-24): the big services first with logos and checkboxes, then every other
+     * service in the region behind "Show all services" with a search box. Each option toggles its ids in place
+     * and keeps the menu open.
+     */
     private fun serviceMenu(f: BrowseFilters, options: ProviderOptions, m: Messages, locale: Locale): BarMenu {
-        val shown = options.providers.take(TOP_PROVIDERS).toMutableList()
-        val selected = f.provider?.let { id -> options.providers.find { it.id == id } }
-        if (selected != null && selected !in shown) shown += selected
+        val choices = serviceChoices(f, options, m)
+        fun link(c: ServiceChoice) = BarLink(
+            label = c.label,
+            href = f.toggleProviders(c.ids).href(),
+            active = c.selected,
+            logoUrl = c.logoPath?.let { "https://image.tmdb.org/t/p/w92$it" },
+            keepOpen = true,
+            option = c.key,
+            checkbox = true,
+        )
+        val anyLink = BarLink(m("browse.service.any"), f.withProviders(emptyList()).href(), active = f.providers.isEmpty(), option = "svc-any")
+        val rest = choices.filter { !it.featured }
         return BarMenu(
             id = "service",
             label = m("browse.menu.service"),
             icon = "monitor-play",
-            value = f.provider?.let { providerName(it, options, m) },
-            sections = listOf(
+            value = serviceValue(choices, m),
+            sections = listOfNotNull(
                 BarSection(
                     heading = m("browse.service.region", countryName(options.region, locale)),
-                    links = listOf(BarLink(m("browse.service.any"), f.copy(provider = null).href(), active = f.provider == null)) +
-                        shown.map { p ->
-                            BarLink(p.name, f.copy(provider = p.id).href(), active = f.provider == p.id, logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w92$it" })
-                        },
+                    links = listOf(anyLink) + choices.filter { it.featured }.map(::link),
                     layout = "logos",
                 ),
+                rest.takeIf { it.isNotEmpty() }?.let {
+                    BarSection(
+                        heading = null,
+                        links = it.map(::link),
+                        layout = "services",
+                        more = BarMore(
+                            label = m("browse.service.all", it.size.toString()),
+                            open = it.any(ServiceChoice::selected),
+                            searchLabel = m("browse.service.search"),
+                            noMatches = m("browse.service.search.none"),
+                        ),
+                    )
+                },
             ),
             note = when {
                 options.failed -> m("browse.service.unavailable")
@@ -248,6 +297,61 @@ class BrowseBarViews(
                 else -> null
             },
         )
+    }
+
+    /** One row of the Service menu: a featured service (maybe several TMDB ids, e.g. two Paramount+ plans) or one provider. */
+    private data class ServiceChoice(
+        val key: String,
+        val label: String,
+        val ids: List<Int>,
+        val logoPath: String?,
+        val selected: Boolean,
+        val featured: Boolean,
+    )
+
+    /**
+     * Featured first ([FEATURED_SERVICES] found in the region, topped up with the region's best-ranked services
+     * up to [FEATURED_COUNT]), then chosen ids TMDB doesn't list (so they can still be unticked), then the
+     * region's other services by TMDB's display priority.
+     */
+    private fun serviceChoices(f: BrowseFilters, options: ProviderOptions, m: Messages): List<ServiceChoice> {
+        val byId = options.providers.associateBy { it.id }
+        val chosen = f.providers.toSet()
+        val used = mutableSetOf<Int>()
+        val featured = mutableListOf<ServiceChoice>()
+        for (service in FEATURED_SERVICES) {
+            val present = service.ids.filter { it in byId }
+            if (present.isEmpty()) continue
+            used += service.ids
+            featured += ServiceChoice(
+                key = "svc-${service.key}",
+                label = service.label,
+                ids = present,
+                logoPath = byId.getValue(present.first()).logoPath,
+                selected = service.ids.any { it in chosen },
+                featured = true,
+            )
+        }
+        fun single(p: BrowseProvider, isFeatured: Boolean) =
+            ServiceChoice("svc-${p.id}", p.name, listOf(p.id), p.logoPath, p.id in chosen, isFeatured)
+        for (p in options.providers) {
+            if (featured.size >= FEATURED_COUNT) break
+            if (p.id in used) continue
+            used += p.id
+            featured += single(p, isFeatured = true)
+        }
+        val unknown = f.providers.filter { it !in used && it !in byId }.map { id ->
+            ServiceChoice("svc-$id", m("browse.service.unknown", id.toString()), listOf(id), null, selected = true, featured = true)
+        }
+        val rest = options.providers.filter { it.id !in used }.map { single(it, isFeatured = false) }
+        return featured + unknown + rest
+    }
+
+    /** "Netflix", or "Netflix + 2" for three services (counted as rows of the menu, not TMDB ids). */
+    private fun serviceValue(choices: List<ServiceChoice>, m: Messages): String? {
+        val selected = choices.filter { it.selected }
+        val first = selected.firstOrNull() ?: return null
+        return if (selected.size == 1) first.label else m("browse.service.several", first.label, (selected.size - 1).toString())
     }
 
     private fun moreMenu(f: BrowseFilters, m: Messages, locale: Locale): BarMenu {
@@ -328,7 +432,7 @@ class BrowseBarViews(
         }
         f.minRating?.let { chip(m("browse.rating.chip", BrowseFilters.formatRating(it)), f.copy(minRating = null)) }
         f.genre?.let { chip(m(genreKey(it)), f.copy(genre = null)) }
-        f.provider?.let { chip(providerName(it, providers, m), f.copy(provider = null)) }
+        serviceValue(serviceChoices(f, providers, m), m)?.let { chip(it, f.withProviders(emptyList())) }
         f.language?.let { chip(languageName(it, locale), f.copy(language = null)) }
         f.runtime?.let { chip(m(runtimeKey(it)), f.copy(runtime = null)) }
         if (f.hideRated) chip(m("browse.chip.hide.rated"), f.copy(hideRated = false))
@@ -350,9 +454,6 @@ class BrowseBarViews(
 
     private fun decadeLabel(start: Int) = "${start}s"
 
-    private fun providerName(id: Int, options: ProviderOptions, m: Messages) =
-        options.providers.find { it.id == id }?.name ?: m("browse.service.unknown", id.toString())
-
     private fun genreKey(genre: Genre) = "genre.${genre.tmdbId}"
 
     private fun popularKey(popular: BrowsePopular) = "browse.popular.${popular.param}"
@@ -368,7 +469,24 @@ class BrowseBarViews(
     }
 
     companion object {
-        const val TOP_PROVIDERS = 20
+        /** Rows above "Show all services". */
+        const val FEATURED_COUNT = 8
+
+        /**
+         * The big US services, in the user's order (2026-11-24), with their TMDB ids checked against
+         * `/watch/providers/movie?watch_region=US`: Paramount+ and Peacock list each plan separately, and one plan
+         * alone misses titles (Paramount+ Premium 2303 has 1192 movies, with Essential 2616 1387).
+         */
+        val FEATURED_SERVICES = listOf(
+            FeaturedService("netflix", "Netflix", listOf(8)),
+            FeaturedService("prime", "Prime Video", listOf(9)),
+            FeaturedService("disney", "Disney+", listOf(337)),
+            FeaturedService("hbomax", "HBO Max", listOf(1899)),
+            FeaturedService("hulu", "Hulu", listOf(15)),
+            FeaturedService("appletv", "Apple TV+", listOf(350)),
+            FeaturedService("peacock", "Peacock", listOf(386, 387)),
+            FeaturedService("paramount", "Paramount+", listOf(2303, 2616)),
+        )
         val RATING_FLOORS = listOf(8.0, 7.0, 6.0)
 
         /** Original languages offered in the menu (any ISO 639-1 code works in the URL). */

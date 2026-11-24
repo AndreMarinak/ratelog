@@ -85,6 +85,18 @@ Problems found while building and running the fork: what happened, the cause, an
 - **"Rate it?" after Seen on a movie page reloaded the page** (left from the movie in-place rating fix, fixed 2026-11-24): the
   prompt's form in `fragments/title-actions.html` had no `data-inplace`; it now swaps `#your-rating, .title-panel` like the Rate
   modal (inplace.js sends the tapped score button's value). The `seen` suite step waits for the in-place update.
+- **Year menu closed itself after picking a decade** (user, 2026-11-24: "I never see the popup it kinda glitches real quick …
+  I'd have to click back on year to then see those popup"): choosing 2020s applied the filter in place, and the swap redrew the
+  bar with every menu closed, so the decade's years (2020-2027) only appeared after opening Year again. Two causes made it look
+  like a glitch: the menu closing, and the bar showing **unstyled for ~0.5 s after every in-place filter**, because the bar's
+  own `<link rel="stylesheet">` was swapped in again and re-downloaded (static files are `no-store`). Fix: decade options
+  (and streaming services) carry `data-keep-open`, and `view-swap.js` re-opens that menu on the new bar with focus on the
+  same option and the years scrolled into view; region stylesheets stay loaded in `<head>`, so nothing flashes. Covered by
+  `BrowseBarViewsTest`, `BrowseTemplatesTest` and the feature's browser check (1440 / 390 / 360).
+- **The open filter panel ran under the phone's bottom nav** (found in the browser check, 360x740, 2026-11-24): panels are
+  up to 60vh tall and open under the bar, so on a short phone the last rows sat behind the fixed bottom nav and a tap there
+  hit the nav (Home). `browse-bar.js` now ends the panel above the nav, scrolling the page up a little when there's less than
+  240px of room.
 
 - **Typing in the header search scrolled the page up** (user, laptop, 2026-11-24: "as I type in search bar it scrolls me up,
   check all the search bars"): every keystroke moved the page up ~64px on every page, laptop and phone. Cause:

@@ -74,23 +74,45 @@
 
 <th:block th:fragment="browsePanel(menu)">
     <p class="bb-note" th:if="${menu.note != null}" th:text="${menu.note}">Couldn't load streaming services.</p>
-    <div th:each="section : ${menu.sections}" class="bb-section" th:classappend="'bb-' + ${section.layout}">
+    <div th:each="section : ${menu.sections}" class="bb-section" th:classappend="'bb-' + ${section.layout}"
+         th:attr="data-reveal=${section.reveal} ? 'true' : null">
         <h3 class="bb-section-heading" th:if="${section.heading != null}" th:text="${section.heading}">Heading</h3>
-        <ul class="bb-options">
-            <li th:each="link : ${section.links}">
-                <a class="bb-option" th:href="${link.href}"
-                   th:classappend="${link.active} ? 'active' : ''"
-                   th:aria-current="${link.active} ? 'true' : null">
-                    <span class="bb-check" th:if="${section.layout == 'toggles'}" aria-hidden="true"><i data-lucide="check"></i></span>
-                    <img th:if="${link.logoUrl != null}" class="bb-logo" th:src="${link.logoUrl}" alt="" loading="lazy" width="28" height="28">
-                    <span class="bb-option-text">
-                        <span class="bb-option-label" th:text="${link.label}">2010s</span>
-                        <span class="bb-option-hint" th:if="${link.hint != null}" th:text="${link.hint}">Hint</span>
-                    </span>
-                </a>
-            </li>
+        <ul class="bb-options" th:if="${section.more == null}">
+            <li th:each="link : ${section.links}" th:insert="~{fragments/browse-bar :: browseOption(${link}, ${section})}"></li>
         </ul>
+        <!--/* Fork: "Show all services" — a plain <details> without JS; browse-bar.js turns on the search box. */-->
+        <details th:if="${section.more != null}" class="bb-more" data-inner="more" th:open="${section.more.open}">
+            <summary class="bb-more-toggle">
+                <span th:text="${section.more.label}">Show all services (280)</span>
+                <i data-lucide="chevron-down" class="bb-chevron" aria-hidden="true"></i>
+            </summary>
+            <div class="bb-more-search" data-bb-search hidden>
+                <i data-lucide="search" aria-hidden="true"></i>
+                <input type="search" class="bb-search-input" autocomplete="off" spellcheck="false"
+                       th:placeholder="${section.more.searchLabel}" th:aria-label="${section.more.searchLabel}">
+            </div>
+            <ul class="bb-options">
+                <li th:each="link : ${section.links}" th:insert="~{fragments/browse-bar :: browseOption(${link}, ${section})}"></li>
+            </ul>
+            <p class="bb-no-match" data-bb-no-match hidden th:text="${section.more.noMatches}">No service matches.</p>
+        </details>
     </div>
+</th:block>
+
+<!--/* One option: a plain link. Fork: data-keep-open / data-option let view-swap.js re-open the menu on it. */-->
+<th:block th:fragment="browseOption(link, section)">
+    <a class="bb-option" th:href="${link.href}"
+       th:classappend="${link.active} ? 'active' : ''"
+       th:aria-current="${link.active} ? 'true' : null"
+       th:attr="data-keep-open=${link.keepOpen} ? 'true' : null, data-option=${link.option}">
+        <span class="bb-check" th:if="${section.layout == 'toggles'}" aria-hidden="true"><i data-lucide="check"></i></span>
+        <span class="bb-check bb-tick" th:if="${link.checkbox}" aria-hidden="true"></span>
+        <img th:if="${link.logoUrl != null}" class="bb-logo" th:src="${link.logoUrl}" alt="" loading="lazy" width="28" height="28">
+        <span class="bb-option-text">
+            <span class="bb-option-label" th:text="${link.label}">2010s</span>
+            <span class="bb-option-hint" th:if="${link.hint != null}" th:text="${link.hint}">Hint</span>
+        </span>
+    </a>
 </th:block>
 </body>
 </html>

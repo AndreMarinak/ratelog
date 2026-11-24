@@ -408,7 +408,7 @@ seen by default, the API only with `hideSeen=true`**. Every parameter is optiona
 | `year` | `1874`-(this year + 10), or `upcoming` (movies only: not released yet) | a `year` outside `decade` replaces it |
 | `minRating` | number above 0 and below 10, e.g. `7` or `7.5` | TMDB vote average floor; needs 100 votes (movies) / 50 (TV) |
 | `genre` | TMDB genre id (`878`) or slug (`science-fiction`, `horror`, `action-adventure`...) | a genre from the other type maps to the nearest one (`action` on TV = Action & Adventure); none = `400` |
-| `provider` | TMDB watch provider id (`8` Netflix, `337` Disney+, `9` Prime Video...) | streaming (flatrate) in your region, from your metadata language (`en` = US, `es` = ES...) |
+| `provider` | TMDB watch provider id (`8` Netflix, `337` Disney+, `9` Prime Video...), or several: `8\|15\|337` (also `8,15` or the parameter repeated), at most 30 | streaming (flatrate) in your region, from your metadata language (`en` = US, `es` = ES...); several = on any of them |
 | `language` | ISO 639-1 original language (`ko`, `ja`, `fr`...) | |
 | `runtime` | `short` (40-89 min), `medium` (90-150), `long` (over 150) | movies only |
 | `popular` | `week` (TMDB trending this week), `now` (by popularity), `alltime` (most voted) | overrides `sort` |
@@ -420,7 +420,7 @@ seen by default, the API only with `hideSeen=true`**. Every parameter is optiona
 ```json
 {
   "type": "movie",
-  "filters": {"decade": "1990s", "year": null, "minRating": 7.0, "genre": "science-fiction", "genreId": 878, "provider": null,
+  "filters": {"decade": "1990s", "year": null, "minRating": 7.0, "genre": "science-fiction", "genreId": 878, "provider": null, "providers": [],
               "language": null, "runtime": null, "popular": null, "sort": "rating", "hideRated": false, "hideWatchlist": false,
               "hideSeen": false},
   "page": 1, "nextPage": 2, "totalPages": 37, "totalResults": 731,

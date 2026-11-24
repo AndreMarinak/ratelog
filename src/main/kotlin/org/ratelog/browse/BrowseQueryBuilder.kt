@@ -59,8 +59,9 @@ object BrowseQueryBuilder {
         minVotes(filters)?.let { params["vote_count.gte"] = it.toString() }
         filters.minRating?.let { params["vote_average.gte"] = BrowseFilters.formatRating(it) }
         filters.genre?.let { params["with_genres"] = it.tmdbId.toString() }
-        filters.provider?.let {
-            params["with_watch_providers"] = it.toString()
+        if (filters.providers.isNotEmpty()) {
+            // A pipe is TMDB's OR: titles streaming on any of the chosen services.
+            params["with_watch_providers"] = filters.providers.joinToString("|")
             params["watch_region"] = region.value
             params["with_watch_monetization_types"] = "flatrate"
         }
@@ -78,7 +79,7 @@ object BrowseQueryBuilder {
     fun ignored(filters: BrowseFilters): List<String> {
         if (filters.popular != BrowsePopular.WEEK) return emptyList()
         return buildList {
-            if (filters.provider != null) add("provider")
+            if (filters.providers.isNotEmpty()) add("provider")
             if (filters.runtime != null) add("runtime")
         }
     }

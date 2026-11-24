@@ -35,6 +35,19 @@ data class BarSection(
     val links: List<BarLink>,
     /** `list`, `grid`, `years`, `logos` or `toggles` (CSS layout of the links). */
     val layout: String = "list",
+    /** Fork: scrolled into view when the menu re-opens after a pick (the Year menu's years of the chosen decade). */
+    val reveal: Boolean = false,
+    /** Fork: the links sit behind a "Show all" toggle with a search box (the Service menu's full list). */
+    val more: BarMore? = null,
+)
+
+/** A collapsed part of a menu: a `<details>` (works without JS) whose search box browse-bar.js turns on. */
+data class BarMore(
+    val label: String,
+    /** Rendered open, e.g. when it holds a chosen option. */
+    val open: Boolean,
+    val searchLabel: String,
+    val noMatches: String,
 )
 
 data class BarLink(
@@ -43,6 +56,15 @@ data class BarLink(
     val active: Boolean,
     val hint: String? = null,
     val logoUrl: String? = null,
+    /**
+     * Fork: picking it re-opens the menu after the in-place swap (view-swap.js), for choices that are often refined
+     * right away: a decade (then a year), a streaming service (then another).
+     */
+    val keepOpen: Boolean = false,
+    /** Fork: a stable name for the option, so focus returns to it after the swap (`data-option`). */
+    val option: String? = null,
+    /** Fork: shows a checkbox (multi-select menus). */
+    val checkbox: Boolean = false,
 )
 
 data class BarChip(

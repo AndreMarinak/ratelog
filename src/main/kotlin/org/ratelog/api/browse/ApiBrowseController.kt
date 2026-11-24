@@ -43,7 +43,10 @@ data class BrowseFiltersDto(
     val minRating: Double?,
     val genre: String?,
     val genreId: Int?,
+    /** The first of [providers] (kept for clients written when only one service could be chosen). */
     val provider: Int?,
+    /** Every chosen streaming service (TMDB provider ids, sorted); a title on any of them matches. */
+    val providers: List<Int>,
     val language: String?,
     val runtime: String?,
     val popular: String?,
@@ -114,7 +117,8 @@ class ApiBrowseController(
         minRating = minRating,
         genre = genre?.let(BrowseGenres::slug),
         genreId = genre?.tmdbId,
-        provider = provider,
+        provider = providers.firstOrNull(),
+        providers = providers,
         language = language,
         runtime = runtime?.param,
         popular = popular?.param,

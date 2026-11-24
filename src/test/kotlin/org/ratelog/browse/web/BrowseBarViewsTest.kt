@@ -44,6 +44,27 @@ class BrowseBarViewsTest {
         failed = false,
     )
 
+    /** A slice of TMDB's US list (ids checked 2026-11-24), in its display priority order. */
+    private val usProviders = ProviderOptions(
+        us,
+        listOf(
+            BrowseProvider(8, "Netflix", "/netflix.png", 3),
+            BrowseProvider(9, "Amazon Prime Video", "/prime.png", 6),
+            BrowseProvider(350, "Apple TV", "/apple.png", 7),
+            BrowseProvider(337, "Disney Plus", "/disney.png", 8),
+            BrowseProvider(15, "Hulu", "/hulu.png", 9),
+            BrowseProvider(257, "fuboTV", "/fubo.png", 13),
+            BrowseProvider(2303, "Paramount Plus Premium", "/pp.png", 19),
+            BrowseProvider(2616, "Paramount Plus Essential", "/pe.png", 20),
+            BrowseProvider(386, "Peacock Premium", "/peacock.png", 21),
+            BrowseProvider(283, "Crunchyroll", "/crunchy.png", 40),
+            BrowseProvider(1899, "HBO Max", "/max.png", 155),
+            BrowseProvider(387, "Peacock Premium Plus", "/peacock2.png", 215),
+            BrowseProvider(11, "MUBI", "/mubi.png", 300),
+        ),
+        failed = false,
+    )
+
     private fun build(filters: BrowseFilters, options: ProviderOptions = providers) = views.build(filters, options, locale = Locale.ENGLISH)
 
     private fun BrowseBarView.menu(id: String) = menus.first { it.id == id }
@@ -64,23 +85,64 @@ class BrowseBarViewsTest {
     }
 
     @Test
-    fun `given the year menu then lists upcoming, decades and the chosen decade's years`() {
+    fun `given the year menu then lists shortcuts, decades and the chosen decade's years`() {
         val today = LocalDate.parse("2026-11-22")
         val bar = build(BrowseFilters(decade = BrowseDecade.Of(2020)))
         val year = bar.menu("year")
 
-        val top = year.sections[0].links.map { it.label }
-        assertEquals(listOf("Any year", "Upcoming", "2020s", "2010s", "2000s", "1990s", "1980s", "1970s", "1960s", "1950s and earlier"), top)
+        assertEquals(listOf("Any year", "This year", "Last year", "Upcoming"), year.sections[0].links.map { it.label })
+        assertEquals("Decades", year.sections[1].heading)
+        assertEquals(listOf("2020s", "2010s", "2000s", "1990s", "1980s", "1970s", "1960s", "1950s and earlier"), year.sections[1].links.map { it.label })
         assertEquals("2020s", year.value)
-        assertEquals("Years in the 2020s", year.sections[1].heading)
-        assertEquals((2020..today.year + 1).map { it.toString() }, year.sections[1].links.map { it.label })
-        assertEquals("/discover?type=movie&decade=2020s&year=2024", year.sections[1].links[4].href)
+        assertEquals("Years in the 2020s", year.sections[2].heading)
+        assertEquals((2020..today.year + 1).map { it.toString() }, year.sections[2].links.map { it.label })
+        assertEquals("/discover?type=movie&decade=2020s&year=2024", year.sections[2].links[4].href)
 
         // TV has no Upcoming; "earlier" opens older decades.
         val tvEarlier = build(BrowseFilters(type = MediaType.tvshow, decade = BrowseDecade.Earlier)).menu("year")
-        assertFalse(tvEarlier.sections[0].links.any { it.label == "Upcoming" })
-        assertTrue(tvEarlier.sections[0].links.last().active)
-        assertEquals(listOf("1950s", "1940s", "1930s", "1920s", "1910s", "1900s"), tvEarlier.sections[1].links.map { it.label })
+        assertEquals(listOf("Any year", "This year", "Last year"), tvEarlier.sections[0].links.map { it.label })
+        assertTrue(tvEarlier.sections[1].links.last().active)
+        assertEquals(listOf("1950s", "1940s", "1930s", "1920s", "1910s", "1900s"), tvEarlier.sections[2].links.map { it.label })
+        assertTrue(tvEarlier.sections[2].reveal)
+    }
+
+    @Test
+    fun `given the year menu then a decade keeps the menu open on its years and a year closes it`() {
+        val year = build(BrowseFilters()).menu("year")
+        val decades = year.sections[1].links
+
+        // No decade chosen yet: no years section.
+        assertEquals(2, year.sections.size)
+        assertTrue(decades.all { it.keepOpen })
+        assertEquals("decade-2020", decades.first().option)
+        assertEquals("decade-earlier", decades.last().option)
+        assertTrue(year.sections[0].links.none { it.keepOpen })
+
+        val years = build(BrowseFilters(decade = BrowseDecade.Of(2020))).menu("year").sections[2]
+        assertTrue(years.reveal)
+        assertEquals((2020..2027).map { "year-$it" }, years.links.map { it.option })
+        assertTrue(years.links.none { it.keepOpen })
+    }
+
+    @Test
+    fun `given This year and Last year then they pick that single year and replace another decade`() {
+        val shortcuts = build(BrowseFilters(decade = BrowseDecade.Of(1990), genre = Genre.HORROR)).menu("year").sections[0].links
+
+        val thisYear = shortcuts.first { it.label == "This year" }
+        val lastYear = shortcuts.first { it.label == "Last year" }
+        assertEquals("/discover?type=movie&year=2026&genre=horror", thisYear.href)
+        assertEquals("2026", thisYear.hint)
+        assertEquals("/discover?type=movie&year=2025&genre=horror", lastYear.href)
+        assertEquals("2025", lastYear.hint)
+        assertFalse(thisYear.active)
+
+        val chosen = build(BrowseFilters(year = BrowseYear.Of(2025))).menu("year")
+        assertTrue(chosen.sections[0].links.first { it.label == "Last year" }.active)
+        assertFalse(chosen.sections[0].links.first { it.label == "This year" }.active)
+        assertEquals("2025", chosen.value)
+        // The year's decade and its years show too, for a one-tap change.
+        assertTrue(chosen.sections[1].links.first { it.label == "2020s" }.active)
+        assertTrue(chosen.sections[2].links.first { it.label == "2025" }.active)
     }
 
     @Test
@@ -88,8 +150,8 @@ class BrowseBarViewsTest {
         val bar = build(BrowseFilters(decade = BrowseDecade.Of(2010), year = BrowseYear.Of(2014)))
 
         assertEquals("2014", bar.menu("year").value)
-        assertTrue(bar.menu("year").sections[0].links.first { it.label == "2010s" }.active)
-        assertTrue(bar.menu("year").sections[1].links.first { it.label == "2014" }.active)
+        assertTrue(bar.menu("year").sections[1].links.first { it.label == "2010s" }.active)
+        assertTrue(bar.menu("year").sections[2].links.first { it.label == "2014" }.active)
         val chip = bar.chips.single()
         assertEquals("2014", chip.label)
         assertEquals("/discover?type=movie&decade=2010s", chip.removeHref)
@@ -99,7 +161,7 @@ class BrowseBarViewsTest {
     @Test
     fun `given every filter then each has a removable chip that drops only itself`() {
         val filters = BrowseFilters(
-            popular = BrowsePopular.NOW, decade = BrowseDecade.Earlier, minRating = 7.0, genre = Genre.HORROR, provider = 3,
+            popular = BrowsePopular.NOW, decade = BrowseDecade.Earlier, minRating = 7.0, genre = Genre.HORROR, providers = listOf(3),
             language = "ko", runtime = BrowseRuntime.SHORT, hideRated = true, hideWatchlist = true,
         )
 
@@ -137,26 +199,91 @@ class BrowseBarViewsTest {
     }
 
     @Test
-    fun `given the provider list then shows the top 20 with logos plus a chosen one further down`() {
-        val service = build(BrowseFilters(provider = 23)).menu("service")
-        val links = service.links()
+    fun `given the US provider list then the big services come first, in the user's order, with logos`() {
+        val service = build(BrowseFilters(), usProviders).menu("service")
+        val featured = service.sections[0]
 
-        assertEquals("Streaming in United States", service.sections[0].heading)
-        assertEquals("Any service", links.first().label)
-        assertEquals((1..20).map { "Service $it" } + "Service 23", links.drop(1).map { it.label })
-        assertEquals("https://image.tmdb.org/t/p/w92/logo1.png", links[1].logoUrl)
-        assertEquals("Service 23", service.value)
+        assertEquals("Streaming in United States", featured.heading)
+        assertEquals(
+            listOf("Any service", "Netflix", "Prime Video", "Disney+", "HBO Max", "Hulu", "Apple TV+", "Peacock", "Paramount+"),
+            featured.links.map { it.label },
+        )
+        assertEquals("https://image.tmdb.org/t/p/w92/netflix.png", featured.links[1].logoUrl)
+        assertTrue(featured.links.drop(1).all { it.checkbox && it.keepOpen && !it.active })
+        assertTrue(featured.links[0].active && !featured.links[0].checkbox)
+        // Each plan TMDB lists counts: Paramount+ is Premium 2303 + Essential 2616.
+        assertEquals("/discover?type=movie&provider=2303%7C2616", featured.links.last().href)
+        assertEquals("svc-paramount", featured.links.last().option)
+        assertNull(service.value)
         assertNull(service.note)
+    }
+
+    @Test
+    fun `given the full list then the other services sit behind Show all services by TMDB priority`() {
+        val service = build(BrowseFilters(), usProviders).menu("service")
+        val all = service.sections[1]
+
+        assertEquals(listOf("fuboTV", "Crunchyroll", "MUBI"), all.links.map { it.label })
+        assertEquals("services", all.layout)
+        assertEquals("Show all services (3)", all.more!!.label)
+        assertFalse(all.more!!.open)
+        assertEquals("Find a service", all.more!!.searchLabel)
+        assertEquals("/discover?type=movie&provider=283", all.links[1].href)
+
+        // A chosen service from the full list opens it (also without JS) and is ticked there.
+        val opened = build(BrowseFilters(providers = listOf(283)), usProviders).menu("service").sections[1]
+        assertTrue(opened.more!!.open)
+        assertTrue(opened.links.single { it.active }.label == "Crunchyroll")
+    }
+
+    @Test
+    fun `given several services then each option toggles itself and the label reads Netflix + 2`() {
+        val bar = build(BrowseFilters(providers = listOf(8, 15, 1899)), usProviders)
+        val service = bar.menu("service")
+        val byLabel = service.links().associateBy { it.label }
+
+        assertEquals("Netflix + 2", service.value)
+        assertEquals(listOf("Netflix", "HBO Max", "Hulu"), service.links().filter { it.active && it.checkbox }.map { it.label })
+        // Unticking keeps the others; ticking adds; Any service clears all.
+        assertEquals("/discover?type=movie&provider=15%7C1899", byLabel.getValue("Netflix").href)
+        assertEquals("/discover?type=movie&provider=8%7C15%7C337%7C1899", byLabel.getValue("Disney+").href)
+        assertEquals("/discover?type=movie", byLabel.getValue("Any service").href)
+        assertFalse(byLabel.getValue("Any service").active)
+
+        val chip = bar.chips.single()
+        assertEquals("Netflix + 2", chip.label)
+        assertEquals("/discover?type=movie", chip.removeHref)
+        assertEquals("Remove Netflix + 2", chip.removeLabel)
+
+        // A plan alone (an old link) still ticks its service, and unticking drops every plan.
+        val peacock = build(BrowseFilters(providers = listOf(387)), usProviders).menu("service")
+        assertEquals("Peacock", peacock.value)
+        assertEquals("/discover?type=movie", peacock.links().single { it.label == "Peacock" }.href)
+    }
+
+    @Test
+    fun `given another region then the featured row is topped up with its best-ranked services`() {
+        // Spain: none of the US services' ids (fixture ids 101..125).
+        val spain = ProviderOptions(WatchRegion("ES"), (1..25).map { BrowseProvider(100 + it, "Service $it", null, it) }, failed = false)
+        val service = build(BrowseFilters(providers = listOf(123)), spain).menu("service")
+
+        assertEquals("Streaming in Spain", service.sections[0].heading)
+        assertEquals((1..8).map { "Service $it" }, service.sections[0].links.drop(1).map { it.label })
+        assertEquals((9..25).map { "Service $it" }, service.sections[1].links.map { it.label })
+        assertEquals("Service 23", service.value)
+        assertTrue(service.sections[1].more!!.open)
     }
 
     @Test
     fun `given the provider list failed then the menu says so and the chip still works`() {
         val failed = ProviderOptions(us, emptyList(), failed = true)
-        val bar = build(BrowseFilters(provider = 8), failed)
+        val bar = build(BrowseFilters(providers = listOf(8)), failed)
 
         assertEquals("Couldn't load streaming services right now. Try again later.", bar.menu("service").note)
         assertEquals("Service 8", bar.chips.single().label)
-        assertEquals(listOf("Any service"), bar.menu("service").links().map { it.label })
+        // The chosen id stays in the menu so it can be unticked.
+        assertEquals(listOf("Any service", "Service 8"), bar.menu("service").links().map { it.label })
+        assertEquals(1, bar.menu("service").sections.size)
     }
 
     @Test
