@@ -157,7 +157,7 @@ class ShowRatingTest {
 
         rate.handle(RateShow(showId, user, 8.0))
 
-        assertEquals(WatchStatus.WATCHED, statuses.find(user, MediaType.tvshow, showId.value)?.status)
+        assertEquals(WatchStatus.WATCHED, statuses.effective(user, MediaType.tvshow, showId.value))
         val state = reader.read(user, MediaType.tvshow, showId.value)
         assertTrue(state.rated)
         assertTrue(state.seen)
@@ -167,17 +167,17 @@ class ShowRatingTest {
     fun `a whole-show rating leaves a Dropped show alone, and deleting it never touches the status`() {
         statuses.save(MediaStatus(user, MediaType.tvshow, showId.value, WatchStatus.DROPPED, 1L))
         rate.handle(RateShow(showId, user, 4.0))
-        assertEquals(WatchStatus.DROPPED, statuses.find(user, MediaType.tvshow, showId.value)?.status)
+        assertEquals(WatchStatus.DROPPED, statuses.effective(user, MediaType.tvshow, showId.value))
 
         statuses.save(MediaStatus(user, MediaType.tvshow, showId.value, WatchStatus.WATCHED, 2L))
         delete.handle(DeleteShowRating(showId, user))
-        assertEquals(WatchStatus.WATCHED, statuses.find(user, MediaType.tvshow, showId.value)?.status)
+        assertEquals(WatchStatus.WATCHED, statuses.effective(user, MediaType.tvshow, showId.value))
     }
 
     @Test
     fun `rating one season still only makes the show Watching`() {
         season(1, 7.0)
 
-        assertEquals(WatchStatus.WATCHING, statuses.find(user, MediaType.tvshow, showId.value)?.status)
+        assertEquals(WatchStatus.WATCHING, statuses.effective(user, MediaType.tvshow, showId.value))
     }
 }

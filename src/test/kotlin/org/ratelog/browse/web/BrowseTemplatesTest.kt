@@ -141,7 +141,7 @@ class BrowseTemplatesTest {
 
         val bookmarks = Regex("""<form class="tile-act tile-watchlist[^"]*"[^>]*>""").findAll(html).map { it.value }.toList()
         assertEquals(2, bookmarks.size, "rendered for both, so un-seeing can bring it back")
-        assertEquals(1, bookmarks.count { it.contains("hidden") }, "the Watched title's bookmark is hidden")
+        assertEquals(0, bookmarks.count { it.contains("hidden") }, "a Watched title gets the bookmark too (fork, 2026-11-24)")
         assertEquals(2, Regex("""<form class="tile-act tile-seen""").findAll(html).count())
         Regex("""<a href="[^"]+" class="browse-tile-link">(.*?)</a>""", RegexOption.DOT_MATCHES_ALL).findAll(html).forEach {
             assertFalse(it.groupValues[1].contains("<form"), "quick actions must not be nested in the tile link")
@@ -204,7 +204,7 @@ class BrowseTemplatesTest {
         assertFalse(horror.contains("data-src"))
         assertFalse(horror.contains("aria-busy"))
         val bookmarks = Regex("""<form class="tile-act tile-watchlist[^"]*"[^>]*>""").findAll(horror).map { it.value }.toList()
-        assertEquals(1, bookmarks.count { !it.contains("hidden") }, "no bookmark on the Watched title")
+        assertEquals(2, bookmarks.count { !it.contains("hidden") }, "the Watched title gets the bookmark too (fork, 2026-11-24)")
         assertTrue(horror.contains("""aria-label="Add to watchlist: The Matrix""""))
         assertTrue(horror.contains("""data-title="The Matrix""""))
         assertTrue(horror.contains("""name="_csrf" value="tok123""""))

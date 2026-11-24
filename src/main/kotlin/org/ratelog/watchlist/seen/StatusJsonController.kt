@@ -42,7 +42,9 @@ class StatusJsonController(
             { failed(HttpStatus.NOT_FOUND, "status.error.media.not.found") },
             { result ->
                 val state = seenStateReader.read(user.id, type, mediaId)
-                val before = SeenState(result.previous, state.rated, state.isTv)
+                val before = SeenState(
+                    result.previous?.takeIf { it != WatchStatus.WANT_TO_WATCH }, state.rated, state.isTv, onWatchlist = result.wasOnWatchlist,
+                )
                 val delta = (if (state.seen) 1 else 0) - (if (before.seen) 1 else 0)
                 ResponseEntity.ok(TileStateResponse.of(state, delta, null))
             },

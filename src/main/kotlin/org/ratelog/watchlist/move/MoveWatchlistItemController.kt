@@ -53,7 +53,8 @@ class MoveWatchlistItemController(
 ) {
     /**
      * Plain form post from a /watchlist tile: `mediaType` (movie | tvshow), `mediaId` (local), `to` (seen | watching |
-     * dropped | want_to_watch | remove), `back` (the tab and filter to return to), `undo=1` when it undoes a move.
+     * dropped | want_to_watch | remove | unlist | relist), `back` (the tab and filter to return to), `undo=1` when it
+     * undoes a move.
      */
     @PostMapping("/watchlist/item")
     fun move(
@@ -91,7 +92,7 @@ class MoveWatchlistItemController(
                             title = title,
                             mediaType = type.name,
                             mediaId = mediaId,
-                            undoMove = if (isUndo) null else WatchlistMove.to(result.previous).param,
+                            undoMove = if (isUndo) null else result.undo?.param,
                         ),
                     )
                 }
@@ -125,7 +126,7 @@ class MoveWatchlistItemController(
                         previous = result.previous?.apiName,
                         current = result.current?.apiName,
                         message = message(key, title),
-                        undoMove = if (isUndo || !result.changed) null else WatchlistMove.to(result.previous).param,
+                        undoMove = if (isUndo) null else result.undo?.param,
                         undoLabel = message("watchlist.notice.undo"),
                     ),
                 )

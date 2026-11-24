@@ -12,16 +12,20 @@ import org.ratelog.watchlist.seen.SeenState
  * other people's public lists. Shown on /list/{id}, the /lists cards and GET /api/v1/lists/{id}.
  */
 
-/** What the viewer has done with one title: their status, their score, and whether they rated it at all. */
+/** What the viewer has done with one title: their status, their score, whether they rated it, and their watchlist. */
 data class ViewerMark(
+    /** The progress status (Watching / Watched / Dropped), never Want to watch: see [onWatchlist]. */
     val status: WatchStatus?,
     /** Movies: the rating's score. TV: the show's score (average of rated seasons). Null when unrated. */
     val score: Double?,
     val rated: Boolean,
+    /** Fork (2026-11-24): on the watchlist (independent of [status]; never changes "seen"). */
+    val onWatchlist: Boolean = status == WatchStatus.WANT_TO_WATCH,
 ) {
     /**
      * "Seen" is the Seen toggle's rule (SeenState): a movie that is rated or Watched; a show that is Watched, or rated
-     * with no status. Watching, Want to watch and Dropped are not seen (for a show, even with rated seasons).
+     * with no status. Watching and Dropped are not seen (for a show, even with rated seasons). Being on the watchlist
+     * changes nothing (fork, 2026-11-24).
      */
     fun seen(type: MediaType): Boolean = SeenState(status, rated, isTv = type == MediaType.tvshow).seen
 
@@ -72,9 +76,11 @@ data class ListProgressEntry(
     val seen: Boolean,
     /** Rated (a show: at least one rated season). Such a title stays seen; the Seen toggle can't clear it. */
     val rated: Boolean = false,
+    /** Fork (2026-11-24): on the viewer's watchlist. */
+    val onWatchlist: Boolean = status == WatchStatus.WANT_TO_WATCH,
 ) {
-    /** "Add the unseen to my watchlist" would mark it Want to watch: not seen and no status at all. */
-    val addable: Boolean get() = !seen && status == null
+    /** "Add the unseen to my watchlist" would add it: not seen, no status at all, not on the watchlist yet. */
+    val addable: Boolean get() = !seen && status == null && !onWatchlist
 }
 
 data class ListProgress(
@@ -118,6 +124,7 @@ data class ListProgress(
                         score = mark.score,
                         seen = mark.seen(item.mediaType),
                         rated = mark.rated,
+                        onWatchlist = mark.onWatchlist,
                     )
                 },
         )

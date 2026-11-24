@@ -16,8 +16,8 @@ class ActionsViewTest {
     private val today = LocalDate.parse("2026-11-23")
     private val released = LocalDate.parse("2001-05-18")
 
-    private fun tile(status: WatchStatus? = null, rated: Boolean = false, date: LocalDate? = released, type: MediaType = MediaType.movie) =
-        TileActionsView.of(603, type, status, rated, date, today, Locale.ENGLISH)
+    private fun tile(status: WatchStatus? = null, rated: Boolean = false, date: LocalDate? = released, type: MediaType = MediaType.movie, onWatchlist: Boolean = false) =
+        TileActionsView.of(603, type, status, rated, date, today, Locale.ENGLISH, onWatchlist = onWatchlist)
 
     private fun title(
         type: MediaType = MediaType.movie,
@@ -26,7 +26,11 @@ class ActionsViewTest {
         date: LocalDate? = released,
         tmdbStatus: String? = "Released",
         followed: Boolean = false,
-    ) = TitleActionsView.of(type, 42, 603, status, rated, date, tmdbStatus, followed, today, Locale.ENGLISH)
+        onWatchlist: Boolean = false,
+    ) = TitleActionsView.of(
+        type, 42, 603, status?.takeIf { it != WatchStatus.WANT_TO_WATCH }, rated, date, tmdbStatus, followed, today, Locale.ENGLISH,
+        onWatchlist = onWatchlist || status == WatchStatus.WANT_TO_WATCH,
+    )
 
     // --- SeenState ---
 
@@ -42,11 +46,21 @@ class ActionsViewTest {
     }
 
     @Test
-    fun `the bookmark toggles only from nothing or want to watch`() {
+    fun `the bookmark toggles on any title but a Watching or Dropped one, and the watchlist never changes seen`() {
         assertTrue(SeenState(null, false).canToggleWatchlist)
-        assertTrue(SeenState(WatchStatus.WANT_TO_WATCH, false).canToggleWatchlist)
-        assertTrue(SeenState(WatchStatus.WANT_TO_WATCH, false).onWatchlist)
-        listOf(WatchStatus.WATCHING, WatchStatus.WATCHED, WatchStatus.DROPPED).forEach { assertFalse(SeenState(it, false).canToggleWatchlist, "$it") }
+        assertTrue(SeenState(null, false, onWatchlist = true).canToggleWatchlist)
+        assertTrue(SeenState(null, false, onWatchlist = true).onWatchlist)
+        // Fork (2026-11-24): seen and rated titles too.
+        assertTrue(SeenState(WatchStatus.WATCHED, false).canToggleWatchlist)
+        assertTrue(SeenState(null, true).canToggleWatchlist)
+        listOf(WatchStatus.WATCHING, WatchStatus.DROPPED).forEach { assertFalse(SeenState(it, false).canToggleWatchlist, "$it") }
+
+        assertTrue(SeenState(WatchStatus.WATCHED, false, onWatchlist = true).let { it.seen && it.rewatch })
+        assertTrue(SeenState(null, true, onWatchlist = true).let { it.seen && it.rewatch })
+        assertTrue(SeenState(null, true, isTv = true, onWatchlist = true).seen, "a rated show with no status stays seen on the watchlist")
+        assertFalse(SeenState(null, false, onWatchlist = true).rewatch)
+        assertEquals(WatchStatus.WANT_TO_WATCH, SeenState(null, false, onWatchlist = true).effectiveStatus)
+        assertEquals(WatchStatus.WATCHED, SeenState(WatchStatus.WATCHED, false, onWatchlist = true).effectiveStatus)
     }
 
     // --- Tiles ---
@@ -112,11 +126,27 @@ class ActionsViewTest {
     }
 
     @Test
-    fun `adding an unrated seen title to the watchlist asks first, a rated one doesn't`() {
-        assertTrue(title(status = WatchStatus.WATCHED).watchlistReplacesSeen)
-        assertFalse(title(status = WatchStatus.WATCHED, rated = true).watchlistReplacesSeen)
-        assertFalse(title(status = null).watchlistReplacesSeen)
-        assertFalse(title(status = WatchStatus.DROPPED).watchlistReplacesSeen)
+    fun `fork 2026-11-24 - a seen or rated title can be on the watchlist and stays seen, with no question asked`() {
+        val watched = title(status = WatchStatus.WATCHED, onWatchlist = true)
+        assertTrue(watched.onWatchlist)
+        assertTrue(watched.seen)
+        val rated = title(rated = true, onWatchlist = true)
+        assertTrue(rated.onWatchlist)
+        assertTrue(rated.seen)
+        assertTrue(rated.seenLocked)
+        val show = title(type = MediaType.tvshow, status = WatchStatus.WATCHED, onWatchlist = true)
+        assertTrue(show.onWatchlist)
+        assertTrue(show.seen)
+
+        // The poster bookmark is there on seen and rated titles too; only Watching / Dropped keep their badge instead.
+        assertTrue(tile(status = WatchStatus.WATCHED).canToggleWatchlist)
+        assertTrue(tile(rated = true).canToggleWatchlist)
+        assertTrue(tile(status = WatchStatus.WATCHED, onWatchlist = true).let { it.canToggleWatchlist && it.onWatchlist && it.seen })
+        assertTrue(tile(rated = true, onWatchlist = true).let { it.onWatchlist && it.seen && it.seenLocked })
+        assertEquals("watched", tile(status = WatchStatus.WATCHED, onWatchlist = true).status)
+        assertEquals("want_to_watch", tile(onWatchlist = true).status)
+        assertFalse(tile(status = WatchStatus.WATCHING, type = MediaType.tvshow).canToggleWatchlist)
+        assertFalse(tile(status = WatchStatus.DROPPED, type = MediaType.tvshow).canToggleWatchlist)
     }
 
     @Test

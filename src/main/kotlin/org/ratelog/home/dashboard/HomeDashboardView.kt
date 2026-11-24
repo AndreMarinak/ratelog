@@ -51,7 +51,7 @@ data class HomeTileView(
     val statusIcon: String?,
     val statusKey: String?,
     val scoreLabel: String?,
-    /** Shows the one-click watchlist bookmark: the title has no status or is Want to watch. */
+    /** Shows the one-click watchlist bookmark: any title but a Watching / Dropped one (fork, 2026-11-24: seen ones too). */
     val canToggleWatchlist: Boolean,
     val inWatchlist: Boolean,
     /** Fork: the Seen / Watchlist quick actions and the Upcoming badge (fragments/tile-actions.html). */
@@ -124,10 +124,10 @@ private fun HomeTitle.toTile(kind: HomeRowKind, locale: Locale, today: LocalDate
     statusIcon = status?.takeIf { showStatus && it != WatchStatus.WANT_TO_WATCH }?.icon,
     statusKey = status?.takeIf { showStatus && it != WatchStatus.WANT_TO_WATCH }?.messageKey,
     scoreLabel = score?.let { String.format(Locale.ROOT, "%.1f", it) },
-    // POST /watchlist/toggle leaves Watching / Watched / Dropped alone, so those tiles get no button.
-    canToggleWatchlist = status == null || status == WatchStatus.WANT_TO_WATCH,
-    inWatchlist = status == WatchStatus.WANT_TO_WATCH,
-    actions = TileActionsView.of(tmdbId, mediaType, status, rated = score != null, releaseDate = releaseDate, today = today, locale = locale, score = score),
+    // POST /watchlist/toggle leaves Watching / Dropped alone, so those tiles get no button.
+    canToggleWatchlist = status != WatchStatus.WATCHING && status != WatchStatus.DROPPED,
+    inWatchlist = onWatchlist,
+    actions = TileActionsView.of(tmdbId, mediaType, status, rated = score != null, releaseDate = releaseDate, today = today, locale = locale, score = score, onWatchlist = onWatchlist),
 )
 
 /** "Dec 5" (in the UI language), with the year when it isn't this year. */

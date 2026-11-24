@@ -72,7 +72,7 @@ class BulkStatusService(
                     setWatchStatusHandler.handle(SetWatchStatus(userId, media.type, media.id, status)).fold(
                         { unresolved += UnresolvedStatusItem(input, "not_found", "Title is no longer available") },
                         { result ->
-                            val dto = media.toStatusChange(status, result.previous)
+                            val dto = media.toStatusChange(result.current ?: status, result.previous, result.onWatchlist)
                             if (result.changed) updated += dto else unchanged += dto
                         }
                     )
@@ -93,7 +93,7 @@ class BulkStatusService(
             { error -> throw when (error) { SetWatchStatusError.MediaNotFound -> notFound("Title not found") } },
             { it }
         )
-        return media.toStatusChange(status, result.previous)
+        return media.toStatusChange(result.current ?: status, result.previous, result.onWatchlist)
     }
 
     private sealed interface Target {

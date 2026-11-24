@@ -40,8 +40,8 @@ class ToggleSeenHandlerTest {
 
     private fun toggleMovie(id: Long = heat.value, who: User.Id = user) = handler.handle(ToggleSeen(who, MediaType.movie, id))
     private fun toggleShow(id: Long = severance.value) = handler.handle(ToggleSeen(user, MediaType.tvshow, id))
-    private fun movieStatus(id: Long = heat.value, who: User.Id = user) = statuses.find(who, MediaType.movie, id)?.status
-    private fun showStatus() = statuses.find(user, MediaType.tvshow, severance.value)?.status
+    private fun movieStatus(id: Long = heat.value, who: User.Id = user) = statuses.effective(who, MediaType.movie, id)
+    private fun showStatus() = statuses.effective(user, MediaType.tvshow, severance.value)
     private fun setMovie(status: WatchStatus, id: Long = heat.value) = statuses.save(MediaStatus(user, MediaType.movie, id, status, 1L))
     private fun rateHeat() = ratings.save(RatingFactory.aQuickRating(movieId = heat, userId = user, score = 8.0))
 
@@ -79,8 +79,9 @@ class ToggleSeenHandlerTest {
             val result = toggleMovie().getOrNull()!!
 
             assertEquals(ToggleSeenOutcome.MARKED_SEEN, result.outcome, "$before")
-            assertEquals(before, result.previous)
+            assertEquals(before.takeIf { it != WatchStatus.WANT_TO_WATCH }, result.previous, "the progress status before")
             assertEquals(WatchStatus.WATCHED, movieStatus(), "$before")
+            assertNull(statuses.findWatchlistEntry(user, MediaType.movie, heat.value), "seen takes it off the watchlist")
         }
     }
 
@@ -98,7 +99,9 @@ class ToggleSeenHandlerTest {
     fun `a rated movie stays seen whatever its status, and nothing changes`() {
         rateHeat()
         listOf(null, WatchStatus.WATCHED, WatchStatus.WANT_TO_WATCH, WatchStatus.DROPPED, WatchStatus.WATCHING).forEach { before ->
-            if (before == null) statuses.delete(user, MediaType.movie, heat.value) else setMovie(before)
+            statuses.delete(user, MediaType.movie, heat.value)
+            statuses.removeFromWatchlist(user, MediaType.movie, heat.value)
+            if (before != null) setMovie(before)
 
             val result = toggleMovie().getOrNull()!!
 
@@ -118,7 +121,7 @@ class ToggleSeenHandlerTest {
     @Test
     fun `a show is never locked - its status says whether it is seen, not its rated seasons`() {
         rateSeason1()
-        listOf(WatchStatus.DROPPED, WatchStatus.WATCHING, WatchStatus.WANT_TO_WATCH).forEach { before ->
+        listOf(WatchStatus.DROPPED, WatchStatus.WATCHING).forEach { before ->
             statuses.save(MediaStatus(user, MediaType.tvshow, severance.value, before, 1L))
 
             val result = toggleShow().getOrNull()!!

@@ -95,8 +95,10 @@ class BrowseBarViews(
         return tiles.map { tile ->
             val t = tile.title
             val typeParam = BrowseFilters.typeParam(t.type)
-            val status = tile.mark?.status
-            val badge = status?.takeIf { it != WatchStatus.WANT_TO_WATCH }
+            // The progress status; Want to watch (older marks) is the bookmark, never a badge.
+            val status = tile.mark?.status?.takeIf { it != WatchStatus.WANT_TO_WATCH }
+            val onWatchlist = tile.mark?.onWatchlist == true
+            val badge = status
             BrowseTileView(
                 key = "$typeParam-${t.tmdbId}",
                 tmdbId = t.tmdbId,
@@ -109,11 +111,11 @@ class BrowseBarViews(
                 initial = t.title.trim().take(1).uppercase(),
                 tmdbScore = t.voteAverage?.let(::oneDecimal),
                 userScore = tile.mark?.score?.let(::oneDecimal),
-                status = status?.apiName,
-                onWatchlist = status == WatchStatus.WANT_TO_WATCH,
+                status = WatchStatus.effective(status, onWatchlist)?.apiName,
+                onWatchlist = onWatchlist,
                 statusIcon = badge?.icon,
                 statusLabel = badge?.let { m(it.messageKey) },
-                actions = TileActionsView.of(t.tmdbId, t.type, status, tile.mark?.rated == true, t.releaseDate, today, locale, score = tile.mark?.score),
+                actions = TileActionsView.of(t.tmdbId, t.type, status, tile.mark?.rated == true, t.releaseDate, today, locale, score = tile.mark?.score, onWatchlist = onWatchlist),
             )
         }
     }

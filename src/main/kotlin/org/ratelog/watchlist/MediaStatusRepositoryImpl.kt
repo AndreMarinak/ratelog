@@ -8,6 +8,7 @@ import kotlin.jvm.optionals.getOrNull
 @Repository
 class MediaStatusRepositoryImpl(
     private val mediaStatusDAO: MediaStatusDAO,
+    private val watchlistEntryDAO: WatchlistEntryDAO,
 ) : MediaStatusRepository {
 
     override fun find(userId: User.Id, mediaType: MediaType, mediaId: Long): MediaStatus? =
@@ -21,6 +22,7 @@ class MediaStatusRepositoryImpl(
             .associate { WatchStatus.valueOf(it.status) to it.total.toInt() }
 
     override fun save(mediaStatus: MediaStatus) {
+        require(mediaStatus.status != WatchStatus.WANT_TO_WATCH) { "Want to watch is a watchlist entry, not a status" }
         mediaStatusDAO.upsert(
             userId = mediaStatus.userId.value,
             mediaType = mediaStatus.mediaType.name,
@@ -33,11 +35,35 @@ class MediaStatusRepositoryImpl(
     override fun delete(userId: User.Id, mediaType: MediaType, mediaId: Long): Boolean =
         mediaStatusDAO.deleteOne(userId.value, mediaType.name, mediaId) > 0
 
+    override fun findWatchlistEntry(userId: User.Id, mediaType: MediaType, mediaId: Long): WatchlistEntry? =
+        watchlistEntryDAO.findOne(userId.value, mediaType.name, mediaId).getOrNull()?.toDomain()
+
+    override fun findWatchlist(userId: User.Id, mediaType: MediaType?): List<WatchlistEntry> =
+        watchlistEntryDAO.findByUser(userId.value, mediaType?.name).map { it.toDomain() }
+
+    override fun countWatchlist(userId: User.Id, mediaType: MediaType?): Int =
+        watchlistEntryDAO.countByUser(userId.value, mediaType?.name).toInt()
+
+    override fun addToWatchlist(entry: WatchlistEntry) {
+        watchlistEntryDAO.upsert(entry.userId.value, entry.mediaType.name, entry.mediaId, entry.addedAtEpochMs, entry.rewatch)
+    }
+
+    override fun removeFromWatchlist(userId: User.Id, mediaType: MediaType, mediaId: Long): Boolean =
+        watchlistEntryDAO.deleteOne(userId.value, mediaType.name, mediaId) > 0
+
     private fun MediaStatusEntity.toDomain() = MediaStatus(
         userId = User.Id(userId),
         mediaType = MediaType.valueOf(mediaType),
         mediaId = mediaId,
         status = WatchStatus.valueOf(status),
         updatedAtEpochMs = updatedAtEpochMs,
+    )
+
+    private fun WatchlistEntryEntity.toDomain() = WatchlistEntry(
+        userId = User.Id(userId),
+        mediaType = MediaType.valueOf(mediaType),
+        mediaId = mediaId,
+        addedAtEpochMs = addedAtEpochMs,
+        rewatch = rewatch,
     )
 }

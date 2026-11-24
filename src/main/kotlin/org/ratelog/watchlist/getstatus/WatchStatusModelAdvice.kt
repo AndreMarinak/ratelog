@@ -37,9 +37,11 @@ class TvWatchStatusModelAdvice(
 }
 
 private fun putWatchStatus(model: Model, handler: GetWatchStatusHandler, user: User?, mediaType: MediaType, tmdbId: Int) {
-    val status = user?.id
+    val query = user?.id
         ?.takeIf { tmdbId > 0 }
-        ?.let { handler.handle(GetWatchStatus(it, mediaType, TmdbId(tmdbId))) }
-    model.addAttribute("watchStatus", status)
+        ?.let { GetWatchStatus(it, mediaType, TmdbId(tmdbId)) }
+    model.addAttribute("watchStatus", query?.let(handler::handle))
+    // Fork (2026-11-24): the watchlist is independent of the status (TitleActionsInterceptor reads it).
+    model.addAttribute("watchOnWatchlist", query?.let(handler::onWatchlist) == true)
     model.addAttribute("watchStatusOptions", WatchStatus.entries)
 }

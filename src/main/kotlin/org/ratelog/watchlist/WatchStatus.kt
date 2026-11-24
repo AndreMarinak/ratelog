@@ -6,6 +6,10 @@ import org.ratelog.user.User
 /**
  * A user's own progress on a movie or show. Having no status is modelled as "no row", not as an entry here.
  * This is separate from following a title, which only drives premiere tracking.
+ *
+ * Fork (2026-11-24): [WANT_TO_WATCH] is no longer stored as a status. "On the watchlist" is its own table
+ * ([WatchlistEntry]), so a Watched title can be on the watchlist too. The value stays for the watchlist page's To watch
+ * tab and the API, where a title only on the watchlist still reports `want_to_watch` ([effective]).
  */
 enum class WatchStatus(val apiName: String, val icon: String) {
     // Fork: the eye means "Seen" (the Letterboxd-style toggle), so Watching uses a play icon.
@@ -22,6 +26,13 @@ enum class WatchStatus(val apiName: String, val icon: String) {
 
     companion object {
         val DEFAULT_TAB = WANT_TO_WATCH
+
+        /**
+         * The one status the API and older readers see: the progress status, or [WANT_TO_WATCH] for a title that is only
+         * on the watchlist. A Watched title on the watchlist stays `watched` (with `onWatchlist: true`).
+         */
+        fun effective(progress: WatchStatus?, onWatchlist: Boolean): WatchStatus? =
+            progress ?: WANT_TO_WATCH.takeIf { onWatchlist }
 
         private val ALIASES = mapOf(
             "want" to WANT_TO_WATCH,

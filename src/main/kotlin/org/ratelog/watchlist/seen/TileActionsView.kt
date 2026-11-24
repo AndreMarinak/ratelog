@@ -19,7 +19,7 @@ data class TileActionsView(
     val tmdbId: Int,
     /** `movie` or `tv`: what POST /watchlist/toggle and POST /seen/toggle expect. */
     val type: String,
-    /** Api name of the viewer's status, or null. */
+    /** Api name of the viewer's status (Want to watch for a title only on the watchlist), or null. */
     val status: String?,
     val onWatchlist: Boolean,
     /** The bookmark is rendered either way (hidden when false) so the page can show it again after un-seeing. */
@@ -89,16 +89,20 @@ data class TileActionsView(
             locale: Locale,
             score: Double? = null,
             detailed: Boolean = false,
+            /** Fork (2026-11-24): on the watchlist, independent of [status] (a seen title can be on it too). */
+            onWatchlist: Boolean,
         ): TileActionsView {
-            val state = SeenState(status, rated, isTv = mediaType == MediaType.tvshow)
+            // An effective Want to watch (older callers) means "only on the watchlist".
+            val progress = status?.takeIf { it != WatchStatus.WANT_TO_WATCH }
+            val state = SeenState(progress, rated, isTv = mediaType == MediaType.tvshow, onWatchlist = onWatchlist || status == WatchStatus.WANT_TO_WATCH)
             val upcoming = ReleaseRules.isUpcoming(releaseDate, today)
-            val badge = status?.takeIf {
+            val badge = progress?.takeIf {
                 it == WatchStatus.WATCHING || it == WatchStatus.DROPPED || (it == WatchStatus.WATCHED && upcoming)
             }
             return TileActionsView(
                 tmdbId = tmdbId,
                 type = if (mediaType == MediaType.movie) "movie" else "tv",
-                status = status?.apiName,
+                status = state.effectiveStatus?.apiName,
                 onWatchlist = state.onWatchlist,
                 canToggleWatchlist = state.canToggleWatchlist,
                 seen = state.seen,
@@ -130,7 +134,7 @@ data class TileStateResponse(
     companion object {
         fun of(state: SeenState, seenDelta: Int, message: String?, ok: Boolean = true) = TileStateResponse(
             ok = ok,
-            status = state.status?.apiName,
+            status = state.effectiveStatus?.apiName,
             seen = state.seen,
             seenLocked = state.seenLocked,
             onWatchlist = state.onWatchlist,

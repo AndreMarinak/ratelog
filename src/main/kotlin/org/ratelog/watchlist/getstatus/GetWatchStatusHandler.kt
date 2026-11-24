@@ -22,12 +22,20 @@ class GetWatchStatusHandler(
     private val movieRepository: MovieRepository,
     private val tvShowRepository: TvShowRepository,
 ) {
+    /** The progress status (Watching / Watched / Dropped), never Want to watch: see [onWatchlist]. */
     fun handle(query: GetWatchStatus): WatchStatus? {
-        val mediaId = when (query.mediaType) {
-            MediaType.movie -> movieRepository.findByTmdbId(query.tmdbId)?.id?.value
-            MediaType.tvshow -> tvShowRepository.findByTmdbId(query.tmdbId)?.id?.value
-        } ?: return null
-
+        val mediaId = mediaId(query) ?: return null
         return mediaStatusRepository.find(query.userId, query.mediaType, mediaId)?.status
+    }
+
+    /** Fork (2026-11-24): whether the title is on the user's watchlist (independent of the status). */
+    fun onWatchlist(query: GetWatchStatus): Boolean {
+        val mediaId = mediaId(query) ?: return false
+        return mediaStatusRepository.findWatchlistEntry(query.userId, query.mediaType, mediaId) != null
+    }
+
+    private fun mediaId(query: GetWatchStatus): Long? = when (query.mediaType) {
+        MediaType.movie -> movieRepository.findByTmdbId(query.tmdbId)?.id?.value
+        MediaType.tvshow -> tvShowRepository.findByTmdbId(query.tmdbId)?.id?.value
     }
 }

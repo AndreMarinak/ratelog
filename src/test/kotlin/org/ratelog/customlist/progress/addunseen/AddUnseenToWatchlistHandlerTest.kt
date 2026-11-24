@@ -48,9 +48,10 @@ class AddUnseenToWatchlistHandlerTest {
         assertEquals(WatchStatus.DROPPED, f.statusOf(viewer, moana))
         assertEquals(WatchStatus.WATCHED, f.statusOf(viewer, frozen))
         assertEquals(WatchStatus.WANT_TO_WATCH, f.statusOf(viewer, encanto))
-        assertEquals(listOf(11L, 12L, 13L, 14L), listOf(up, moana, frozen, encanto).map {
+        assertEquals(listOf(11L, 12L, 13L), listOf(up, moana, frozen).map {
             f.statuses.find(viewer, MediaType.movie, it.id!!.value)!!.updatedAtEpochMs
         })
+        assertEquals(14L, f.statuses.findWatchlistEntry(viewer, MediaType.movie, encanto.id!!.value)!!.addedAtEpochMs)
     }
 
     @Test
@@ -81,12 +82,12 @@ class AddUnseenToWatchlistHandlerTest {
 
         handler.handle(AddUnseenToWatchlist(list.id!!, viewer))
 
-        val watchlist = f.statuses.findByUser(viewer, WatchStatus.WANT_TO_WATCH, null)
+        val watchlist = f.statuses.findWatchlist(viewer, null)
         assertEquals(
             listOf(MediaType.movie to coco.id!!.value, MediaType.tvshow to bluey.id!!.value, MediaType.movie to up.id!!.value),
             watchlist.map { it.mediaType to it.mediaId },
         )
-        assertEquals(now, watchlist.first().updatedAtEpochMs)
+        assertEquals(now, watchlist.first().addedAtEpochMs)
     }
 
     @Test

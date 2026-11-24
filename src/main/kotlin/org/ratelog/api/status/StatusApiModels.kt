@@ -15,10 +15,15 @@ data class StatusItemDto(
     val title: String,
     val year: Int?,
     val posterUrl: String?,
+    /** The effective status: `want_to_watch` for a title only on the watchlist, else its own status. */
     val status: String,
     /** The user's own score, if rated. */
     val score: Double?,
     val updatedAt: String,
+    /** Fork (2026-11-24): on your watchlist, independent of `status` (a `watched` title can be on it too, to rewatch). */
+    val onWatchlist: Boolean = false,
+    /** Rated, or status `watched` (the poster eye's rule). */
+    val seen: Boolean = false,
 )
 
 data class StatusListResponse(
@@ -35,6 +40,8 @@ data class StatusChangeDto(
     val posterUrl: String?,
     val status: String,
     val previousStatus: String?,
+    /** Fork (2026-11-24): on your watchlist, independent of `status` (a `watched` title can be on it too, to rewatch). */
+    val onWatchlist: Boolean = false,
 )
 
 data class SetStatusRequest(val status: String? = null)
@@ -90,9 +97,11 @@ fun WatchlistItem.toDto() = StatusItemDto(
     status = status.apiName,
     score = score,
     updatedAt = Instant.ofEpochMilli(updatedAtEpochMs).toString(),
+    onWatchlist = onWatchlist,
+    seen = seen,
 )
 
-fun LocalMedia.toStatusChange(status: WatchStatus, previous: WatchStatus?) = StatusChangeDto(
+fun LocalMedia.toStatusChange(status: WatchStatus, previous: WatchStatus?, onWatchlist: Boolean = status == WatchStatus.WANT_TO_WATCH) = StatusChangeDto(
     tmdbId = tmdbId,
     type = type.apiName(),
     title = title,
@@ -100,4 +109,5 @@ fun LocalMedia.toStatusChange(status: WatchStatus, previous: WatchStatus?) = Sta
     posterUrl = posterPath?.let(::posterUrl),
     status = status.apiName,
     previousStatus = previous?.apiName,
+    onWatchlist = onWatchlist,
 )

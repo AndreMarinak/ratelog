@@ -71,6 +71,7 @@ class RankingTileActionsInterceptor(
                 today = today,
                 locale = locale,
                 score = mark?.score,
+                onWatchlist = mark?.onWatchlist == true,
             )
         }
     }

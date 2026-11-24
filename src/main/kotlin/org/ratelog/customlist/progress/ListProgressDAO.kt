@@ -11,6 +11,8 @@ data class ViewerMarkRow(
     val status: String?,
     val score: Double?,
     val rated: Boolean,
+    /** Fork (2026-11-24): on the watchlist (independent of the status). */
+    @Column("on_watchlist") val onWatchlist: Boolean = false,
 )
 
 data class ListSeenRow(
@@ -35,7 +37,8 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
                  WHERE s.user_id = :userId AND s.media_type = 'movie' AND s.media_id = m.id) AS status,
                (SELECT r.score FROM movie_ratings r
                  WHERE r.movie_id = m.id AND r.user_id = :userId ORDER BY r.id DESC LIMIT 1) AS score,
-               EXISTS (SELECT 1 FROM movie_ratings r WHERE r.movie_id = m.id AND r.user_id = :userId) AS rated
+               EXISTS (SELECT 1 FROM movie_ratings r WHERE r.movie_id = m.id AND r.user_id = :userId) AS rated,
+               EXISTS (SELECT 1 FROM watchlist_entries w WHERE w.user_id = :userId AND w.media_type = 'movie' AND w.media_id = m.id) AS on_watchlist
         FROM movies m
         WHERE m.id IN (:mediaIds)
         """
@@ -49,7 +52,8 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
                  WHERE s.user_id = :userId AND s.media_type = 'tvshow' AND s.media_id = t.id) AS status,
                (SELECT r.score FROM tv_ratings r
                  WHERE r.tv_show_id = t.id AND r.user_id = :userId ORDER BY r.id DESC LIMIT 1) AS score,
-               (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = :userId) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = t.id AND tr.user_id = :userId AND tr.show_score IS NOT NULL)) AS rated
+               (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.tv_show_id = t.id AND sr.user_id = :userId) OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.tv_show_id = t.id AND tr.user_id = :userId AND tr.show_score IS NOT NULL)) AS rated,
+               EXISTS (SELECT 1 FROM watchlist_entries w WHERE w.user_id = :userId AND w.media_type = 'tvshow' AND w.media_id = t.id) AS on_watchlist
         FROM tv t
         WHERE t.id IN (:mediaIds)
         """
@@ -79,20 +83,22 @@ interface ListProgressDAO : Repository<ListProgressMarker, Long> {
     fun countSeenByList(userId: Long, listIds: List<Long>): List<ListSeenRow>
 
     /**
-     * Marks these list items Want to watch in one statement. `ON CONFLICT DO NOTHING` means a title that already
-     * has any status (even one set a moment ago) is never changed; rated titles and titles missing from
-     * movies / tv are skipped. Earlier list positions get later timestamps, so the watchlist (newest first)
-     * shows them in list order.
+     * Puts these list items on the watchlist in one statement (fork, 2026-11-24: `watchlist_entries`). Titles with any
+     * status (Watching / Watched / Dropped, even one set a moment ago), rated titles and titles missing from movies / tv
+     * are skipped; `ON CONFLICT DO NOTHING` leaves titles already on the watchlist as they are. Earlier list positions
+     * get later timestamps, so the watchlist (newest first) shows them in list order.
      */
     @Modifying
     @Query(
         """
-        INSERT INTO media_statuses (user_id, media_type, media_id, status, updated_at_epoch_ms)
-        SELECT :userId, i.media_type, i.media_id, 'WANT_TO_WATCH',
-               :nowEpochMs - ROW_NUMBER() OVER (ORDER BY i.position, i.id) + 1
+        INSERT INTO watchlist_entries (user_id, media_type, media_id, added_at_epoch_ms, rewatch)
+        SELECT :userId, i.media_type, i.media_id,
+               :nowEpochMs - ROW_NUMBER() OVER (ORDER BY i.position, i.id) + 1, FALSE
         FROM custom_list_items i
         WHERE i.list_id = :listId
           AND i.id IN (:itemIds)
+          AND NOT EXISTS (SELECT 1 FROM media_statuses s
+                           WHERE s.user_id = :userId AND s.media_type = i.media_type AND s.media_id = i.media_id)
           AND (
                 (i.media_type = 'movie'
                  AND EXISTS (SELECT 1 FROM movies m WHERE m.id = i.media_id)

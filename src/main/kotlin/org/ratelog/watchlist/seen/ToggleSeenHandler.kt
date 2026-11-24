@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.LocalDate
 
-/** The viewer's status and whether they rated the title (a show: at least one rated season). */
+/** The viewer's status, whether they rated the title (a show: at least one rated season) and whether it's on their watchlist. */
 @Component
 class SeenStateReader(
     private val mediaStatusRepository: MediaStatusRepository,
@@ -34,6 +34,7 @@ class SeenStateReader(
                 ?.isRated == true
         },
         isTv = mediaType == MediaType.tvshow,
+        onWatchlist = mediaStatusRepository.findWatchlistEntry(userId, mediaType, mediaId) != null,
     )
 }
 
@@ -45,7 +46,7 @@ data class ToggleSeen(
 )
 
 enum class ToggleSeenOutcome(val messageKey: String) {
-    /** Not seen -> Watched (from no status, Want to watch, Watching or Dropped). */
+    /** Not seen -> Watched (from no status, Watching or Dropped). It leaves the watchlist: you've now seen it. */
     MARKED_SEEN("seen.marked"),
 
     /** Watched (and not rated) -> no status. */
@@ -81,8 +82,9 @@ sealed interface ToggleSeenError {
 
 /**
  * The one-tap Seen toggle (title pages, poster tiles, list tick-off mode). "Seen" is [SeenState.seen].
- * - Not seen: sets Watched, replacing Want to watch / Watching / Dropped (refused while the title isn't out).
- * - Seen, not rated: clears the status (no status at all, not back to what it was before).
+ * - Not seen: sets Watched, replacing Watching / Dropped, and takes it off the watchlist (refused while the title isn't out).
+ * - Seen, not rated: clears the status (no status at all, not back to what it was before). A rewatch on the watchlist
+ *   stays there, as a title you haven't seen (so seeing it later takes it off).
  * - A rated movie: locked. It stays seen and nothing changes; the caller explains that the rating would have to go.
  * - A seen show with rated seasons: back to Watching.
  */
@@ -107,11 +109,17 @@ class ToggleSeenHandler(
 
             before.seen && before.isTv && before.rated -> {
                 save(command, WatchStatus.WATCHING)
-                ToggleSeenResult(ToggleSeenOutcome.UNMARKED_TO_WATCHING, before.status, before.copy(status = WatchStatus.WATCHING))
+                // Watching and the watchlist don't mix (the To watch -> Watching move).
+                mediaStatusRepository.removeFromWatchlist(command.userId, command.mediaType, command.mediaId)
+                ToggleSeenResult(ToggleSeenOutcome.UNMARKED_TO_WATCHING, before.status, before.copy(status = WatchStatus.WATCHING, onWatchlist = false))
             }
 
             before.seen -> {
                 mediaStatusRepository.delete(command.userId, command.mediaType, command.mediaId)
+                // Fork (2026-11-24): a rewatch stays on the watchlist, now as a title you haven't seen.
+                mediaStatusRepository.findWatchlistEntry(command.userId, command.mediaType, command.mediaId)
+                    ?.takeIf { it.rewatch }
+                    ?.let { mediaStatusRepository.addToWatchlist(it.copy(rewatch = false)) }
                 ToggleSeenResult(ToggleSeenOutcome.UNMARKED, before.status, before.copy(status = null))
             }
 
@@ -119,7 +127,9 @@ class ToggleSeenHandler(
                 val today = LocalDate.now(clock)
                 if (ReleaseRules.isUpcoming(command.mediaType, release.first, release.second, today)) raise(ToggleSeenError.NotReleased)
                 save(command, WatchStatus.WATCHED)
-                ToggleSeenResult(ToggleSeenOutcome.MARKED_SEEN, before.status, before.copy(status = WatchStatus.WATCHED))
+                // Seen now: off the watchlist, as before the watchlist had its own table.
+                mediaStatusRepository.removeFromWatchlist(command.userId, command.mediaType, command.mediaId)
+                ToggleSeenResult(ToggleSeenOutcome.MARKED_SEEN, before.status, before.copy(status = WatchStatus.WATCHED, onWatchlist = false))
             }
         }
     }

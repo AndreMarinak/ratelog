@@ -1,5 +1,6 @@
 package org.ratelog.watchlist.move
 
+import org.ratelog.test.WatchlistHandlers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -50,7 +51,7 @@ class WatchlistQuickActionsTest {
     private val shows = InMemoryTvShowRepository()
     private val ratings = InMemoryRatingRepository()
     private val importer: MediaImporter = mock()
-    private val handler = MoveWatchlistItemHandler(SetWatchStatusHandler(statuses, movies, shows))
+    private val handler = MoveWatchlistItemHandler(WatchlistHandlers.setStatus(statuses, movies, shows, ratings), WatchlistHandlers.setWatchlist(statuses, movies, shows, ratings), statuses)
     private val controller = MoveWatchlistItemController(handler, importer, BrowseBarViewsTest.testMessageSource())
     private val page = WatchlistController(
         GetWatchlistHandler(statuses, movies, InMemoryMovieDescriptionRepository(), ratings, shows, InMemoryTvDescriptionRepository(), InMemoryTvRatingRepository()),
@@ -79,7 +80,7 @@ class WatchlistQuickActionsTest {
     fun tearDown() = LocaleContextHolder.resetLocaleContext()
 
     private fun want(id: Long, type: MediaType = MediaType.movie) = statuses.save(MediaStatus(user.id!!, type, id, WatchStatus.WANT_TO_WATCH, 1L))
-    private fun status(id: Long, type: MediaType = MediaType.movie) = statuses.find(user.id!!, type, id)?.status
+    private fun status(id: Long, type: MediaType = MediaType.movie) = statuses.effective(user.id!!, type, id)
     private fun request() = MockHttpServletRequest()
 
     // --- POST /watchlist/item (plain form) ---
@@ -96,7 +97,7 @@ class WatchlistQuickActionsTest {
         val notice = flash.flashAttributes["watchlistNotice"] as WatchlistNotice
         assertEquals("watchlist.notice.removed.want_to_watch", notice.messageKey)
         assertEquals("Dune: Part Two", notice.title)
-        assertEquals("want_to_watch", notice.undoMove, "undo puts it back on the watchlist")
+        assertEquals("relist", notice.undoMove, "undo puts it back on the watchlist")
         assertEquals("movie", notice.mediaType)
     }
 
@@ -168,7 +169,7 @@ class WatchlistQuickActionsTest {
             assertEquals("want_to_watch", previous)
             assertNull(current)
             assertEquals("Removed \"Dune: Part Two\" from your watchlist.", message)
-            assertEquals("want_to_watch", undoMove)
+            assertEquals("relist", undoMove)
             assertEquals("Undo", undoLabel)
         }
 
@@ -217,14 +218,14 @@ class WatchlistQuickActionsTest {
 
         val tv = ExtendedModelMap().also { page.watchlistPage(user, null, "tv", it) }
         val items = ((model["items"] as List<WatchlistItemResponse>) + (tv["items"] as List<WatchlistItemResponse>)).associateBy { it.title }
-        assertTrue(items.values.all { item -> item.actions.any { it.to == "remove" } }, "Remove on every tile")
-        assertEquals(listOf("seen", "remove"), items.getValue("Dune: Part Two").actions.map { it.to })
+        assertTrue(items.values.all { item -> item.actions.any { it.to == "unlist" } }, "Remove (off the watchlist) on every tile")
+        assertEquals(listOf("seen", "unlist"), items.getValue("Dune: Part Two").actions.map { it.to })
         assertEquals(2, items.getValue("Dune: Part Two").firstSpan, "a movie's Seen takes the Watching slot, Remove lines up")
-        assertEquals(listOf("seen", "watching", "remove"), items.getValue("The Bear").actions.map { it.to })
+        assertEquals(listOf("seen", "watching", "unlist"), items.getValue("The Bear").actions.map { it.to })
         assertEquals(1, items.getValue("The Bear").firstSpan)
         assertTrue(items.values.all { it.slots == 3 })
         val upcoming = items.getValue("Avengers: Doomsday")
-        assertEquals(listOf("remove"), upcoming.actions.map { it.to }, "no Seen before it's out")
+        assertEquals(listOf("unlist"), upcoming.actions.map { it.to }, "no Seen before it's out")
         assertEquals("watchlist.note.upcoming", upcoming.noteKey)
         assertEquals(2, upcoming.noteSpan)
         assertEquals(1, upcoming.firstSpan)
@@ -307,10 +308,11 @@ class WatchlistQuickActionsTest {
             WatchlistController.actionsFor(status, isTv, upcoming, rated).map { it.to }
 
         // Seen first, Watching / Drop for shows only, Remove last (2026-11-23: Watching is "bc its a series").
-        assertEquals(listOf("seen", "remove"), moves(WatchStatus.WANT_TO_WATCH))
-        assertEquals(listOf("seen", "watching", "remove"), moves(WatchStatus.WANT_TO_WATCH, isTv = true))
+        // Fork (2026-11-24): To watch's Remove is `unlist` (off the watchlist only, so a rewatch stays seen).
+        assertEquals(listOf("seen", "unlist"), moves(WatchStatus.WANT_TO_WATCH))
+        assertEquals(listOf("seen", "watching", "unlist"), moves(WatchStatus.WANT_TO_WATCH, isTv = true))
         listOf(false, true).forEach { tv ->
-            assertEquals(listOf("remove"), moves(WatchStatus.WANT_TO_WATCH, isTv = tv, upcoming = true))
+            assertEquals(listOf("unlist"), moves(WatchStatus.WANT_TO_WATCH, isTv = tv, upcoming = true))
             assertEquals(listOf("remove"), moves(WatchStatus.WATCHED, isTv = tv))
             assertEquals(emptyList<String>(), moves(WatchStatus.WATCHED, isTv = tv, rated = true), "a rated title stays seen through its rating")
             assertEquals(listOf("remove"), moves(WatchStatus.DROPPED, isTv = tv, upcoming = true))

@@ -96,7 +96,7 @@ class UnratedSeenController(
             posterUrl2x = posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
             initial = title.trim().take(1).uppercase().ifEmpty { "?" },
             isMovie = type == MediaType.movie,
-            actions = TileActionsView.of(tmdbId, type, WatchStatus.WATCHED, rated = false, releaseDate = releaseDate, today = today, locale = locale),
+            actions = TileActionsView.of(tmdbId, type, WatchStatus.WATCHED, rated = false, releaseDate = releaseDate, today = today, locale = locale, onWatchlist = onWatchlist),
         )
     }
 }

@@ -44,7 +44,7 @@ class TileRateHandlerTest {
     private val doomsday = movies.save(MovieFactory.aMovie(tmdbId = 1003596, originalTitle = "Avengers: Doomsday", releaseDate = LocalDate.parse("2026-12-18")))
 
     private fun rating() = ratings.findByMovieIdAndUserId(heat.id!!, userId)
-    private fun status() = statuses.find(userId, MediaType.movie, heat.id!!.value)?.status
+    private fun status() = statuses.effective(userId, MediaType.movie, heat.id!!.value)
 
     @Test
     fun `rating an unrated movie saves a quick rating and marks it seen`() {
@@ -77,9 +77,10 @@ class TileRateHandlerTest {
 
         val result = rate.handle(TileRate(userId, heat.id!!, 7.0)).getOrNull()!!
 
-        assertEquals(WatchStatus.WANT_TO_WATCH, result.before.status)
+        assertNull(result.before.status)
+        assertTrue(result.before.onWatchlist)
         assertEquals(WatchStatus.WATCHED, result.after.status)
-        assertFalse(result.after.onWatchlist)
+        assertFalse(result.after.onWatchlist, "added while unseen: rating it takes it off the watchlist")
     }
 
     @Test

@@ -113,7 +113,7 @@ class ApiListControllerProgressTest {
         assertEquals(1, json["progress"]["total"].asInt())
         val item = json["items"][0]
         assertEquals(
-            setOf("position", "tmdbId", "type", "title", "year", "posterUrl", "status", "score", "seen"),
+            setOf("position", "tmdbId", "type", "title", "year", "posterUrl", "status", "score", "seen", "onWatchlist"),
             item.fieldNames().asSequence().toSet(),
         )
         assertEquals("watched", item["status"].asText())

@@ -52,6 +52,8 @@ data class StatsTitle(
     val releaseDate: LocalDate?,
     val posterPath: String?,
     val status: WatchStatus?,
+    /** Fork (2026-11-24): on the watchlist (independent of [status]). */
+    val onWatchlist: Boolean = false,
 )
 
 interface StatsRepository {
@@ -100,6 +102,7 @@ class StatsRepositoryImpl(
                 releaseDate = it.releaseDate?.take(10)?.let { date -> runCatching { date.toLocalDate() }.getOrNull() },
                 posterPath = it.posterPath,
                 status = it.status?.let { status -> WatchStatus.entries.find { s -> s.name == status } },
+                onWatchlist = it.onWatchlist,
             )
         }
     }

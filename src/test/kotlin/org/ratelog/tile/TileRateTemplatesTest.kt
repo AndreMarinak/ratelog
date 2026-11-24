@@ -77,7 +77,7 @@ class TileRateTemplatesTest {
         status: WatchStatus? = null,
         date: LocalDate? = LocalDate.parse("1999-03-31"),
         detailed: Boolean = false,
-    ) = TileActionsView.of(tmdbId, type, status, score != null, date, today, Locale.ENGLISH, score = score, detailed = detailed)
+    ) = TileActionsView.of(tmdbId, type, status, score != null, date, today, Locale.ENGLISH, score = score, detailed = detailed, onWatchlist = status == WatchStatus.WANT_TO_WATCH)
 
     private fun actions(a: TileActionsView, title: String = "The Matrix", marks: TileMarks? = null) =
         render("fragments/tile-actions", setOf("actions"), mapOf("a" to a, "title" to title, "tileMarks" to marks))
@@ -309,13 +309,14 @@ class TileRateTemplatesTest {
             slots = WatchlistController.slotsFor(status),
             noteKey = WatchlistController.noteFor(status, upcomingDate != null, score != null, hasDate = upcomingDate != null),
             tileActions = TileActionsView.of(if (isMovie) 1 else 2, if (isMovie) MediaType.movie else MediaType.tvshow, status, score != null,
-                if (upcomingDate != null) LocalDate.parse("2026-12-18") else LocalDate.parse("2001-01-01"), today, Locale.ENGLISH, score = score),
+                if (upcomingDate != null) LocalDate.parse("2026-12-18") else LocalDate.parse("2001-01-01"), today, Locale.ENGLISH, score = score, onWatchlist = status == WatchStatus.WANT_TO_WATCH),
         )
         fun grid(vararg items: WatchlistItemResponse) = render("watchlist", setOf("grid"), mapOf("items" to items.toList(), "watchlistSelf" to "/watchlist"))
 
         val toWatch = grid(item("Heat", true, WatchStatus.WANT_TO_WATCH), item("The Bear", false, WatchStatus.WANT_TO_WATCH))
         assertEquals(2, Regex("""class="watchlist-actions slots-3"""").findAll(toWatch).count(), toWatch)
-        listOf("seen", "remove").forEach { to ->
+        // Fork (2026-11-24): To watch's Remove only takes it off the watchlist (`unlist`), the status stays.
+        listOf("seen", "unlist").forEach { to ->
             assertEquals(2, Regex("""name="to" value="$to"""").findAll(toWatch).count(), "$to on both the movie and the show")
         }
         assertEquals(1, Regex("""name="to" value="watching"""").findAll(toWatch).count(), "Watching is for shows")
@@ -333,5 +334,20 @@ class TileRateTemplatesTest {
         assertTrue(seen.contains(">Rated<"))
         assertEquals(1, Regex("""name="to" value="remove"""").findAll(seen).count())
         assertFalse(seen.contains("??"))
+
+        // Fork (2026-11-24): a seen title on To watch (a rewatch) gets the "Rewatch" tag in Seen's place and only Remove.
+        val rewatch = render("watchlist", setOf("grid"), mapOf("items" to listOf(
+            item("Heat", true, WatchStatus.WANT_TO_WATCH, score = 9.0).copy(
+                actions = WatchlistController.actionsFor(WatchStatus.WANT_TO_WATCH, false, false, true, rewatch = true),
+                noteKey = WatchlistController.NOTE_REWATCH,
+                rewatch = true,
+            ),
+        ), "watchlistSelf" to "/watchlist"))
+        assertTrue(rewatch.contains("watchlist-note is-rewatch"), rewatch)
+        assertTrue(rewatch.contains(">Rewatch<"))
+        assertTrue(rewatch.contains("data-lucide=\"eye\""))
+        assertEquals(1, Regex("""name="to" value="unlist"""").findAll(rewatch).count())
+        assertFalse(rewatch.contains("value=\"seen\""), "already seen: no Seen button")
+        assertTrue(rewatch.contains("grid-column: span 2"), "the tag fills Seen's and Watching's slots")
     }
 }

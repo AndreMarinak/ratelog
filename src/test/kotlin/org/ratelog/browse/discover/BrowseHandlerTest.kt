@@ -92,7 +92,7 @@ class BrowseHandlerTest {
         // Then
         assertEquals(20, result.tiles.size)
         assertEquals(LibraryMark(score = 8.5, rated = true, status = WatchStatus.WATCHED), result.tiles[1].mark)
-        assertEquals(LibraryMark(score = null, rated = false, status = WatchStatus.WANT_TO_WATCH), result.tiles[2].mark)
+        assertEquals(LibraryMark(score = null, rated = false, status = null, onWatchlist = true), result.tiles[2].mark)
         assertNull(result.tiles[0].mark)
         assertNull(result.tiles[3].mark)
         assertEquals(1, library.calls.size)
@@ -128,7 +128,7 @@ class BrowseHandlerTest {
 
         val ids = result.tiles.map { it.title.tmdbId }
         assertEquals(listOf(3, 4, 5) + (7..20).toList(), ids)
-        assertEquals(WatchStatus.WANT_TO_WATCH, result.tiles.first { it.title.tmdbId == 5 }.mark?.status)
+        assertEquals(true, result.tiles.first { it.title.tmdbId == 5 }.mark?.onWatchlist)
         assertTrue(BrowseFilters().hideSeen)
     }
 

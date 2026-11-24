@@ -41,14 +41,14 @@
     </div>
 </th:block>
 
-<!--/* Watchlist: toggles Want to watch (POST /status). From an unrated Watched it asks first: it would stop counting as seen. */-->
-<form th:fragment="watchlist(a)" th:if="${a != null}" action="/status" method="post" class="title-action-form" data-title-act="watchlist"
-      th:data-confirm="${a.watchlistReplacesSeen} ? #{title.watchlist.confirm.seen} : null"
-      th:data-confirm-seen="#{title.watchlist.confirm.seen}">
+<!--/* Watchlist (fork, 2026-11-24): on / off the watchlist (POST /watchlist/set), independent of Seen, so a seen or rated
+       title can be added too (a rewatch) and stays seen. No confirm any more. */-->
+<form th:fragment="watchlist(a)" th:if="${a != null}" action="/watchlist/set" method="post" class="title-action-form" data-title-act="watchlist">
     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
     <input type="hidden" name="mediaType" th:value="${a.mediaType}" />
     <input type="hidden" name="mediaId" th:value="${a.mediaId}" />
-    <input type="hidden" name="status" th:value="${a.onWatchlist} ? '' : 'want_to_watch'" />
+    <input type="hidden" name="back" th:value="${a.back}" />
+    <input type="hidden" name="on" th:value="${a.onWatchlist} ? '0' : '1'" />
     <button type="submit" class="title-action title-toggle title-toggle-watchlist" data-title-watchlist
             th:classappend="${a.onWatchlist} ? 'is-on' : ''" th:aria-pressed="${a.onWatchlist}"
             th:title="${a.onWatchlist} ? #{title.watchlist.title.on} : #{title.watchlist.title.off}"

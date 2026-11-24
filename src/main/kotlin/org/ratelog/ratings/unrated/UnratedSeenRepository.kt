@@ -17,6 +17,8 @@ data class UnratedSeenTitle(
     val releaseDate: LocalDate?,
     /** When it was marked seen (the status's update time), for "newest first". */
     val seenAtEpochMs: Long,
+    /** Fork (2026-11-24): on the watchlist too (a rewatch). */
+    val onWatchlist: Boolean = false,
 )
 
 interface UnratedSeenRepository {
@@ -48,6 +50,7 @@ class UnratedSeenRepositoryImpl(
                 posterPath = it.posterPath,
                 releaseDate = it.releaseDate?.take(10)?.let { date -> runCatching { date.toLocalDate() }.getOrNull() },
                 seenAtEpochMs = it.sortKey,
+                onWatchlist = it.onWatchlist,
             )
         }
     }

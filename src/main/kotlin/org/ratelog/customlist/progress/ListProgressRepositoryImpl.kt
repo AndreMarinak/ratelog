@@ -20,7 +20,7 @@ class ListProgressRepositoryImpl(
             MediaType.tvshow -> dao.findTvMarks(userId.value, ids)
         }
         return rows
-            .map { it.mediaId to ViewerMark(it.status?.let(WatchStatus::valueOf), it.score, it.rated) }
+            .map { it.mediaId to ViewerMark(it.status?.let(WatchStatus::valueOf), it.score, it.rated, it.onWatchlist) }
             .filter { (_, mark) -> mark != ViewerMark.NONE }
             .toMap()
     }
