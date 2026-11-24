@@ -8,6 +8,7 @@ import org.ratelog.backnav.BackNavNames
 import org.ratelog.backnav.BackNavPages
 import org.ratelog.customlist.getlistdetail.ListDetail
 import org.ratelog.movie.detail.MovieDetailResponse
+import org.ratelog.person.detail.web.PersonView
 import org.ratelog.tvshow.detail.TvShowDetailResponse
 import org.ratelog.user.User
 import org.ratelog.user.UserDetailsService
@@ -41,6 +42,8 @@ class BackNavInterceptor(
         when (view) {
             "movie-detail" -> (model["movie"] as? MovieDetailResponse)?.let { modelAndView.addObject("backNav", titleLink(request, it.name)) }
             "tvshow-detail" -> (model["show"] as? TvShowDetailResponse)?.let { modelAndView.addObject("backNav", titleLink(request, it.name)) }
+            // Fork (2026-11-24): person pages get the same back link (they count as a title in the back-link chain).
+            "person" -> (model["person"] as? PersonView)?.let { modelAndView.addObject("backNav", titleLink(request, it.name)) }
             else -> pageLabel(view, path, request.queryString, model)?.let { modelAndView.addObject("backNavPage", it) }
         }
     }

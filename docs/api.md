@@ -28,7 +28,8 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
 | GET | `/api/v1/me` | | `{id, username, role}`; `role` is `USER`, `MANAGER`, `ADMIN` or `SUPERADMIN` |
-| GET | `/api/v1/search` | `q`, optional `type`, `year` | `{results: [Candidate]}` (raw TMDB search) |
+| GET | `/api/v1/search` | `q`, optional `type`, `year`, `people` | `{results: [Candidate]}` (raw TMDB search); with `people=true` also `people: [Person]` (see [People](#people)) |
+| GET | `/api/v1/people/{tmdbPersonId}` | optional `department`, `type`, `sort` | a person and their filmography (see [People](#people)) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
 | GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url, numbered}]` |
 | GET | `/api/v1/lists/official` | | every official list, with your progress (see [Official lists](#official-lists)) |
@@ -622,3 +623,44 @@ What counts (a period is a year, or everything with `all`):
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/stats"
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/stats?year=all"
 ```
+
+## People
+
+Added in this fork (2026-11-24): the data of the person page (`/person/{id}`) and People in search. Person ids are TMDB's.
+
+`GET /api/v1/people/{tmdbPersonId}`, optional:
+- `department`: a department slug from `departments` (`acting`, `directing`, `writing`, `production`...); default: the
+  person's known-for department (an unknown slug also falls back to it).
+- `type`: `all` (default), `movie` or `tv`. Anything else: `400 invalid_type`.
+- `sort`: `newest` (default; upcoming first, titles with no date last) or `popular` (most TMDB votes first). Anything else:
+  `400 invalid_parameter`.
+
+```json
+{
+  "tmdbId": 525, "name": "Christopher Nolan", "url": "/person/525",
+  "profileUrl": "https://image.tmdb.org/t/p/w185/...", "knownForDepartment": "Directing",
+  "birthday": "1970-07-30", "deathday": null, "placeOfBirth": "Westminster, London, England, UK", "biography": "...",
+  "departments": [{"department": "acting", "name": "Acting", "count": 12}, {"department": "directing", "name": "Directing", "count": 19}],
+  "department": "directing", "type": "all", "sort": "newest",
+  "credits": [
+    {"tmdbId": 27205, "type": "movie", "title": "Inception", "year": 2010, "releaseDate": "2010-07-15",
+     "posterUrl": "https://image.tmdb.org/t/p/w342/...", "roles": ["Director"], "upcoming": false,
+     "status": "watched", "score": 9.0}
+  ]
+}
+```
+
+- One entry per title in the chosen department; `roles` lists the characters (Acting) or jobs, several on one title together.
+- `status` / `score` are yours (`want_to_watch`, `watching`, `watched`, `dropped`; `null` when none).
+- Acting leaves out appearances that aren't roles: TV talk / news / reality shows and "Self" on TV, and "Self" in a
+  documentary or genre-less movie. Every credit is returned (no 60-title limit as on the page).
+- Cached for a day. Errors: `not_found` (no such person), `tmdb_not_configured`, `tmdb_error`.
+
+`GET /api/v1/search?q=tom+hanks&people=true` adds `people` (up to 6, best known first; only people whose name is exactly
+`q`, or who have a photo and some popularity):
+
+```json
+{"results": [...], "people": [{"tmdbId": 31, "name": "Tom Hanks", "url": "/person/31", "profileUrl": "https://image.tmdb.org/t/p/w185/...",
+  "knownForDepartment": "Acting", "knownFor": ["Forrest Gump", "Toy Story", "The Green Mile"]}]}
+```
+Without `people=true` the response is unchanged (no `people` key).

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${person.name})}"></head>
+<body>
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='person')}"></header>
+    <link rel="stylesheet" href="/home.css">
+    <link rel="stylesheet" href="/search-results.css">
+    <link rel="stylesheet" href="/tile-actions.css">
+    <link rel="stylesheet" href="/person-page.css">
+
+    <!--/* Fork: person pages (PersonController, docs/design-decisions.md "People: person pages and People in search").
+           The back link works like a title page's: a person counts as a title in the back-link chain. */-->
+    <nav th:replace="~{fragments/back-nav :: link(${backNav})}"></nav>
+
+    <article class="person" th:with="p=${person}">
+        <header class="person-head">
+            <div class="person-photo">
+                <img th:if="${p.photoUrl != null}" th:src="${p.photoUrl}"
+                     th:srcset="${p.photoUrl + ' 185w, ' + p.photoUrl2x + ' 632w'}"
+                     sizes="(max-width: 600px) 112px, 180px" th:alt="#{person.photo.alt(${p.name})}" decoding="async">
+                <div th:unless="${p.photoUrl != null}" class="person-photo-fallback" aria-hidden="true" th:text="${p.initial}">T</div>
+            </div>
+            <div class="person-info">
+                <h1 class="person-name" th:text="${p.name}">Tom Hanks</h1>
+                <p th:if="${p.knownForLabel != null}" class="person-known">
+                    <span th:text="#{person.known.for}">Known for</span>
+                    <strong th:text="${p.knownForKey != null} ? #{${p.knownForKey}} : ${p.knownForLabel}">Acting</strong>
+                </p>
+                <dl th:if="${p.born != null or p.died != null or p.placeOfBirth != null}" class="person-facts">
+                    <div th:if="${p.born != null or p.placeOfBirth != null}">
+                        <dt th:text="#{person.born}">Born</dt>
+                        <dd>
+                            <span th:if="${p.born != null}" th:text="${p.age != null} ? #{person.born.age(${p.born}, ${p.age})} : ${p.born}">July 9, 1956 (age 70)</span>
+                            <span th:if="${p.born != null and p.placeOfBirth != null}" class="person-sep" aria-hidden="true">·</span>
+                            <span th:if="${p.placeOfBirth != null}" th:text="${p.placeOfBirth}">Concord, California, USA</span>
+                        </dd>
+                    </div>
+                    <div th:if="${p.died != null}">
+                        <dt th:text="#{person.died}">Died</dt>
+                        <dd th:text="${p.diedAge != null} ? #{person.died.age(${p.died}, ${p.diedAge})} : ${p.died}">March 3, 2020 (aged 80)</dd>
+                    </div>
+                </dl>
+                <!--/* The first sentences, then the rest behind "More" (a plain <details>: no JS needed). */-->
+                <div th:if="${p.bioLead != null}" class="person-bio">
+                    <p th:text="${p.bioLead}">Thomas Jeffrey Hanks is an American actor and filmmaker.</p>
+                    <details th:unless="${#lists.isEmpty(p.bioRest)}" class="person-bio-more">
+                        <summary th:text="#{person.bio.more}">More</summary>
+                        <p th:each="para : ${p.bioRest}" th:text="${para}">More of the biography.</p>
+                    </details>
+                </div>
+            </div>
+        </header>
+
+        <!--/* The filmography. Its filters are links that view-swap.js applies in place (this region is swapped from the
+               new URL, which replaces this history entry's URL: one Back leaves the page). Without JS they load. */-->
+        <section id="personView" class="person-credits" data-view data-view-fallback="dept" th:aria-label="#{person.credits.aria}">
+            <div class="person-filters">
+                <nav th:if="${#lists.size(p.departmentTabs) > 1}" class="person-tabs person-depts" data-view-links="dept" th:aria-label="#{person.filter.dept}">
+                    <a th:each="tab : ${p.departmentTabs}" th:href="${tab.href}" class="person-tab" th:classappend="${tab.active} ? 'active' : ''"
+                       th:attr="aria-current=${tab.active} ? 'page' : null,data-person-dept=${tab.value}">
+                        <span th:text="${tab.labelKey != null} ? #{${tab.labelKey}} : ${tab.label}">Acting</span>
+                        <span class="person-tab-count" th:text="${tab.count}">120</span>
+                    </a>
+                </nav>
+                <h2 th:if="${#lists.size(p.departmentTabs) == 1}" class="person-credits-title"
+                    th:with="tab=${p.departmentTabs[0]}" th:text="${tab.labelKey != null} ? #{${tab.labelKey}} : ${tab.label}">Acting</h2>
+                <div th:unless="${#lists.isEmpty(p.departmentTabs)}" class="person-filter-row">
+                    <nav class="person-tabs person-types" data-view-links="type" th:aria-label="#{person.filter.type}">
+                        <a th:each="tab : ${p.typeTabs}" th:href="${tab.href}" class="person-tab" th:classappend="${tab.active} ? 'active' : ''"
+                           th:attr="aria-current=${tab.active} ? 'page' : null,data-person-type=${tab.value}">
+                            <span th:text="#{${tab.labelKey}}">All</span>
+                            <span class="person-tab-count" th:text="${tab.count}">95</span>
+                        </a>
+                    </nav>
+                    <nav class="person-sort" data-view-links="sort" th:aria-label="#{person.filter.sort}">
+                        <a th:each="tab : ${p.sortTabs}" th:href="${tab.href}" class="person-sort-link" th:classappend="${tab.active} ? 'active' : ''"
+                           th:attr="aria-current=${tab.active} ? 'page' : null,data-person-sort=${tab.value}" th:text="#{${tab.labelKey}}">Newest</a>
+                    </nav>
+                </div>
+            </div>
+
+            <div th:if="${p.emptyKey != null}" class="empty-state person-empty" th:text="#{${p.emptyKey}}">No credits.</div>
+
+            <div th:unless="${#lists.isEmpty(p.tiles)}" class="search-grid person-grid">
+                <div th:each="tile : ${p.tiles}" class="home-tile-wrap search-tile-wrap" th:attr="data-key=${tile.key}">
+                    <a th:href="${tile.href}" class="home-tile search-tile person-tile">
+                        <div class="home-poster">
+                            <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
+                                 th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
+                                 sizes="(max-width: 600px) 31vw, 170px" th:alt="'Poster of ' + ${tile.title}" loading="lazy" decoding="async">
+                            <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
+                            <span class="home-type" th:title="${tile.isMovie} ? #{search.type.movie} : #{search.type.tv}">
+                                <i th:data-lucide="${tile.isMovie} ? 'film' : 'tv'" aria-hidden="true"></i>
+                            </span>
+                            <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
+                        </div>
+                        <span class="home-tile-title" th:text="${tile.title}" th:title="${tile.title}">Forrest Gump</span>
+                        <span class="home-tile-meta person-tile-role" th:if="${tile.role != null}" th:text="${tile.role}" th:title="${tile.role}">Forrest Gump</span>
+                        <span class="home-tile-meta" th:text="${tile.year != null} ? ${tile.year} : #{person.year.unknown}">1994</span>
+                    </a>
+                    <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
+                </div>
+            </div>
+
+            <p th:if="${p.showAllHref != null}" class="person-show-all" data-view-links="all">
+                <a th:href="${p.showAllHref}" class="person-show-all-link" th:text="#{person.show.all(${p.total})}">Show all 125</a>
+            </p>
+        </section>
+    </article>
+</div>
+<script src="/view-swap.js" defer></script>
+<script src="/tile-actions.js" defer></script>
+<th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
+</body>
+</html>

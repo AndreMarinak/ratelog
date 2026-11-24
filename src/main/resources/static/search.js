@@ -107,6 +107,8 @@ const SearchInfinite = {
         try {
             const params = new URLSearchParams({ q: query, page });
             if (mediaType) params.set('mediaType', mediaType);
+            // Fork (2026-11-24): the Year box applies to every page.
+            if (this.sentinel.dataset.year) params.set('year', this.sentinel.dataset.year);
 
             const response = await fetch(`/?${params}`, { credentials: 'same-origin', headers: { Accept: 'text/html' } });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);

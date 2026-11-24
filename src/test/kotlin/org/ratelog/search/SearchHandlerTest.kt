@@ -170,4 +170,27 @@ class SearchHandlerTest {
         assertEquals(9, results.items.size)
         assertTrue(results.hasMore)
     }
+
+    @Test
+    fun `a year narrows both searches with TMDB's year parameters`() {
+        val dune1984 = TmdbMovieResponse(841, "Dune", overview = null, releaseDate = "1984-12-14", posterPath = null, voteAverage = 6.5, originalTitle = "Dune")
+        whenever(tmdbClient.searchMovies("dune", Lang.en, 1, 1984)).thenReturn((listOf(dune1984) to 1).right())
+        whenever(tmdbClient.searchTvShows("dune", Lang.en, 1, 1984)).thenReturn((emptyList<TmdbTvShowResponse>() to 1).right())
+
+        val results = handler.handle(SearchQuery("dune", User.Id(1), Lang.en, null, year = 1984)).getOrElse { SearchResult(emptyList(), false) }
+
+        assertEquals(listOf(841), results.items.map { it.tmdbId })
+        org.mockito.kotlin.verify(tmdbClient, org.mockito.kotlin.never()).searchMovies("dune", Lang.en, 1)
+    }
+
+    @Test
+    fun `a year with the Movies filter only searches movies of that year`() {
+        val dune2021 = TmdbMovieResponse(438631, "Dune", overview = null, releaseDate = "2021-09-15", posterPath = null, voteAverage = 7.8, originalTitle = "Dune")
+        whenever(tmdbClient.searchMovies("dune", Lang.en, 1, 2021)).thenReturn((listOf(dune2021) to 1).right())
+
+        val results = handler.handle(SearchQuery("dune", User.Id(1), Lang.en, MediaType.movie, year = 2021)).getOrElse { SearchResult(emptyList(), false) }
+
+        assertEquals(listOf(438631), results.items.map { it.tmdbId })
+        org.mockito.kotlin.verify(tmdbClient, org.mockito.kotlin.never()).searchTvShows(org.mockito.kotlin.any(), org.mockito.kotlin.any(), org.mockito.kotlin.any(), org.mockito.kotlin.anyOrNull())
+    }
 }

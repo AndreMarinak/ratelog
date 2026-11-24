@@ -393,7 +393,7 @@ recommendations but". Code: `org.ratelog.backnav`, `fragments/back-nav.html`, `s
 - **No back links on the tab pages** (Home, Ratings, Discover, Watchlist, Lists): the top / bottom nav covers them. The list page
   and `/lists/official` keep their "← Lists" / "← {owner}'s profile" links (a fixed "up" link, see UI below). Other users'
   profiles were considered (Community sits in the phone menu) but left out: they're reached from Community or a list's owner link,
-  and a second level of origins would make the rule harder to predict. There are no season or person pages yet.
+  and a second level of origins would make the rule harder to predict. There are no season pages yet; person pages (2026-11-24) take part like a title (see "People: person pages and People in search").
 - **Phones:** the link is 44px tall to tap, one line, and tucked into the gap under the header (negative margins, layered above the
   title it overlaps by a few pixels), so the title moves down 16px. The action row stays above the fold at 390x844 and 360x740
   (checked on Toy Story 3, Breaking Bad and titles opened from rows).
@@ -903,6 +903,57 @@ or the five categories, create and edit) and the delete confirmation were plain 
 - **Not changed here:** the "Rate it?" prompt after Seen still saves with a page load (it lives in
   `fragments/title-actions.html`, which another branch was editing; see bugs-and-issues Open).
 
+### People: person pages and People in search (2026-11-24)
+
+The user asked: "am I able to click on a name like tom hanks and see his movies by search bc rn search doesn't do that", and
+agreed to person pages plus People in search ("yea I think those would work"). A Year box for search, queued earlier, came
+with it. Code: `org.ratelog.person` (`TmdbPersonClient`, `Person.kt`, `Filmography.kt`, `detail/`, `search/`),
+`templates/person.html`, `fragments/search-people.html`, `static/person-page.css`, `search-people.css`, `search-type.js`.
+
+- **`/person/{tmdbPersonId}`**: photo (TMDB `w185`, `h632` for 2x screens), name, "Known for" (TMDB's department), born
+  (date, age, place) and died (date, age at death) when TMDB knows them, then the biography's first three sentences (never past
+  its first paragraph; "Jr." / "Dr." / initials don't end a sentence) with **More** as a plain `<details>`, so it works
+  without JS; once open the link goes away. Then the filmography as the app's standard poster tiles (quick actions: hover with
+  a mouse, "⋯" on touch; your Seen / ★ marks; the Upcoming badge), with the character or job under the title and the year.
+- **One TMDB request per person**: `/person/{id}?append_to_response=combined_credits` (details and every cast and crew
+  credit, movies and TV), cached in memory for a day per person and language (`TtlCache`, like Discover's pages; no table, no
+  migration: the data is TMDB's and cheap to fetch again after a restart). Filters and sorts are worked out from the cached
+  answer, so switching them costs no TMDB call.
+- **Filters**: department tabs (Acting, then Directing, Writing, Creator, Production, Camera, Editing, Sound, Art... only the
+  ones the person has, each with its title count), **All | Movies | TV** (with counts; an empty type is hidden unless chosen)
+  and **Newest | Most popular**. The default department is TMDB's "known for" one, so Tom Hanks opens on Acting and
+  Christopher Nolan on Directing. They are links that apply in place and replace the URL (`view-swap.js`, "One Back leaves the
+  page"); the default view has no parameters (`/person/31`), others are `?dept=directing&type=movie&sort=popular`.
+- **One tile per title per department**: several jobs on one film (Director and Writer under different departments stay in
+  their own tabs; Screenplay and Story inside Writing) are joined ("Screenplay, Story"); several characters on one show are
+  joined with " / ". Repeats ("Host" twice on SNL) are listed once.
+- **Newest first** puts upcoming titles on top and titles with no date yet last (announced projects shouldn't push the
+  filmography down). **Most popular** sorts by TMDB vote count (how well known a title is) rather than TMDB "popularity"
+  (this week's trend), so Forrest Gump, Toy Story and The Green Mile lead for Tom Hanks.
+- **Appearances that aren't roles are left out of Acting**: on TV, talk, news and reality shows and any "Self" credit (Tom
+  Hanks has 96 TV cast credits, ~70 of them talk shows, award shows and interviews); in movies, "Self" (or archive footage) in
+  a documentary or in a title with no genre (making-ofs, award galas). Playing yourself in a comedy stays. Crew credits are
+  kept as TMDB lists them.
+- **Long filmographies show 60 tiles** and a "Show all N" link (in place, URL replaced): Tom Hanks' 180-odd acting credits
+  would otherwise put ~600 KB of tiles on the page before you picked a filter.
+- **Back link like a title page**: a person counts as a title in the back-link chain (`BackNavPages.isTitle` matches
+  `/person/{id}`), so opened from search it reads "← Search results", from a title "← Discover › Cast Away", and a title
+  opened from a person keeps the person as its one extra step.
+- **People in search**: on the first results page for **Any** type, a "People" row above the title results (round photo,
+  name, "Acting · Forrest Gump, Toy Story, The Green Mile"), up to 6, each linking to `/person/{id}`. Title results are
+  unchanged below. Only people whose name is exactly the query, or who have a photo and some popularity (TMDB popularity
+  ≥ 1), are shown: a search for "dune" finds 81 people named Dune, none of whom you meant, so no row. With Movies or TV
+  chosen there is no row (the filter says what you want); no "People only" type was added. The people search runs in
+  parallel with the title search (`SearchPeopleInterceptor`: started in `preHandle`, read in `postHandle`, at most 4 s), so
+  the page waits for the slower of the two, not both; a TMDB failure only loses the row. Cached 30 minutes per query.
+- **Year box** next to Any / Movies / TV: TMDB's own year filters (`primary_release_year` for movies, `first_air_date_year`
+  for TV; both for Any). It applies like the type filter (on Enter, leaving the box or the arrows, after a short pause so a
+  few arrow clicks make one search); an empty box leaves the URL; the URL keeps `year=`, later pages (infinite scroll) and the
+  type filter keep it. A new header search starts without it (a new title usually means a different year). Anything that
+  isn't a year between 1870 and 2100 is ignored.
+- **Title pages link names here** only when `ratelog.features.people` is on (credits on title pages, another branch); this
+  page doesn't depend on the flag.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -965,6 +1016,8 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Ratings ranking: the next 30 as you scroll, "Show more" | — (a count select, page load) | appends in place (`ranking-scroll.js`, 2026-11-23), **URL replaced** with the loaded count (`?limit=60`); no JS = the link loads the same view with one more page |
 | To rate view All / Movies / TV tabs | page load (pushed) | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes |
+| Person page department / All, Movies, TV / Newest, Most popular / Show all | — | in place, **URL replaced** (`view-swap.js`, 2026-11-24) |
+| Search Year box | — | **page load** like the Any / Movies / TV select (a new result set) |
 | Title page back link ("← Discover", "› Toy Story 3") | — | **navigation**: `history.back()` when that page is the previous entry, else a page load of its URL with the scroll put back (`back-nav.js`) |
 
 ## Deployment (Railway)

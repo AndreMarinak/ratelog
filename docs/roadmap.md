@@ -118,6 +118,13 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   state. API: `GET /api/v1/stats?year=YYYY|all` ([docs/api.md](api.md#stats)). No migration. Follow-ups: other people's
   stats, TV hours (episode counts), tags, streaks. Details in
   [design-decisions.md](design-decisions.md#stats-your-year-in-movies-2026-11-23).
+- [x] **32. People: person pages and People in search** (asked 2026-11-24: "am I able to click on a name like tom hanks and
+  see his movies by search"): `/person/{id}` with photo, known for, dates, a short bio (More), and the filmography as poster
+  tiles with quick actions: department tabs (Acting, Directing, ...), All / Movies / TV, Newest / Most popular, applied in
+  place. Search shows a People row above the titles (Any type), and a Year box next to Any / Movies / TV. One cached TMDB
+  request per person. API: `GET /api/v1/people/{id}`, `people=true` on `GET /api/v1/search`
+  ([docs/api.md](api.md#people)). No migration. Title-page credits link here when `ratelog.features.people` is on. Details in
+  [design-decisions.md](design-decisions.md#people-person-pages-and-people-in-search-2026-11-24).
 
 ## Fixes and housekeeping done
 

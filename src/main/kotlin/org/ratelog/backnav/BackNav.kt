@@ -57,7 +57,8 @@ object BackNavPages {
     const val DEFAULT_HREF = "/"
     val DEFAULT_LABEL = BackNavLabel.HOME
 
-    private val TITLE_PATH = Regex("^/(movie|tv)/\\d+/?$")
+    /** Title pages, and (fork, 2026-11-24) person pages, which take part in the back links like a title. */
+    private val TITLE_PATH = Regex("^/(movie|tv|person)/\\d+/?$")
     private val LIST_PATH = Regex("^/list/(\\d+)/?$")
     private val PROFILE_PATH = Regex("^/profile/(\\d+)/?$")
 

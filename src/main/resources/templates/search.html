@@ -22,6 +22,9 @@
                 <option value="movie" th:selected="${mediaType == 'movie'}" th:text="#{search.type.movie}">Movies</option>
                 <option value="tvshow" th:selected="${mediaType == 'tvshow'}" th:text="#{search.type.tv}">TV Shows</option>
             </select>
+            <!--/* Fork (2026-11-24): Year narrows the TMDB search (movies by release year, TV by first air year). */-->
+            <input id="searchYear" name="year" type="number" class="year-filter" inputmode="numeric" min="1870" max="2100" step="1"
+                   th:value="${searchYear}" th:placeholder="#{search.filter.year}" th:aria-label="#{search.filter.year.aria}">
             <button class="primary" type="submit" th:aria-label="#{search.btn}" th:title="#{search.btn}">
                 <i data-lucide="search" aria-hidden="true"></i>
             </button>
@@ -34,6 +37,8 @@
 
         <!--/* Fork: results are the home rows' poster tiles (home.css) in a grid (search-results.css). search.js builds the same markup for later pages. */-->
         <th:block th:if="${results != null}"><link rel="stylesheet" href="/home.css"><link rel="stylesheet" href="/search-results.css"><link rel="stylesheet" href="/tile-actions.css"></th:block>
+        <!--/* Fork: People in search (first page, Any type): links to person pages. */-->
+        <section th:replace="~{fragments/search-people :: people(${searchPeople})}"></section>
         <div th:if="${results != null}" id="results" class="search-grid">
             <div th:text="#{search.empty}" th:if="${#lists.isEmpty(results)}" class="empty-state"></div>
 
@@ -62,6 +67,7 @@
         <div th:if="${hasMore}" id="scroll-sentinel" class="scroll-sentinel"
              th:data-query="${query}"
              th:data-media-type="${mediaType}"
+             th:data-year="${searchYear}"
              th:data-page="${currentPage}">
         </div>
 
