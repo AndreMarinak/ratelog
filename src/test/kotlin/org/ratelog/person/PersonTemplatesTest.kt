@@ -111,6 +111,22 @@ class PersonTemplatesTest {
     }
 
     @Test
+    fun `the appearances switch shows its count and pronoun, in place, off by default`() {
+        val credits = listOf(credit(13, "Forrest Gump", "1994-06-23", role = "Forrest Gump"))
+        val off = personHtml(page(credits).copy(appearanceCount = 84))
+        assertTrue(off.contains("role=\"switch\"") && off.contains("aria-checked=\"false\"") && off.contains("data-view-links=\"appearances\""), off)
+        assertTrue(off.contains("href=\"/person/31?appearances=1\""), off)
+        assertTrue(off.contains(">Show 84 appearances as themselves<"), off)
+        assertTrue(off.contains(">Talk shows, award shows and interviews<"), off)
+
+        val her = page(credits).let { it.copy(person = it.person.copy(gender = 1), appearanceCount = 1, appearances = true) }
+        val on = personHtml(her)
+        assertTrue(on.contains(">Show 1 appearance as herself<") && on.contains("aria-checked=\"true\"") && on.contains("is-on"), on)
+
+        assertFalse(personHtml(page(credits)).contains("data-appearances"))
+    }
+
+    @Test
     fun `one department is a heading, none says there are no credits`() {
         val one = personHtml(page(listOf(credit(13, "Forrest Gump", "1994-06-23"))))
         assertTrue(one.contains("class=\"person-credits-title\">Acting</h2>"), one)

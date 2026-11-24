@@ -39,6 +39,10 @@ data class PersonResponse(
     val department: String?,
     val type: String,
     val sort: String,
+    /** Fork (2026-11-24): whether appearances as oneself are included (`appearances=true`). */
+    val appearances: Boolean,
+    /** Fork (2026-11-24): titles that are only appearances as oneself, in Acting for this `type` (the page's switch count). */
+    val appearanceCount: Int,
     val credits: List<PersonCreditDto>,
 )
 
@@ -57,6 +61,8 @@ data class PersonCreditDto(
     /** Your status (`want_to_watch`, `watching`, `watched`, `dropped`) and score, null when none. */
     val status: String?,
     val score: Double?,
+    /** Fork (2026-11-24): only an appearance as oneself on this title (returned with `appearances=true`). */
+    val appearance: Boolean = false,
 )
 
 data class PersonSummaryDto(
@@ -92,6 +98,7 @@ class ApiPeopleController(
         @RequestParam(required = false) department: String?,
         @RequestParam(required = false) type: String?,
         @RequestParam(required = false) sort: String?,
+        @RequestParam(required = false) appearances: String?,
     ): PersonResponse {
         val filmType = when (type?.trim()?.lowercase()) {
             null, "", "all" -> FilmographyType.ALL
@@ -104,8 +111,14 @@ class ApiPeopleController(
             "popular" -> FilmographySort.POPULAR
             else -> throw badRequest("invalid_parameter", "sort must be \"newest\" or \"popular\"")
         }
+        val withAppearances = when (appearances?.trim()?.lowercase()) {
+            null, "", "0", "false", "no" -> false
+            "1", "true", "yes" -> true
+            else -> throw badRequest("invalid_parameter", "appearances must be true or false")
+        }
         val page = handler.handle(
-            GetPersonQuery(personId = id, userId = user.id, lang = user.metadataLang, department = department, type = filmType, sort = filmSort)
+            GetPersonQuery(personId = id, userId = user.id, lang = user.metadataLang, department = department, type = filmType, sort = filmSort,
+                appearances = withAppearances)
         ).fold({ error ->
             throw when (error) {
                 GetPersonError.NotFound -> notFound("Person $id not found")
@@ -129,6 +142,8 @@ class ApiPeopleController(
             department = page.department?.slug,
             type = page.type.param ?: "all",
             sort = page.sort.param ?: "newest",
+            appearances = page.appearances,
+            appearanceCount = page.appearanceCount,
             credits = page.entries.map { entry ->
                 val mark = page.marks[entry.type to entry.tmdbId]
                 PersonCreditDto(
@@ -142,6 +157,7 @@ class ApiPeopleController(
                     upcoming = ReleaseRules.isUpcoming(entry.releaseDate, today),
                     status = mark?.status?.apiName,
                     score = mark?.score,
+                    appearance = entry.appearance,
                 )
             },
         )

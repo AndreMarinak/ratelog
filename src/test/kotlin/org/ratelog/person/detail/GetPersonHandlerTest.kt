@@ -161,4 +161,90 @@ class GetPersonHandlerTest {
         assertEquals(null to emptyList<String>(), PersonPageView.bio("  "))
         assertFalse(PersonPageView.bio("One. Two. Three.").second.isNotEmpty())
     }
+
+    // --- Fork (2026-11-24): "Show N appearances as himself" ---
+
+    private fun appearance(id: Int, title: String, role: String, type: MediaType = MediaType.tvshow) =
+        PersonCredit(id, type, title, LocalDate.parse("2010-01-01"), "/$id.jpg", ACTING, role, 1.0, 10, appearance = true)
+
+    private val hanksWithShows = hanks.copy(
+        gender = 2,
+        credits = hanks.credits + listOf(
+            appearance(2518, "The Tonight Show", "Self - Guest"),
+            appearance(27023, "The Oscars", "Self - Presenter"),
+            appearance(99998, "A Documentary", "Self", MediaType.movie),
+        ),
+    )
+
+    @Test
+    fun `appearances are hidden by default, with the switch's count`() {
+        whenever(client.person(31, Lang.en)).thenReturn(hanksWithShows.right())
+
+        val page = handler.handle(query()).getOrNull()!!
+        assertFalse(page.appearances)
+        assertEquals(3, page.appearanceCount)
+        assertEquals(listOf("Toy Story 5", "Toy Story", "Forrest Gump", "Bosom Buddies"), page.entries.map { it.title })
+        assertEquals(4, page.departments.first { it.slug == "acting" }.count)
+
+        val view = PersonPageView.of(page, false, today, Locale.ENGLISH)
+        val switch = view.appearancesSwitch!!
+        assertFalse(switch.on)
+        assertEquals(3, switch.count)
+        assertEquals("person.appearances.himself", switch.labelKey)
+        assertEquals("/person/31?appearances=1", switch.href)
+        // Movies only: just the documentary.
+        assertEquals(1, handler.handle(query(type = FilmographyType.MOVIE)).getOrNull()!!.appearanceCount)
+    }
+
+    @Test
+    fun `with the switch on, appearances join Acting with their role text, and every link keeps it`() {
+        whenever(client.person(31, Lang.en)).thenReturn(hanksWithShows.right())
+
+        val page = handler.handle(query().copy(appearances = true)).getOrNull()!!
+        assertTrue(page.appearances)
+        assertEquals(7, page.entries.size)
+        assertEquals(7, page.departments.first { it.slug == "acting" }.count)
+        assertEquals(mapOf(FilmographyType.ALL to 7, FilmographyType.MOVIE to 4, FilmographyType.TV to 3), page.typeCounts)
+
+        val view = PersonPageView.of(page, false, today, Locale.ENGLISH)
+        assertEquals("Self - Guest", view.tiles.first { it.title == "The Tonight Show" }.role)
+        assertTrue(view.appearancesSwitch!!.on)
+        assertEquals("/person/31", view.appearancesSwitch!!.href)
+        assertEquals(listOf("/person/31?appearances=1", "/person/31?dept=directing&appearances=1", "/person/31?dept=writing&appearances=1"), view.departmentTabs.map { it.href })
+        assertEquals("/person/31?type=tv&appearances=1", view.typeTabs.first { it.value == "tv" }.href)
+        assertEquals("/person/31?sort=popular&appearances=1", view.sortTabs.first { it.value == "popular" }.href)
+
+        val many = hanksWithShows.copy(credits = (1..75).map { credit(it, "Film $it", "2000-01-01") } + appearance(5, "Talk", "Self"))
+        whenever(client.person(31, Lang.en)).thenReturn(many.right())
+        val long = PersonPageView.of(handler.handle(query().copy(appearances = true)).getOrNull()!!, false, today, Locale.ENGLISH)
+        assertEquals("/person/31?appearances=1&all=1", long.showAllHref)
+    }
+
+    @Test
+    fun `no switch without appearances, nor on a crew tab`() {
+        whenever(client.person(31, Lang.en)).thenReturn(hanks.right())
+        assertNull(PersonPageView.of(handler.handle(query()).getOrNull()!!, false, today, Locale.ENGLISH).appearancesSwitch)
+
+        whenever(client.person(31, Lang.en)).thenReturn(hanksWithShows.right())
+        assertNull(PersonPageView.of(handler.handle(query("directing")).getOrNull()!!, false, today, Locale.ENGLISH).appearancesSwitch)
+    }
+
+    @Test
+    fun `someone who only appears as herself gets the switch, which opens Acting`() {
+        val host = hanks.copy(
+            id = 99, name = "A Host", gender = 1, knownForDepartment = "Acting",
+            credits = listOf(appearance(1, "Talk Show", "Herself - Host"), appearance(2, "Awards", "Herself"), credit(3, "A Special", "2020-01-01", "Production", "Producer")),
+        )
+        whenever(client.person(99, Lang.en)).thenReturn(host.right())
+
+        val off = PersonPageView.of(handler.handle(GetPersonQuery(99, me, Lang.en)).getOrNull()!!, false, today, Locale.ENGLISH)
+        assertEquals(listOf("production"), off.departmentTabs.map { it.value })
+        assertEquals("person.appearances.herself", off.appearancesSwitch!!.labelKey)
+        assertEquals(2, off.appearancesSwitch!!.count)
+        assertEquals("/person/99?dept=acting&appearances=1", off.appearancesSwitch!!.href)
+
+        val on = handler.handle(GetPersonQuery(99, me, Lang.en, department = "acting", appearances = true)).getOrNull()!!
+        assertEquals("acting", on.department?.slug)
+        assertEquals(listOf("Awards", "Talk Show"), on.entries.map { it.title })
+    }
 }

@@ -718,6 +718,9 @@ Added in this fork (2026-11-24): the data of the person page (`/person/{id}`) an
 - `type`: `all` (default), `movie` or `tv`. Anything else: `400 invalid_type`.
 - `sort`: `newest` (default; upcoming first, titles with no date last) or `popular` (most TMDB votes first). Anything else:
   `400 invalid_parameter`.
+- `appearances` (fork, 2026-11-24): `true` (or `1`) also returns appearances as oneself in Acting (talk / award shows,
+  "Self"; see below), like the page's "Show N appearances as himself" switch; default `false`. Anything else:
+  `400 invalid_parameter`.
 
 ```json
 {
@@ -725,11 +728,11 @@ Added in this fork (2026-11-24): the data of the person page (`/person/{id}`) an
   "profileUrl": "https://image.tmdb.org/t/p/w185/...", "knownForDepartment": "Directing",
   "birthday": "1970-07-30", "deathday": null, "placeOfBirth": "Westminster, London, England, UK", "biography": "...",
   "departments": [{"department": "acting", "name": "Acting", "count": 12}, {"department": "directing", "name": "Directing", "count": 19}],
-  "department": "directing", "type": "all", "sort": "newest",
+  "department": "directing", "type": "all", "sort": "newest", "appearances": false, "appearanceCount": 0,
   "credits": [
     {"tmdbId": 27205, "type": "movie", "title": "Inception", "year": 2010, "releaseDate": "2010-07-15",
      "posterUrl": "https://image.tmdb.org/t/p/w342/...", "roles": ["Director"], "upcoming": false,
-     "status": "watched", "score": 9.0}
+     "status": "watched", "score": 9.0, "appearance": false}
   ]
 }
 ```
@@ -737,7 +740,9 @@ Added in this fork (2026-11-24): the data of the person page (`/person/{id}`) an
 - One entry per title in the chosen department; `roles` lists the characters (Acting) or jobs, several on one title together.
 - `status` / `score` are yours (`want_to_watch`, `watching`, `watched`, `dropped`; `null` when none).
 - Acting leaves out appearances that aren't roles: TV talk / news / reality shows and "Self" on TV, and "Self" in a
-  documentary or genre-less movie. Every credit is returned (no 60-title limit as on the page).
+  documentary or genre-less movie, unless `appearances=true` (then they count in `departments` and the type, and a credit
+  that is only an appearance has `"appearance": true`). `appearanceCount` is how many such titles Acting has for this
+  `type` (titles that also have a role aren't counted). Every credit is returned (no 60-title limit as on the page).
 - Cached for a day. Errors: `not_found` (no such person), `tmdb_not_configured`, `tmdb_error`.
 
 `GET /api/v1/search?q=tom+hanks&people=true` adds `people` (up to 6, best known first; only people whose name is exactly

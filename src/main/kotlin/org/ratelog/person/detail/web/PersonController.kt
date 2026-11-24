@@ -38,6 +38,7 @@ class PersonController(
         @RequestParam("type", required = false) type: String?,
         @RequestParam("sort", required = false) sort: String?,
         @RequestParam("all", required = false) all: String?,
+        @RequestParam("appearances", required = false) appearances: String?,
         model: Model,
         response: HttpServletResponse,
     ): String {
@@ -48,6 +49,8 @@ class PersonController(
             department = dept,
             type = FilmographyType.parse(type),
             sort = FilmographySort.parse(sort),
+            // Fork (2026-11-24): "Show N appearances as himself"; anything but 1 / true is off.
+            appearances = appearances?.trim()?.lowercase() in setOf("1", "true"),
         )
         return handler.handle(query).fold(
             { error ->

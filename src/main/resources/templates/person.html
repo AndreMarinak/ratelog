@@ -79,6 +79,17 @@
                            th:attr="aria-current=${tab.active} ? 'page' : null,data-person-sort=${tab.value}" th:text="#{${tab.labelKey}}">Newest</a>
                     </nav>
                 </div>
+                <!--/* Fork (2026-11-24): appearances as oneself are hidden by default; this switch (a link, in place like the
+                       tabs; person-page.js lets Space flip it) shows them. */-->
+                <a th:if="${p.appearancesSwitch != null}" th:with="sw=${p.appearancesSwitch}" th:href="${sw.href}"
+                   class="person-appearances" th:classappend="${sw.on} ? 'is-on' : ''" role="switch"
+                   th:aria-checked="${sw.on}" data-appearances data-view-links="appearances">
+                    <span class="person-appearances-track" aria-hidden="true"><span class="person-appearances-thumb"></span></span>
+                    <span class="person-appearances-text">
+                        <span class="person-appearances-label" th:text="#{${sw.labelKey}(${sw.count})}">Show 84 appearances as himself</span>
+                        <span class="person-appearances-hint" th:text="#{person.appearances.hint}">Talk shows, award shows and interviews</span>
+                    </span>
+                </a>
             </div>
 
             <div th:if="${p.emptyKey != null}" class="empty-state person-empty" th:text="#{${p.emptyKey}}">No credits.</div>
@@ -111,6 +122,7 @@
     </article>
 </div>
 <script src="/view-swap.js" defer></script>
+<script src="/person-page.js" defer></script>
 <script src="/tile-actions.js" defer></script>
 <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
 </body>

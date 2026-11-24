@@ -32,7 +32,7 @@ class TmdbPersonClientTest {
         config.save(GeneralConfig(id = null, key = ConfigKey.TMDB_API_KEY, value = "tmdb-secret", updatedAtEpochMs = 0L))
 
     private val hanks = """
-        {"id":31,"name":"Tom Hanks","known_for_department":"Acting","birthday":"1956-07-09","deathday":null,
+        {"id":31,"name":"Tom Hanks","known_for_department":"Acting","gender":2,"birthday":"1956-07-09","deathday":null,
          "place_of_birth":"Concord, California, USA","profile_path":"/hanks.jpg","biography":"Thomas Jeffrey Hanks is an actor.",
          "combined_credits":{
            "cast":[
@@ -81,16 +81,21 @@ class TmdbPersonClientTest {
     }
 
     @Test
-    fun `TV appearances that are not roles are left out, movies are kept`() {
+    fun `appearances that are not roles are kept but marked, roles are not`() {
         configureKey()
         server.reply = { Reply(200, hanks) }
 
         val person = client.person(31, Lang.en).getOrNull()!!
-        val acting = person.credits.filter { it.department == ACTING }
+        val acting = person.credits.filter { it.department == ACTING && !it.appearance }
 
-        // Talk / news shows and "Self" on TV go; "Self" in a documentary or genre-less film goes, playing yourself in a
-        // comedy stays; adult, id-less and odd types go.
+        // Talk / news shows and "Self" on TV are appearances; "Self" in a documentary or genre-less film too; playing
+        // yourself in a comedy is a role; adult, id-less and odd types go.
         assertEquals(listOf(13, 2574, 99997), acting.map { it.tmdbId })
+        val appearances = person.credits.filter { it.appearance }
+        assertEquals(listOf(2518, 27023, 1667, 99999, 99998), appearances.map { it.tmdbId })
+        assertEquals("Self - Presenter", appearances[1].role)
+        assertTrue(appearances.all { it.department == ACTING })
+        assertEquals(2, person.gender)
         assertEquals(MediaType.tvshow, acting[1].type)
         assertEquals("Kip Wilson / Buffy", acting[1].role)
         assertEquals(listOf("Directing", "Writing", "Production"), person.credits.filter { it.department != ACTING }.map { it.department })
@@ -121,7 +126,7 @@ class TmdbPersonClientTest {
         server.reply = {
             Reply(200, """
                 {"results":[
-                  {"id":31,"name":"Tom Hanks","known_for_department":"Acting","popularity":10.0,"profile_path":"/hanks.jpg",
+                  {"id":31,"name":"Tom Hanks","known_for_department":"Acting","gender":2,"popularity":10.0,"profile_path":"/hanks.jpg",
                    "known_for":[{"title":"Forrest Gump"},{"title":"Toy Story"},{"title":"The Green Mile"},{"title":"Cast Away"}]},
                   {"id":2,"name":"Tom Hanks Jr","popularity":0.2,"profile_path":"/x.jpg"},
                   {"id":3,"name":"Colin Hanks","popularity":3.0,"profile_path":null},

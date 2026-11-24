@@ -128,6 +128,76 @@ module.exports = {
       return `${results} results at ${page.url().replace(t.base, '')}`;
     });
 
+    // Fork (2026-11-24): the search Year menu is Discover's (decades, a decade's years, "Type a year"), applied in place.
+    await t.step('search Year menu: decade keeps it open, exact year, type a year (in place)', async () => {
+      await t.go('/movies');
+      const from = new URL(page.url()).pathname;
+      await t.go('/?q=star');
+      const token = await t.mark();
+      const yearsOf = () => page.evaluate(() => [...document.querySelectorAll('#results .search-tile-wrap .home-tile-meta')].map((m) => parseInt(m.innerText, 10)));
+      await t.pressSel('.search-year summary');
+      await t.waitFor(() => !!document.querySelector('.search-year details[open] .bb-panel'));
+      await t.pressSel('.search-year a[data-option="decade-1980"]');
+      await t.waitFor(() => location.search.includes('decade=1980s') && !document.querySelector('#searchView[aria-busy]')
+        && !!document.querySelector('.search-year details[open] .bb-years'), null, 45000);
+      const decade = await yearsOf();
+      await t.shot('search-decade-open');
+      assert(decade.length > 0 && decade.every((y) => y >= 1980 && y <= 1989), `1980s results: ${decade.join(',')}`);
+      await t.pressSel('.search-year a[data-option="year-1983"]');
+      await t.waitFor(() => location.search.includes('year=1983') && !document.querySelector('.search-year details[open]')
+        && !document.querySelector('#searchView[aria-busy]'), null, 45000);
+      const exact = await yearsOf();
+      assert(exact.length > 0 && exact.every((y) => y === 1983), `1983 results: ${exact.join(',')}`);
+      // Type a year: text that isn't a year says so and loads nothing; a year applies.
+      await t.pressSel('.search-year summary');
+      await t.waitFor(() => !!document.querySelector('.search-year details[open] .bb-year-input'));
+      await page.$eval('.search-year .bb-year-input', (i) => { i.value = ''; });
+      await page.type('.search-year .bb-year-input', '19x');
+      await page.keyboard.press('Enter');
+      await t.waitFor(() => { const e = document.querySelector('.search-year .bb-year-error'); return e && !e.hidden; });
+      assert(page.url().includes('year=1983'), `invalid year changed the URL: ${page.url()}`);
+      await page.$eval('.search-year .bb-year-input', (i) => { i.value = ''; });
+      await page.type('.search-year .bb-year-input', '1977');
+      await t.pressSel('.search-year .bb-year-go');
+      await t.waitFor(() => location.search.includes('year=1977') && !document.querySelector('#searchView[aria-busy]'), null, 45000);
+      const typed = await yearsOf();
+      assert(typed.length > 0 && typed.every((y) => y === 1977), `1977 results: ${typed.join(',')}`);
+      await t.noOverflow();
+      await t.stillHere(token);
+      // Filters replace the URL: one Back leaves the results.
+      await page.goBack({ waitUntil: 'networkidle2' });
+      assert(new URL(page.url()).pathname === from, `Back went to ${page.url()}`);
+      return `1980s: ${decade.length} titles; 1983: ${exact.length}; typed 1977: ${typed.length}`;
+    });
+
+    // Fork (2026-11-24): appearances as oneself are hidden on person pages until the switch is on.
+    await t.step('person page: Show appearances switch (in place)', async () => {
+      await t.go('/person/31');
+      const before = await page.evaluate(() => ({
+        label: document.querySelector('[data-appearances] .person-appearances-label')?.innerText.trim(),
+        checked: document.querySelector('[data-appearances]')?.getAttribute('aria-checked'),
+        acting: parseInt(document.querySelector('[data-person-dept="acting"] .person-tab-count')?.innerText, 10),
+      }));
+      assert(/^Show \d+ appearances? as himself$/.test(before.label || ''), `switch label "${before.label}"`);
+      assert(before.checked === 'false', `switch starts ${before.checked}`);
+      const token = await t.mark();
+      await t.pressSel('[data-appearances]');
+      await t.waitFor(() => location.search.includes('appearances=1') && document.querySelector('[data-appearances]')?.getAttribute('aria-checked') === 'true'
+        && !document.querySelector('#personView[aria-busy]'), null, 30000);
+      const after = await page.evaluate(() => ({
+        acting: parseInt(document.querySelector('[data-person-dept="acting"] .person-tab-count')?.innerText, 10),
+        self: [...document.querySelectorAll('.person-tile-role')].filter((r) => /^(Self|Himself)/.test(r.innerText.trim())).length,
+        tabsKeep: [...document.querySelectorAll('[data-person-type], [data-person-sort], [data-person-dept]')].every((a) => a.href.includes('appearances=1')),
+      }));
+      await t.shot('person-appearances');
+      await t.stillHere(token);
+      assert(after.acting > before.acting, `Acting ${before.acting} -> ${after.acting}`);
+      assert(after.self > 0, 'no "Self" roles shown');
+      assert(after.tabsKeep, 'a tab drops appearances=1');
+      await t.noOverflow();
+      return `"${before.label}"; Acting ${before.acting} -> ${after.acting}; ${after.self} "Self" tiles in view`;
+    });
+
     await t.step('discover landing: genre rows + hide seen', async () => {
       await t.go('/discover');
       // Rows below the fold load as they scroll into view.

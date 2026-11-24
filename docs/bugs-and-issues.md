@@ -4,6 +4,10 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **`SecurityChainIntegrationTest` can fail at random** (seen once, 2026-11-24, searchyear branch; passed on the re-run):
+  "posts still need the CSRF token" got `/login?error=true` when signing in. Likely cause: each test signs in from
+  `198.51.100.(nanoTime % 250)`, so two tests can share an address, and the lockout test's wrong passwords then count
+  against the other's login. Fix: a distinct address per test (a counter), not a random one.
 - **Search results skip most of each TMDB page** (upstream, found 2026-11-24 building the search Year menu): results page N
   shows the first 9 titles of TMDB page N (Any: of movies and shows interleaved) and page N+1 starts at TMDB page N+1, so
   titles 10-20 of every TMDB page (and most shows for Any) never appear, however far you scroll. `SearchHandler`'s

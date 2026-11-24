@@ -159,6 +159,9 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 
 ## Fixes and housekeeping done
 
+- [x] **Person pages: "Show appearances as himself / herself"** (user's choice 2026-11-24: hidden by default, with a switch):
+  talk-show, award-show and "Self" credits come back with a switch under the tabs (count, pronoun by TMDB gender, in place,
+  `appearances=1`); `GET /api/v1/people/{id}?appearances=true`. [people-and-credits.md](decisions/people-and-credits.md#show-appearances-as-himself--herself-2026-11-24).
 - [x] **Search Year menu** (asked 2026-11-24, "can the year under search allow you to type but also still [have the] same
   style of like 2020s"): Discover's Year menu on search results (Any year, This year, Last year, decades, a decade's years)
   with a "Type a year" box; a decade is filtered on our side (up to 5 TMDB pages per results page, TMDB's first 400 titles

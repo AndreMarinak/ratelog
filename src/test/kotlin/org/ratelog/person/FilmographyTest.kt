@@ -17,7 +17,8 @@ class FilmographyTest {
         type: MediaType = MediaType.movie,
         votes: Int = 100,
         popularity: Double = 1.0,
-    ) = PersonCredit(id, type, title, date?.let(LocalDate::parse), "/$id.jpg", department, role, popularity, votes)
+        appearance: Boolean = false,
+    ) = PersonCredit(id, type, title, date?.let(LocalDate::parse), "/$id.jpg", department, role, popularity, votes, appearance)
 
     private val nolan = listOf(
         credit(27205, "Inception", "2010-07-15", "Directing", "Director", votes = 38000),
@@ -109,5 +110,53 @@ class FilmographyTest {
         assertEquals(FilmographySort.POPULAR, FilmographySort.parse("popular"))
         assertEquals(FilmographySort.NEWEST, FilmographySort.parse(null))
         assertEquals("costume-make-up", Filmography.slug("Costume & Make-Up"))
+    }
+
+    // --- Fork (2026-11-24): the appearances switch ---
+
+    private val withAppearances = listOf(
+        credit(13, "Forrest Gump", "1994-06-23", role = "Forrest Gump"),
+        credit(2518, "The Tonight Show", "1992-01-01", role = "Self", type = MediaType.tvshow, appearance = true),
+        credit(2518, "The Tonight Show", "1992-01-01", role = "Self - Guest", type = MediaType.tvshow, appearance = true),
+        credit(27023, "The Oscars", "1953-03-19", role = "Self - Presenter", type = MediaType.tvshow, appearance = true),
+        credit(99998, "A Documentary", "2015-01-01", role = "Self (archive footage)", appearance = true),
+        // A title with a role and a "Self" credit is shown anyway: the switch doesn't add it.
+        credit(1667, "Saturday Night Live", "1975-10-11", role = "Host", type = MediaType.tvshow),
+        credit(1667, "Saturday Night Live", "1975-10-11", role = "Self", type = MediaType.tvshow, appearance = true),
+        credit(4, "That Thing You Do!", "1996-10-04", "Directing", "Director"),
+    )
+
+    @Test
+    fun `the switch counts the titles it would add, per type`() {
+        assertEquals(3, Filmography.appearanceCount(withAppearances, FilmographyType.ALL))
+        assertEquals(1, Filmography.appearanceCount(withAppearances, FilmographyType.MOVIE))
+        assertEquals(2, Filmography.appearanceCount(withAppearances, FilmographyType.TV))
+        assertEquals(0, Filmography.appearanceCount(nolan, FilmographyType.ALL))
+    }
+
+    @Test
+    fun `appearances are left out unless the switch is on, and keep their role text`() {
+        val hidden = Filmography.visible(withAppearances, appearances = false)
+        assertEquals(listOf("Forrest Gump", "Saturday Night Live"), Filmography.entries(hidden, ACTING, FilmographyType.ALL, FilmographySort.NEWEST).map { it.title })
+
+        val shown = Filmography.entries(Filmography.visible(withAppearances, appearances = true), ACTING, FilmographyType.ALL, FilmographySort.NEWEST)
+        assertEquals(5, shown.size)
+        val tonight = shown.single { it.title == "The Tonight Show" }
+        assertEquals("Self / Self - Guest", Filmography.roleLabel(tonight, ACTING))
+        assertEquals(true, tonight.appearance)
+        val snl = shown.single { it.title == "Saturday Night Live" }
+        assertEquals(listOf("Host", "Self"), snl.roles)
+        assertEquals(false, snl.appearance)
+        assertEquals(listOf("Acting" to 2, "Directing" to 1), Filmography.departments(hidden).map { it.name to it.count })
+        assertEquals(listOf("Acting" to 5, "Directing" to 1), Filmography.departments(withAppearances).map { it.name to it.count })
+    }
+
+    @Test
+    fun `the switch says himself, herself or themselves by TMDB gender`() {
+        assertEquals("person.appearances.herself", Filmography.appearancesLabelKey(1))
+        assertEquals("person.appearances.himself", Filmography.appearancesLabelKey(2))
+        assertEquals("person.appearances.themselves", Filmography.appearancesLabelKey(3))
+        assertEquals("person.appearances.themselves", Filmography.appearancesLabelKey(0))
+        assertEquals("person.appearances.themselves", Filmography.appearancesLabelKey(null))
     }
 }

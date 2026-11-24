@@ -331,3 +331,86 @@
     padding: 4px 12px;
   }
 }
+
+/*
+ * Fork (2026-11-24): "Show 84 appearances as himself" under the filters, a switch drawn like Discover's "Hide titles I've
+ * seen" (discover.css .seen-toggle), a size smaller: off by default, on puts talk shows, award shows and "Self" credits in.
+ */
+.person-appearances {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 5px 14px 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-soft);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &.is-on {
+    color: var(--text);
+  }
+}
+
+.person-appearances-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.person-appearances-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--text-soft);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.person-appearances.is-on .person-appearances-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.person-appearances.is-on .person-appearances-thumb {
+  background: #fff;
+  transform: translateX(14px);
+}
+
+.person-appearances-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.person-appearances-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.person-appearances-hint {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
