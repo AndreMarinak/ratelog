@@ -63,12 +63,39 @@
         if (rect.right > width - MARGIN) dx = (width - MARGIN) - rect.right;
         if (rect.left + dx < MARGIN) dx = MARGIN - rect.left;
         if (dx) panel.style.transform = `translateX(${Math.round(dx)}px)`;
+        fitHeight(panel);
+    }
+
+    // Fork (2026-11-24): a panel ends above the phone's fixed bottom nav (it used to run under it, so its last rows,
+    // e.g. the full service list, couldn't be tapped). Short of room, the page scrolls up a little first.
+    const MIN_PANEL = 240;
+    function fitHeight(panel) {
+        panel.style.maxHeight = '';
+        const nav = document.querySelector('.bottom-nav');
+        const navTop = nav && nav.getClientRects().length && getComputedStyle(nav).position === 'fixed'
+            ? nav.getBoundingClientRect().top : window.innerHeight;
+        const limit = navTop - MARGIN;
+        let rect = panel.getBoundingClientRect();
+        if (rect.bottom <= limit) return;
+        const short = MIN_PANEL - (limit - rect.top);
+        if (short > 0) {
+            window.scrollBy(0, Math.max(0, Math.min(short, rect.top - 120)));
+            rect = panel.getBoundingClientRect();
+        }
+        panel.style.maxHeight = `${Math.max(Math.min(MIN_PANEL, rect.height), Math.floor(limit - rect.top))}px`;
     }
 
     // "toggle" doesn't bubble: listen in the capture phase.
     document.addEventListener('toggle', (event) => {
         const details = event.target;
-        if (!(details instanceof HTMLDetailsElement) || !details.classList.contains('bb-menu')) return;
+        if (!(details instanceof HTMLDetailsElement)) return;
+        // "Show all services" changes the panel's height: fit it again.
+        if (details.classList.contains('bb-more')) {
+            const menu = details.closest('details.bb-menu');
+            if (menu && menu.open) keepOnScreen(menu);
+            return;
+        }
+        if (!details.classList.contains('bb-menu')) return;
         if (!details.open) {
             delete queries[details.dataset.menu];
             return;

@@ -774,3 +774,28 @@
     width: auto;
   }
 }
+
+/* Phones: two columns are ~140px wide, so the featured services' checkbox sits on the logo's corner and the names
+   ("Prime Video", "Paramount+") keep their room instead of being cut. */
+@media (max-width: 720px) {
+  .bb-logos .bb-option:has(.bb-logo) {
+    position: relative;
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  .bb-logos .bb-option:has(.bb-logo) .bb-tick {
+    position: absolute;
+    top: 3px;
+    left: 26px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    background: var(--surface-strong);
+  }
+
+  .bb-logos .bb-option.active:has(.bb-logo) .bb-tick {
+    background: var(--accent);
+  }
+}

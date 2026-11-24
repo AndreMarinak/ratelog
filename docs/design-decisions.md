@@ -903,6 +903,45 @@ or the five categories, create and edit) and the delete confirmation were plain 
 - **Not changed here:** the "Rate it?" prompt after Seen still saves with a page load (it lives in
   `fragments/title-actions.html`, which another branch was editing; see bugs-and-issues Open).
 
+### Discover: several streaming services; the Year menu stays open on a decade (2026-11-24)
+
+Asked by the user on 2026-11-24: "I can only select one streaming service at a time, should be multi select, and the filter
+shouldn't list all of them, should show like netflix... or something like that", and about the Year menu: "I never see the
+popup it kinda glitches real quick … I'd have to click back on year to then see those popup".
+
+- **Services are multi-select, OR'ed:** `provider=8|15|1899` (TMDB's own OR syntax, `with_watch_providers=8|15|1899`, region
+  and `flatrate` as before) finds titles streaming on any of them. Ids are kept distinct and sorted, so the same choice is
+  always the same URL and cache entry. Old links keep working: `provider=8` (one id), `provider=8,15` and a repeated
+  `provider=8&provider=15` (Spring joins it as `8,15`) all parse; at most 30 ids. The API returns `providers` (all) next to
+  `provider` (the first, for older clients).
+- **The menu opens on the big US services, with logos, in the user's order:** Netflix, Prime Video, Disney+, HBO Max, Hulu,
+  Apple TV+, Peacock, Paramount+ (`BrowseBarViews.FEATURED_SERVICES`). Ids were checked against TMDB's
+  `/watch/providers/movie?watch_region=US` on 2026-11-24: Netflix 8, Prime Video 9, Disney+ 337, HBO Max 1899 (the old 384 and
+  531 ids are gone from the US list), Hulu 15, Apple TV+ 350 (TMDB now calls it "Apple TV"; the store is 2). **Paramount+ and
+  Peacock are two ids each** (Premium 2303 + Essential 2616; Peacock Premium 386 + Premium Plus 387): TMDB lists each plan
+  separately and one plan alone misses titles (Paramount+ Premium alone: 1,192 movies, both plans: 1,387), so one row ticks
+  both. Netflix's and Prime's ad plans (1796, 2100) were left out: same catalogue (+0.5%) and a longer URL. Other regions show
+  the featured services TMDB lists there, topped up to 8 with the region's best-ranked services.
+- **Checkbox rows that apply in place and keep the menu open** (each row is still a plain link that toggles its ids, so it
+  works without JS). The trigger and the chip read "Netflix" or "Netflix + 2" (rows, not TMDB ids); the chip's ✕ and "Any
+  service" clear them all.
+- **"Show all services (N)"** is a `<details>` under the featured rows with the rest of the region's ~280 services in TMDB's
+  priority order and a "Find a service" box (shown by `browse-bar.js`; without JS the list just opens). It opens by itself
+  when it holds a ticked service. The box keeps its text when the menu comes back after a pick. The ticks are CSS (no icon per
+  row) and logos load lazily, so the long list stays cheap. On phones rows are 44px and the list is one column.
+- **Picking a decade keeps the Year menu open on its years** (the glitch: the in-place swap redrew the bar and closed the
+  menu, so the "Years in the 2020s" row only showed on a second tap). Options can carry `data-keep-open` (a decade, a service):
+  `view-swap.js` keeps that menu open while loading, re-opens it on the new bar, focuses the same option (`data-option`),
+  scrolls the years into view (`data-reveal`) and keeps an open "Show all" open. Picks made while it loads are queued and
+  replayed on the new menu, so ticking two services quickly keeps both. A year, "This year" and the other menus still close
+  the menu as before; Escape and an outside tap close it.
+- **"This year" / "Last year"** head the Year menu (with the year as a hint), then "Upcoming" (movies only), then the decades
+  under a "Decades" heading. They are single-year filters and drop a decade they aren't in.
+- **No unstyled flash after a swap:** the bar brings its own `<link rel="stylesheet">`, and static files are served `no-store`,
+  so every swap re-downloaded `browse-bar.css` and showed the bar unstyled for ~0.5 s (also part of the "glitch"). Region
+  stylesheets are now kept loaded in `<head>` (`view-swap.js`). On phones an open panel also ends above the fixed bottom nav
+  (`browse-bar.js` sizes it; it used to run under the nav, so its last rows couldn't be tapped).
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);

@@ -71,9 +71,10 @@
             const part = menu.querySelector(`details[data-inner="${CSS.escape(name)}"]`);
             if (part) part.open = true;
         });
-        menu.open = true;
+        // Revealed once the menu has opened and been fitted on screen (browse-bar.js sizes it on the same event).
         const reveal = menu.querySelector('[data-reveal]');
-        if (reveal) reveal.scrollIntoView({ block: 'nearest' });
+        if (reveal) menu.addEventListener('toggle', () => reveal.scrollIntoView({ block: 'nearest' }), { once: true });
+        menu.open = true;
         const option = key.option ? menu.querySelector(`a[data-option="${CSS.escape(key.option)}"]`) : null;
         const target = (visible(option) && option) || menu.querySelector(':scope > summary');
         if (target) target.focus({ preventScroll: true });
@@ -100,6 +101,29 @@
         if (!target) target = inGroup(byName(region.dataset.viewFallback));
         if (target) target.focus({ preventScroll: true });
     }
+
+    // Stylesheets inside a region (the browse bar brings its own <link>) are kept loaded in <head>: a <link> swapped
+    // in again is fetched again (static files are no-store) and the region showed unstyled for ~0.5 s each time.
+    const headSheet = (href) => [...document.head.querySelectorAll('link[rel="stylesheet"]')].find((l) => l.href === href);
+    function adoptStyles(root) {
+        const pending = [];
+        root.querySelectorAll('link[rel="stylesheet"][href]').forEach((link) => {
+            let copy = headSheet(link.href);
+            if (!copy) {
+                copy = link.cloneNode();
+                document.head.appendChild(copy);
+            }
+            if (!copy.sheet) {
+                pending.push(new Promise((done) => {
+                    copy.addEventListener('load', done, { once: true });
+                    copy.addEventListener('error', done, { once: true });
+                    setTimeout(done, 2000);
+                }));
+            }
+        });
+        return Promise.all(pending);
+    }
+    document.querySelectorAll('[data-view][id]').forEach(adoptStyles);
 
     function setBusy(region, busy) {
         if (busy) region.setAttribute('aria-busy', 'true'); else region.removeAttribute('aria-busy');
@@ -128,6 +152,9 @@
             const fresh = doc.getElementById(id);
             if (!fresh || !fresh.hasAttribute('data-view')) throw new Error('unexpected page');
             const node = document.importNode(fresh, true);
+            await adoptStyles(node);
+            if (mine !== seq) return;
+            node.querySelectorAll('link[rel="stylesheet"][href]').forEach((link) => { if (headSheet(link.href)) link.remove(); });
             region.replaceWith(node);
             replaceUrl(url);
             if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
