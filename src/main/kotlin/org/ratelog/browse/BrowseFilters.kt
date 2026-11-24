@@ -101,8 +101,12 @@ data class BrowseFilters(
     /** TMDB vote average floor, e.g. 7.0 = "7+". */
     val minRating: Double? = null,
     val genre: Genre? = null,
-    /** TMDB watch provider id (8 = Netflix), filtered as flatrate in the user's region. */
-    val provider: Int? = null,
+    /**
+     * TMDB watch provider ids (8 = Netflix), filtered as flatrate in the user's region; a title on any of them
+     * matches (TMDB `with_watch_providers=8|15`). Distinct and sorted (see [normalizeProviders]), so the same
+     * choice always gives the same URL and cache key.
+     */
+    val providers: List<Int> = emptyList(),
     /** ISO 639-1 original language. */
     val language: String? = null,
     /** Movies only. */
@@ -159,6 +163,12 @@ data class BrowseFilters(
 
     fun withSort(newSort: BrowseSort?) = copy(sort = newSort, popular = null)
 
+    fun withProviders(ids: Collection<Int>) = copy(providers = normalizeProviders(ids))
+
+    /** The Service menu's checkboxes: adds [ids] if none of them is chosen yet, else removes all of them. */
+    fun toggleProviders(ids: Collection<Int>): BrowseFilters =
+        if (ids.any { it in providers }) withProviders(providers - ids.toSet()) else withProviders(providers + ids)
+
     /** Canonical query parameters, in a stable order. `type` is always present. */
     fun toParams(): List<Pair<String, String>> = buildList {
         add("type" to typeParam(type))
@@ -167,7 +177,7 @@ data class BrowseFilters(
         year?.let { add("year" to it.param) }
         minRating?.let { add("minRating" to formatRating(it)) }
         genre?.let { add("genre" to BrowseGenres.slug(it)) }
-        provider?.let { add("provider" to it.toString()) }
+        if (providers.isNotEmpty()) add("provider" to providers.joinToString(PROVIDER_SEPARATOR))
         language?.let { add("language" to it) }
         runtime?.let { add("runtime" to it.param) }
         sort?.let { add("sort" to it.param) }
@@ -182,6 +192,11 @@ data class BrowseFilters(
     companion object {
         /** The Discover page (formerly `/browse`, which now redirects here). */
         const val PATH = "/discover"
+
+        /** Several services in one `provider` parameter, as TMDB writes an OR list: `provider=8|15|337`. */
+        const val PROVIDER_SEPARATOR = "|"
+
+        fun normalizeProviders(ids: Collection<Int>): List<Int> = ids.filter { it > 0 }.distinct().sorted()
 
         fun link(path: String, params: List<Pair<String, String>>): String =
             path + "?" + params.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, StandardCharsets.UTF_8)}" }

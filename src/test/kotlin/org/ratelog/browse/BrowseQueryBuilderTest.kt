@@ -131,9 +131,23 @@ class BrowseQueryBuilderTest {
     }
 
     @Test
+    fun `given several services then asks TMDB for titles on any of them`() {
+        val p = params(BrowseFilters(providers = listOf(8, 15, 1899)))
+
+        assertEquals("8|15|1899", p["with_watch_providers"])
+        assertEquals("US", p["watch_region"])
+        assertEquals("flatrate", p["with_watch_monetization_types"])
+        // Same choice in any order: same request, same cache entry.
+        val a = BrowseQueryBuilder.build(BrowseFilters().withProviders(listOf(1899, 8, 15)), 1, Lang.en, WatchRegion("US"), LocalDate.parse("2026-11-22"))
+        val b = BrowseQueryBuilder.build(BrowseFilters().withProviders(listOf(15, 1899, 8)), 1, Lang.en, WatchRegion("US"), LocalDate.parse("2026-11-22"))
+        assertEquals(a.cacheKey, b.cacheKey)
+        assertEquals(listOf("provider"), BrowseQueryBuilder.ignored(BrowseFilters(popular = BrowsePopular.WEEK, providers = listOf(8, 15))))
+    }
+
+    @Test
     fun `given genre, service, language and runtime then adds their discover parameters`() {
         val p = params(
-            BrowseFilters(genre = Genre.HORROR, provider = 8, language = "ja", runtime = BrowseRuntime.SHORT)
+            BrowseFilters(genre = Genre.HORROR, providers = listOf(8), language = "ja", runtime = BrowseRuntime.SHORT)
         )
 
         assertEquals("27", p["with_genres"])
@@ -169,10 +183,10 @@ class BrowseQueryBuilderTest {
     fun `given this week with service or runtime then reports them as ignored`() {
         assertEquals(
             listOf("provider", "runtime"),
-            BrowseQueryBuilder.ignored(BrowseFilters(popular = BrowsePopular.WEEK, provider = 8, runtime = BrowseRuntime.LONG)),
+            BrowseQueryBuilder.ignored(BrowseFilters(popular = BrowsePopular.WEEK, providers = listOf(8), runtime = BrowseRuntime.LONG)),
         )
         assertTrue(BrowseQueryBuilder.ignored(BrowseFilters(popular = BrowsePopular.WEEK, genre = Genre.DRAMA)).isEmpty())
-        assertTrue(BrowseQueryBuilder.ignored(BrowseFilters(provider = 8, runtime = BrowseRuntime.LONG)).isEmpty())
+        assertTrue(BrowseQueryBuilder.ignored(BrowseFilters(providers = listOf(8), runtime = BrowseRuntime.LONG)).isEmpty())
     }
 
     @Test
@@ -195,7 +209,7 @@ class BrowseQueryBuilderTest {
         val upcoming = BrowseFilters(popular = BrowsePopular.WEEK, year = BrowseYear.Upcoming)
         assertTrue(BrowseQueryBuilder.matchesTrending(upcoming, title.copy(releaseDate = LocalDate.parse("2027-05-01")), today))
         assertFalse(BrowseQueryBuilder.matchesTrending(upcoming, title, today))
-        assertFalse(BrowseQueryBuilder.filtersTrendingLocally(BrowseFilters(popular = BrowsePopular.WEEK, provider = 8)))
+        assertFalse(BrowseQueryBuilder.filtersTrendingLocally(BrowseFilters(popular = BrowsePopular.WEEK, providers = listOf(8))))
     }
 
     @Test

@@ -88,6 +88,45 @@ class BrowseTemplatesTest {
     }
 
     @Test
+    fun `given the Service and Year menus then options carry keep-open and the full list is a details with search`() {
+        val bar = views.build(
+            BrowseFilters(providers = listOf(8, 283)).withDecade(org.ratelog.browse.BrowseDecade.Of(2020)),
+            ProviderOptions(
+                WatchRegion("US"),
+                // In TMDB's display priority order, as TmdbBrowseClient sorts them.
+                listOf(BrowseProvider(8, "Netflix", "/n.png", 0), BrowseProvider(15, "Hulu", "/h.png", 1)) +
+                    (1..10).map { BrowseProvider(1000 + it, "Extra $it", null, 1 + it) } +
+                    BrowseProvider(283, "Crunchyroll", "/c.png", 40),
+                false,
+            ),
+            locale = Locale.ENGLISH,
+        )
+
+        val html = render("fragments/browse-bar", "browseBar", mapOf("browseBar" to bar))
+
+        // Ticking Hulu keeps Netflix and Crunchyroll; the link re-opens the menu on itself.
+        val hulu = Regex("""<a[^>]*data-option="svc-hulu"[^>]*>""").find(html)?.value ?: error(html)
+        assertTrue(hulu.contains("""href="/discover?type=movie&amp;decade=2020s&amp;provider=8%7C15%7C283""""), hulu)
+        assertTrue(hulu.contains("data-keep-open"), hulu)
+        assertTrue(html.contains("""class="bb-check bb-tick""""))
+        // The full list: open because Crunchyroll is ticked there, search box hidden until browse-bar.js shows it.
+        val more = Regex("""<details[^>]*class="bb-more"[^>]*>""").find(html)?.value ?: error(html)
+        assertTrue(more.contains("open"), more)
+        assertTrue(html.contains("Show all services (5)"))
+        assertTrue(Regex("""<div class="bb-more-search" data-bb-search hidden>""").containsMatchIn(html))
+        assertTrue(html.contains("""aria-label="Find a service""""))
+        assertTrue(html.contains("Netflix + 1"))
+        // Year: decades keep the menu open, years close it; the years section is revealed.
+        val decade = Regex("""<a[^>]*data-option="decade-2010"[^>]*>""").find(html)?.value ?: error(html)
+        assertTrue(decade.contains("data-keep-open"), decade)
+        val year = Regex("""<a[^>]*data-option="year-2025"[^>]*>""").find(html)?.value ?: error(html)
+        assertFalse(year.contains("data-keep-open"), year)
+        assertTrue(html.contains("data-reveal"))
+        assertTrue(html.contains(">This year<") && html.contains(">Last year<"))
+        assertFalse(html.contains("??"), "every message key resolves")
+    }
+
+    @Test
     fun `given browseType tv then the default bar starts on TV`() {
         val html = render("fragments/browse-bar", "browseBar", mapOf("browseType" to "tv"))
 
@@ -99,7 +138,7 @@ class BrowseTemplatesTest {
     @Test
     fun `given a filter state then renders chips, active options and the Sort menu`() {
         val bar = views.build(
-            BrowseFilters(genre = Genre.HORROR, provider = 8, hideRated = true),
+            BrowseFilters(genre = Genre.HORROR, providers = listOf(8), hideRated = true),
             ProviderOptions(WatchRegion("US"), listOf(BrowseProvider(8, "Netflix", null, 0)), false),
             locale = Locale.ENGLISH,
         )

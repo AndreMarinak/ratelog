@@ -45,7 +45,7 @@ class BrowseParamParserTest {
                 year = BrowseYear.Of(2014),
                 minRating = 7.0,
                 genre = Genre.HORROR,
-                provider = 8,
+                providers = listOf(8),
                 language = "ko",
                 runtime = BrowseRuntime.SHORT,
                 sort = BrowseSort.NEWEST,
@@ -138,8 +138,32 @@ class BrowseParamParserTest {
     }
 
     @Test
+    fun `given several services then they parse as one sorted set, pipe, comma or repeated`() {
+        assertEquals(listOf(8, 15, 337), parse(BrowseParams(provider = "8|15|337")).filters.providers)
+        assertEquals(listOf(8, 15, 337), parse(BrowseParams(provider = "337|8|15|8")).filters.providers)
+        // provider=8&provider=15 reaches the parser as "8,15" (Spring joins repeated values with commas).
+        assertEquals(listOf(8, 15), parse(BrowseParams(provider = "8,15")).filters.providers)
+        assertEquals(listOf(8, 15), parse(BrowseParams(provider = " 15 | 8 ")).filters.providers)
+        assertEquals(listOf(8, 15), parse(BrowseParams(provider = "8||15|")).filters.providers)
+        assertEquals(emptyList<Int>(), parse(BrowseParams(provider = "|")).filters.providers)
+        assertTrue(parse(BrowseParams(provider = "|")).invalid.isEmpty())
+        assertEquals(emptyList<Int>(), parse(BrowseParams()).filters.providers)
+    }
+
+    @Test
+    fun `given a bad service among several then the whole parameter is invalid`() {
+        assertEquals(listOf("provider"), invalidNames(BrowseParams(provider = "8|netflix")))
+        assertEquals(listOf("provider"), invalidNames(BrowseParams(provider = "8|0")))
+        val tooMany = (1..BrowseParamParser.MAX_PROVIDERS + 1).joinToString("|")
+        assertEquals(listOf("provider"), invalidNames(BrowseParams(provider = tooMany)))
+        assertEquals(emptyList<Int>(), parse(BrowseParams(provider = tooMany)).filters.providers)
+        val most = (1..BrowseParamParser.MAX_PROVIDERS).joinToString("|")
+        assertEquals(BrowseParamParser.MAX_PROVIDERS, parse(BrowseParams(provider = most)).filters.providers.size)
+    }
+
+    @Test
     fun `given provider and language then validates their format`() {
-        assertEquals(337, parse(BrowseParams(provider = "337")).filters.provider)
+        assertEquals(listOf(337), parse(BrowseParams(provider = "337")).filters.providers)
         assertEquals(listOf("provider"), invalidNames(BrowseParams(provider = "-1")))
         assertEquals(listOf("provider"), invalidNames(BrowseParams(provider = "netflix")))
         assertEquals("ja", parse(BrowseParams(language = "JA")).filters.language)

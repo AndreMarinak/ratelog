@@ -19,7 +19,7 @@ class BrowseFiltersTest {
             year = BrowseYear.Of(2014),
             minRating = 7.5,
             genre = Genre.SCIENCE_FICTION,
-            provider = 8,
+            providers = listOf(8),
             language = "ko",
             runtime = BrowseRuntime.MEDIUM,
             sort = BrowseSort.RATING,
@@ -80,7 +80,7 @@ class BrowseFiltersTest {
             BrowseFilters(decade = BrowseDecade.Of(1990)),
             BrowseFilters(year = BrowseYear.Upcoming),
             BrowseFilters(minRating = 7.0),
-            BrowseFilters(provider = 8),
+            BrowseFilters(providers = listOf(8)),
             BrowseFilters(language = "ko"),
             BrowseFilters(runtime = BrowseRuntime.SHORT),
             BrowseFilters(hideRated = true),
@@ -89,10 +89,35 @@ class BrowseFiltersTest {
     }
 
     @Test
+    fun `given several services then the URL pipe-joins them and parses back`() {
+        val filters = BrowseFilters(type = MediaType.tvshow).withProviders(listOf(337, 8, 15, 8))
+
+        assertEquals(listOf(8, 15, 337), filters.providers)
+        assertEquals("/discover?type=tv&provider=8%7C15%7C337", filters.href())
+        val raw = java.net.URLDecoder.decode(filters.href().substringAfter("provider="), Charsets.UTF_8)
+        assertEquals("8|15|337", raw)
+        assertEquals(filters, BrowseParamParser.parse(BrowseParams(type = "tv", provider = raw), LocalDate.parse("2026-11-22")).filters)
+    }
+
+    @Test
+    fun `given a service toggle then it adds the ids, or removes them when any is already chosen`() {
+        val none = BrowseFilters()
+        val netflix = none.toggleProviders(listOf(8))
+        val withParamount = netflix.toggleProviders(listOf(2616, 2303))
+
+        assertEquals(listOf(8), netflix.providers)
+        assertEquals(listOf(8, 2303, 2616), withParamount.providers)
+        assertEquals(listOf(2303, 2616), withParamount.toggleProviders(listOf(8)).providers)
+        // One plan chosen (e.g. an old link): unticking drops every plan of the service.
+        assertEquals(listOf(8), BrowseFilters(providers = listOf(8, 2616)).toggleProviders(listOf(2303, 2616)).providers)
+        assertTrue(netflix.toggleProviders(listOf(8)).isUnfiltered)
+    }
+
+    @Test
     fun `given a switch to TV then keeps what applies and maps genres`() {
         val movie = BrowseFilters(
             genre = Genre.SCIENCE_FICTION, runtime = BrowseRuntime.LONG, year = BrowseYear.Upcoming,
-            minRating = 7.0, provider = 8, hideRated = true,
+            minRating = 7.0, providers = listOf(8), hideRated = true,
         )
 
         val tv = movie.withType(MediaType.tvshow)
@@ -102,7 +127,7 @@ class BrowseFiltersTest {
         assertNull(tv.runtime)
         assertNull(tv.year)
         assertEquals(7.0, tv.minRating)
-        assertEquals(8, tv.provider)
+        assertEquals(listOf(8), tv.providers)
         assertEquals(true, tv.hideRated)
     }
 

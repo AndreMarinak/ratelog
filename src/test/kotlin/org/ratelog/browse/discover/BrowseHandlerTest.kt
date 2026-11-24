@@ -269,7 +269,7 @@ class BrowseHandlerTest {
             listOf(title(p * 10 + 1, genres = listOf(27)), title(p * 10 + 2, genres = listOf(35)), title(p * 10 + 3, genres = listOf(27, 53)), title(p * 10 + 4))
         }
 
-        val result = handler.handle(query(BrowseFilters(popular = BrowsePopular.WEEK, genre = Genre.HORROR, provider = 8))).ok()
+        val result = handler.handle(query(BrowseFilters(popular = BrowsePopular.WEEK, genre = Genre.HORROR, providers = listOf(8)))).ok()
 
         assertEquals(listOf(11, 13, 21, 23), result.tiles.map { it.title.tmdbId })
         assertTrue(requests.all { it.path == "/trending/movie/week" })
