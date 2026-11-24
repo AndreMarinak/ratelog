@@ -84,6 +84,10 @@ does not create yet.
 
 ## Status
 
+Updated for master `5a03f3d` (2026-11-23): Classics is checked on Discover (it left Home), the Ratings step no longer expects the
+count select (rankings load as you scroll), and the phone menu sheet has 5 items (Stats added). Run against the main session's
+port 8110 app on `5a03f3d`: home 58/58 (after the update), seen 50/50, tilerate 54/54, title 21/21, recs 25/25, backnav 39/39.
+
 Updated for master `7addbcf` (2026-11-23): poster actions go through `t.tileAct()` (the "⋯" chooser on touch, hover + click
 with a mouse), the official toggle is used from the list's "⋯" List actions menu (with its confirm), list tabs replace the URL
 (one Back leaves the list), the watchlist is opened per type (`?type=movie` / `?type=tv`; it opens on Movies), a show rated by

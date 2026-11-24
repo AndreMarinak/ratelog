@@ -148,7 +148,7 @@ module.exports = {
       return `${d.h1}: ${d.rows.slice(0, 4).join(', ')}... (${d.rows.length} rows)`;
     });
 
-    await t.step('discover genre rows span the years; home has classics', async () => {
+    await t.step('discover genre rows span the years; Discover has classics', async () => {
       await t.go('/discover?hideSeen=0');
       await t.waitFor(() => [...document.querySelectorAll('.discover-row')].some((r) => /horror/i.test(r.querySelector('h2,h3')?.innerText || '') && r.querySelectorAll('.home-tile-meta').length >= 10), null, 45000).catch(() => {});
       const years = await page.evaluate(() => {
@@ -157,9 +157,10 @@ module.exports = {
       });
       const old = years.filter((y) => y < 2015).length;
       assert(years.length >= 10 && old >= years.length * 0.4, `horror years ${years.join(',')}`);
-      await t.go('/');
+      // Since "Home vs Discover" (2026-11-23) Classics is a Discover row (Movies mode), not a Home row.
+      await t.go('/discover?hideSeen=0');
       const classics = await page.evaluate(() => {
-        const row = [...document.querySelectorAll('.home-row')].find((r) => /classics/i.test(r.querySelector('h2,h3')?.innerText || ''));
+        const row = [...document.querySelectorAll('.discover-row, .home-row')].find((r) => /classics/i.test(r.querySelector('h2,h3')?.innerText || ''));
         return row ? [...row.querySelectorAll('.home-tile')].map((x) => `${x.querySelector('.home-tile-title')?.innerText} ${x.querySelector('.home-tile-meta')?.innerText}`) : null;
       });
       assert(classics && classics.length >= 10, `classics row ${classics}`);
@@ -360,7 +361,7 @@ module.exports = {
         await t.waitFor(() => [...document.querySelectorAll('.nav-sheet-item')].filter((a) => a.offsetParent).length > 0);
         await t.shot('menu-sheet');
         const items = await page.evaluate(() => [...document.querySelectorAll('.nav-sheet-item')].filter((a) => a.offsetParent).length);
-        assert(items === 4, `menu sheet shows ${items} items (expected Community, Profile, Configuration, Logout)`);
+        assert(items === 5, `menu sheet shows ${items} items (expected Community, Stats, Profile, Configuration, Logout)`);
         return `${items} items`;
       });
     }
@@ -389,8 +390,9 @@ module.exports = {
       assert(b.url === '/tvshows' && b.active === 'TV Shows' && b.filter, JSON.stringify(b));
       await t.shot('ratings-tv');
       await t.go('/movies?category=16&limit=25');
-      const c = await page.evaluate(() => ({ sel: document.querySelector('#category')?.value, limit: document.querySelector('#limit')?.value }));
-      assert(c.sel === '16' && c.limit === '25', JSON.stringify(c));
+      // Since "Ratings load as you scroll" (2026-11-23) there is no count select; ?limit= still works in addresses.
+      const c = await page.evaluate(() => ({ sel: document.querySelector('#category')?.value, cards: document.querySelectorAll('.rank-item, [data-rank]').length }));
+      assert(c.sel === '16', JSON.stringify(c));
       await t.noOverflow();
       await t.go('/movies');
       const ratio = await page.evaluate(() => { const i = document.querySelector('.grid a.card img'); if (!i) return null; const r = i.getBoundingClientRect(); return r.height / r.width; });
