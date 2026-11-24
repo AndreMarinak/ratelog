@@ -4,6 +4,8 @@
 // - Pending rows: fetched from /discover/row as they near the viewport, at most 3 at a time; a row that fails is removed.
 // - Bookmark: posts /watchlist/toggle in the background and flips the button, keeping the page as it is.
 // - The seen switch is a link; Space toggles it like a real switch.
+// Fork (2026-11-23): filters apply in place (view-swap.js swaps the whole view); rows that arrive with a new view
+// get their arrows and lazy loading on `view:swapped`, and the switch's Space key is delegated.
 (() => {
     const parse = (html) => new DOMParser().parseFromString(html, 'text/html');
     const refreshIcons = () => { if (window.lucide) window.lucide.createIcons(); };
@@ -35,7 +37,7 @@
         update();
     }
 
-    const readyRows = () => document.querySelectorAll('.discover-row:not(.is-pending)');
+    const readyRows = (root = document) => root.querySelectorAll('.discover-row:not(.is-pending)');
     readyRows().forEach(setupRow);
     window.addEventListener('resize', () => readyRows().forEach((row) => row.discoverUpdate && row.discoverUpdate()));
     window.addEventListener('load', () => readyRows().forEach((row) => row.discoverUpdate && row.discoverUpdate()));
@@ -56,6 +58,7 @@
     function pump() {
         while (loading < MAX_LOADS && queue.length) {
             const row = queue.shift();
+            if (!row.isConnected) continue; // its view was swapped out
             loading++;
             loadRow(row).finally(() => {
                 loading--;
@@ -83,21 +86,33 @@
         }
     }
 
-    const pending = [...document.querySelectorAll('.discover-row.is-pending[data-src]')];
-    if (pending.length && window.fetch && window.DOMParser) {
-        if ('IntersectionObserver' in window) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach((entry) => {
-                    if (!entry.isIntersecting) return;
-                    observer.unobserve(entry.target);
-                    enqueue(entry.target);
-                });
-            }, { rootMargin: '800px 0px' });
-            pending.forEach((row) => observer.observe(row));
-        } else {
-            pending.forEach(enqueue);
-        }
+    const observer = 'IntersectionObserver' in window
+        ? new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                observer.unobserve(entry.target);
+                enqueue(entry.target);
+            });
+        }, { rootMargin: '800px 0px' })
+        : null;
+
+    function watchPending(root) {
+        if (!window.fetch || !window.DOMParser) return;
+        root.querySelectorAll('.discover-row.is-pending[data-src]').forEach((row) => {
+            if (observer) observer.observe(row); else enqueue(row);
+        });
     }
+    watchPending(document);
+
+    // A view swapped in place (view-swap.js): its rows are new. Rows still queued from the old view are skipped
+    // (pump), and one already loading replaces a detached node, which is harmless.
+    document.addEventListener('view:swapped', (event) => {
+        const regions = (event.detail && event.detail.regions) || [];
+        regions.forEach((region) => {
+            readyRows(region).forEach(setupRow);
+            watchPending(region);
+        });
+    });
 
     // --- Bookmark (Want to watch) ---
 
@@ -165,11 +180,10 @@
 
     // --- "Hide titles I've seen" switch ---
 
-    document.querySelectorAll('[data-seen-toggle]').forEach((link) => {
-        link.addEventListener('keydown', (event) => {
-            if (event.key !== ' ') return;
-            event.preventDefault();
-            link.click();
-        });
+    document.addEventListener('keydown', (event) => {
+        const link = event.key === ' ' && event.target.closest && event.target.closest('[data-seen-toggle]');
+        if (!link) return;
+        event.preventDefault();
+        link.click();
     });
 })();

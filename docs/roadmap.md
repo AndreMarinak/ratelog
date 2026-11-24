@@ -104,6 +104,9 @@ accounts and roles `V1130–1139`.
 - 2026-11-23 small fixes: Ratings filters apply on change with an ✕ per filter (in place, URL + Back), no full-screen loader
   (a thin top bar after 400 ms), a Rotten Tomatoes search link next to IMDb's on title pages, hidden (private) official lists.
   No migration.
+- 2026-11-23 smoother phone navigation: filters replace, navigation pushes (one Back leaves Ratings, a list, Discover or the
+  watchlist); Discover's filters, the list Sort menu and the watchlist tabs apply in place; coming back to Discover's grid or
+  search results brings back the pages you had loaded and the scroll position. No migration, no server change.
 
 Gap research against Letterboxd, the TV trackers and the discovery apps (ranked): [competitor-gaps.md](competitor-gaps.md).
 

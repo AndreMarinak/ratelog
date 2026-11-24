@@ -3,6 +3,7 @@
 <!--
   Fork: the "Browse by" bar (Movies / TV, Year, Rating, Popular, Genre, Service, More, Sort) plus "Find a title".
   Self-contained: brings its own /browse-bar.css and /browse-bar.js, and every option is a plain link to /discover.
+  Fork: the data-view-links groups only matter on /discover, where view-swap.js applies the links in place.
 
   Include anywhere:      <div th:replace="~{fragments/browse-bar :: browseBar}"></div>
   Start on TV:           <div th:replace="~{fragments/browse-bar :: browseBar(browseType='tv')}"></div>
@@ -14,13 +15,13 @@
 <body>
 <section th:fragment="browseBar" class="browse-bar"
          th:with="bar=${browseBar ?: @browseBarViews.defaults(browseType)}"
-         th:attr="data-type=${bar.type}"
+         th:attr="data-type=${bar.type}" data-view-links="bar"
          th:aria-label="#{browse.by}">
     <link rel="stylesheet" href="/browse-bar.css">
     <script src="/browse-bar.js" defer></script>
 
     <div class="bb-main">
-        <nav class="bb-type" th:aria-label="#{browse.type.aria}">
+        <nav class="bb-type" th:aria-label="#{browse.type.aria}" data-view-links="type">
             <a th:each="link : ${bar.typeLinks}" th:href="${link.href}" class="bb-type-link"
                th:classappend="${link.active} ? 'active' : ''"
                th:aria-current="${link.active} ? 'page' : null"
@@ -47,7 +48,7 @@
     </div>
 
     <div class="bb-sub" th:if="${!#lists.isEmpty(bar.chips) or bar.sortMenu != null}">
-        <ul class="bb-chips" th:aria-label="#{browse.chips.aria}">
+        <ul class="bb-chips" th:aria-label="#{browse.chips.aria}" data-view-links="chips">
             <li th:each="chip : ${bar.chips}">
                 <a class="bb-chip" th:href="${chip.removeHref}" th:aria-label="${chip.removeLabel}" th:title="${chip.removeLabel}">
                     <span th:text="${chip.label}">Horror</span>

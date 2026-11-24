@@ -10,13 +10,17 @@
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='browse')}"></header>
 
+    <!--/* Fork: the view the filters change. view-swap.js swaps all of it in place (a fetch of the new URL) when a link
+           in a [data-view-links] group is clicked, and replaces the URL, so the bar, chips, switch and results always
+           match; without JS the links load the page. */-->
+    <div id="discoverView" class="discover-view" data-view data-view-fallback="type">
     <div class="discover-head">
         <div class="discover-heading">
             <h1 th:text="#{discover.title}">Discover</h1>
             <p class="browse-subtitle" th:text="#{discover.subtitle}">Popular picks by genre. Pick a filter to dig deeper.</p>
         </div>
         <!--/* A plain link to the same view with the setting flipped; discover.js lets Space toggle it like a switch. */-->
-        <a class="seen-toggle" th:href="${seenToggle.href}" role="switch" data-seen-toggle
+        <a class="seen-toggle" th:href="${seenToggle.href}" role="switch" data-seen-toggle data-view-links="seen"
            th:aria-checked="${seenToggle.on}" th:classappend="${seenToggle.on} ? 'is-on' : ''">
             <span class="seen-toggle-track" aria-hidden="true"><span class="seen-toggle-thumb"></span></span>
             <span class="seen-toggle-text">
@@ -36,7 +40,7 @@
         <div th:if="${errorKey != null}" class="browse-message" role="alert">
             <i data-lucide="triangle-alert" aria-hidden="true"></i>
             <span th:text="#{${errorKey}}">Couldn't reach TMDB right now.</span>
-            <a class="btn secondary" th:href="${retryHref}" th:text="#{browse.retry}">Try again</a>
+            <a class="btn secondary" th:href="${retryHref}" data-view-links="retry" th:text="#{browse.retry}">Try again</a>
         </div>
         <div th:replace="~{fragments/discover-rows :: rows(rows=${rows})}"></div>
     </th:block>
@@ -52,7 +56,7 @@
         <div th:if="${errorKey != null}" class="browse-message" role="alert">
             <i data-lucide="triangle-alert" aria-hidden="true"></i>
             <span th:text="#{${errorKey}}">Couldn't reach TMDB right now.</span>
-            <a class="btn secondary" th:href="${retryHref}" th:text="#{browse.retry}">Try again</a>
+            <a class="btn secondary" th:href="${retryHref}" data-view-links="retry" th:text="#{browse.retry}">Try again</a>
         </div>
 
         <div th:if="${errorKey == null and #lists.isEmpty(tiles)}" class="empty-state" th:text="#{browse.empty}">Nothing matches these filters.</div>
@@ -92,17 +96,19 @@
                 <span th:text="#{browse.load.more}">Load more</span>
                 <i data-lucide="chevron-down" aria-hidden="true"></i>
             </a>
-            <a th:if="${firstPageHref != null}" class="browse-first" th:href="${firstPageHref}">
+            <a th:if="${firstPageHref != null}" class="browse-first" th:href="${firstPageHref}" data-view-links="pages">
                 <i data-lucide="arrow-left" aria-hidden="true"></i>
                 <span th:text="#{browse.first.page}">Back to the first page</span>
             </a>
         </div>
     </section>
     </th:block>
+    </div>
     <div class="browse-toast" id="browseToast" role="status" aria-live="polite"></div>
 </div>
 <script src="/browse.js" defer></script>
 <script src="/discover.js" defer></script>
+<script src="/view-swap.js" defer></script>
 <script src="/tile-actions.js" defer></script>
 <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
 </body>

@@ -85,14 +85,16 @@ class RatingsFiltersAndLoaderTest {
     }
 
     @Test
-    fun `the script applies on change, clears one filter, and keeps the URL and Back working`() {
+    fun `the script applies on change, clears one filter, and keeps the URL without adding history entries`() {
         val js = resource("/static/ratings-filters.js")
 
         assertTrue(js.contains("const FORM = '.ratings-switch ~ .grid form.filter';"))
         assertTrue(js.contains("DEFAULTS = { limit: '10' }"), "the server's default count is not a filter")
         assertTrue(js.contains("addEventListener('change'"))
-        assertTrue(js.contains("history.pushState("))
-        assertTrue(js.contains("addEventListener('popstate'"))
+        // Filters replace, navigation pushes (2026-11-23): one Back leaves Ratings, the URL still describes the view.
+        assertTrue(js.contains("history.replaceState(Object.assign({}, keep, { ratingsFilters: true }), '', url)"),
+            "the URL is replaced, keeping other scripts' history.state (back-nav.js)")
+        assertFalse(js.contains("history.pushState("), "a filter never adds a history entry")
         assertTrue(js.contains("form.classList.add('is-live')"))
         assertTrue(js.contains("window.location.assign(url)"), "a failed fetch loads the page instead")
 

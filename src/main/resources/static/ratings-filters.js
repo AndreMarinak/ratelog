@@ -4,13 +4,14 @@
 //
 // - A dropdown applies on change; the name field after a short pause in typing (DEBOUNCE_MS) or on Enter.
 // - The ranking is swapped in place (the page is fetched and the part after the form replaced) and the URL is
-//   pushed, so it still describes the view and Back / Forward step through filters. Typing pushes one entry per burst,
-//   not one per pause.
+//   replaced (history.replaceState, keeping the entry's state such as back-nav.js's id), so it still describes the
+//   view for reload and sharing, but filters add no history entries: one Back leaves Ratings (user feedback
+//   2026-11-23: "the back button thing is REAL annoying on the phone"). Rule: filters replace, navigation pushes.
 // - The URL only carries filters that are set (no "?category=&name=&limit=10").
 // - Progressive enhancement: without JS the form and its Search button work as before; with JS the button is hidden
 //   (.is-live) and any failed fetch falls back to loading the URL.
 (function () {
-  if (!window.fetch || !window.DOMParser || !window.history || !history.pushState || !window.URLSearchParams) return;
+  if (!window.fetch || !window.DOMParser || !window.history || !history.replaceState || !window.URLSearchParams) return;
 
   const FORM = '.ratings-switch ~ .grid form.filter';
   const DEBOUNCE_MS = 450;
@@ -32,8 +33,6 @@
   let seq = 0;
   let inFlight = null;
   let typingTimer = null;
-  // True while the current history entry came from typing in the name field, so the next pause replaces it.
-  let typingEntry = false;
 
   function shownValue(control) {
     if (isText(control)) return control.value.trim();
@@ -76,8 +75,14 @@
     if (window.Loader) (busy ? window.Loader.start : window.Loader.stop)();
   }
 
-  // historyMode: 'push' | 'replace' | 'none' (popstate: the URL is already the one shown).
-  async function load(url, historyMode, syncControls, fromTyping) {
+  // Replace this entry's URL; other scripts' keys in history.state (back-nav.js's backNav) are kept.
+  function replaceUrl(url) {
+    const state = history.state;
+    const keep = state && typeof state === 'object' ? state : {};
+    history.replaceState(Object.assign({}, keep, { ratingsFilters: true }), '', url);
+  }
+
+  async function load(url) {
     const mine = ++seq;
     if (inFlight) inFlight.abort();
     const controller = window.AbortController ? new AbortController() : null;
@@ -101,21 +106,12 @@
       current.forEach((el) => el.remove());
       resultsOf(fresh).forEach((el) => parent.appendChild(document.importNode(el, true)));
 
-      if (syncControls) {
-        controls.forEach((control) => {
-          const twin = fresh.querySelector(`[name="${control.name}"]`);
-          if (twin) control.value = isText(control) ? twin.getAttribute('value') || '' : twin.value;
-          refresh(control);
-        });
-      }
-      if (historyMode === 'push') history.pushState({ ratingsFilters: true }, '', url);
-      else if (historyMode === 'replace') history.replaceState({ ratingsFilters: true }, '', url);
-      if (historyMode !== 'none') typingEntry = !!fromTyping;
+      replaceUrl(url);
       if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
     } catch (err) {
       if (err && err.name === 'AbortError') return;
       if (mine !== seq) return;
-      if (historyMode === 'none') window.location.reload(); else window.location.assign(url);
+      window.location.assign(url);
     } finally {
       if (mine === seq) {
         inFlight = null;
@@ -124,7 +120,7 @@
     }
   }
 
-  function apply(fromTyping) {
+  function apply() {
     clearTimeout(typingTimer);
     typingTimer = null;
     const url = urlFor();
@@ -138,7 +134,7 @@
       }
       return;
     }
-    load(url, fromTyping && typingEntry ? 'replace' : 'push', false, fromTyping);
+    load(url);
   }
 
   // Wrap each control so its ✕ can sit inside it (ratings.css). The no-JS markup stays untouched.
@@ -161,8 +157,7 @@
       control.value = defaultOf(control);
       refresh(control);
       control.focus({ preventScroll: true });
-      typingEntry = false;
-      apply(false);
+      apply();
     });
     field.appendChild(clear);
     refresh(control);
@@ -171,39 +166,29 @@
       control.addEventListener('input', () => {
         refresh(control);
         clearTimeout(typingTimer);
-        typingTimer = setTimeout(() => apply(true), DEBOUNCE_MS);
+        typingTimer = setTimeout(apply, DEBOUNCE_MS);
       });
-      // Leaving the field applies what was typed at once and ends the typing burst (the next one gets its own entry).
+      // Leaving the field applies what was typed at once.
       control.addEventListener('blur', () => {
-        if (typingTimer) apply(true);
-        typingEntry = false;
+        if (typingTimer) apply();
       });
       control.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' || event.isComposing) return;
         event.preventDefault();
-        apply(true);
+        apply();
       });
     } else {
       control.addEventListener('change', () => {
         refresh(control);
-        typingEntry = false;
-        apply(false);
+        apply();
       });
     }
   });
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    apply(false);
+    apply();
   });
   form.classList.add('is-live');
   if (window.lucide && window.lucide.createIcons && document.readyState !== 'loading') window.lucide.createIcons();
-
-  window.addEventListener('popstate', () => {
-    if (window.location.pathname !== path) return;
-    clearTimeout(typingTimer);
-    typingTimer = null;
-    typingEntry = false;
-    load(window.location.pathname + window.location.search, 'none', true, false);
-  });
 })();
