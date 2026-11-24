@@ -7,6 +7,7 @@
         <header class="site-header" th:replace="~{fragments/nav :: nav(active='tvshows')}"></header>
         <link rel="stylesheet" href="/title-page.css">
         <link rel="stylesheet" href="/title-info.css">
+        <link rel="stylesheet" href="/title-credits.css">
         <link rel="stylesheet" href="/tile-actions.css">
         <link rel="stylesheet" href="/list-membership.css">
         <link rel="stylesheet" href="/tv-rating.css">
@@ -33,6 +34,7 @@
                     <span th:replace="~{fragments/title-actions :: upcoming(${titleActions})}"></span>
                     <div class="title-meta">
                         <th:block th:replace="~{fragments/title-info :: titleFacts(${titleInfo})}"></th:block>
+                        <th:block th:replace="~{fragments/title-credits :: certification(${titleInfo})}"></th:block>
                         <span class="tag" th:each="genreId : ${show.genres}" th:text="#{${'genre.' + genreId}}">Genre</span>
                     </div>
                     <div th:replace="~{fragments/title-info :: titleScores(${titleInfo})}"></div>
@@ -40,10 +42,12 @@
                 </header>
 
                 <div class="title-body">
+                    <p th:replace="~{fragments/title-credits :: tagline(${titleInfo})}"></p>
                     <p class="title-overview" id="title-overview" th:text="${show.overview != null and show.overview.trim().length() > 0} ? ${show.overview} : #{tvshow.detail.no.synopsis}">Loading TV show information.</p>
                     <button type="button" class="title-overview-toggle" aria-controls="title-overview" aria-expanded="false" hidden
                             th:data-more="#{title.overview.more}" th:data-less="#{title.overview.less}" th:text="#{title.overview.more}">More</button>
                 </div>
+                <section th:replace="~{fragments/title-credits :: mobile(${titleInfo})}"></section>
                 <div th:replace="~{fragments/title-info :: titleTrailer(${titleInfo})}"></div>
             </div>
 
@@ -76,6 +80,7 @@
 
                     <div th:replace="~{fragments/tags :: titleTags('tvshow', ${show.id}, ${show.tmdbId})}"></div>
                 </section>
+                <th:block th:replace="~{fragments/title-credits :: side(${titleInfo})}"></th:block>
             </div>
         </div>
 

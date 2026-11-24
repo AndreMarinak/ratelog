@@ -23,6 +23,8 @@ data class TitleExtrasEntity(
     @Column("runtime_minutes") val runtimeMinutes: Int?,
     @Column("number_of_seasons") val numberOfSeasons: Int?,
     @Column("trailer_youtube_key") val trailerYoutubeKey: String?,
+    /** Fork (V1143): [TitleCredits] as JSON; null on rows cached before credits. */
+    @Column("credits_json") val creditsJson: String? = null,
     @Column("tmdb_fetched_at_epoch_ms") val tmdbFetchedAtEpochMs: Long?,
     @Column("tmdb_next_refresh_at_epoch_ms") val tmdbNextRefreshAtEpochMs: Long?,
     @Column("imdb_rating") val imdbRating: Double?,
@@ -50,10 +52,10 @@ interface TitleExtrasDAO : CrudRepository<TitleExtrasEntity, Long> {
     @Query(
         """
         INSERT INTO title_extras (media_type, tmdb_id, imdb_id, title, latest_release_date, tmdb_vote_average,
-            tmdb_vote_count, runtime_minutes, number_of_seasons, trailer_youtube_key,
+            tmdb_vote_count, runtime_minutes, number_of_seasons, trailer_youtube_key, credits_json,
             tmdb_fetched_at_epoch_ms, tmdb_next_refresh_at_epoch_ms)
         VALUES (:mediaType, :tmdbId, :imdbId, :title, :latestReleaseDate, :voteAverage,
-            :voteCount, :runtimeMinutes, :numberOfSeasons, :trailerYoutubeKey,
+            :voteCount, :runtimeMinutes, :numberOfSeasons, :trailerYoutubeKey, :creditsJson,
             :fetchedAtEpochMs, :nextRefreshAtEpochMs)
         ON CONFLICT (media_type, tmdb_id) DO UPDATE SET
             imdb_id = COALESCE(EXCLUDED.imdb_id, title_extras.imdb_id),
@@ -64,6 +66,7 @@ interface TitleExtrasDAO : CrudRepository<TitleExtrasEntity, Long> {
             runtime_minutes = EXCLUDED.runtime_minutes,
             number_of_seasons = EXCLUDED.number_of_seasons,
             trailer_youtube_key = EXCLUDED.trailer_youtube_key,
+            credits_json = EXCLUDED.credits_json,
             tmdb_fetched_at_epoch_ms = EXCLUDED.tmdb_fetched_at_epoch_ms,
             tmdb_next_refresh_at_epoch_ms = EXCLUDED.tmdb_next_refresh_at_epoch_ms
         """
@@ -79,6 +82,7 @@ interface TitleExtrasDAO : CrudRepository<TitleExtrasEntity, Long> {
         runtimeMinutes: Int?,
         numberOfSeasons: Int?,
         trailerYoutubeKey: String?,
+        creditsJson: String?,
         fetchedAtEpochMs: Long,
         nextRefreshAtEpochMs: Long,
     )

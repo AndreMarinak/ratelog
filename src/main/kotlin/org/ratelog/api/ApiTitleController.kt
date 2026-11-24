@@ -10,6 +10,7 @@ import org.ratelog.api.media.MediaImporter
 import org.ratelog.customlist.membership.ListMembershipRepository
 import org.ratelog.customlist.saved.intitle.OfficialTitleListsOrder
 import org.ratelog.customlist.saved.intitle.OfficialTitleListsRepository
+import org.ratelog.extras.TitleCredits
 import org.ratelog.extras.gettitleinfo.GetTitleInfo
 import org.ratelog.extras.gettitleinfo.GetTitleInfoHandler
 import org.ratelog.extras.gettitleinfo.TitleInfo
@@ -52,6 +53,48 @@ data class TitleDetailDto(
     val inLists: List<TitleListDto> = emptyList(),
     /** Fork (saved lists, 2026-11-24): every public official list with the title, the caller's saved ones first. */
     val officialLists: List<TitleOfficialListDto> = emptyList(),
+    /** Director, writers, cast, age rating, tagline... (fork, 2026-11-24). Null when TMDB extras aren't available yet. */
+    val credits: TitleCreditsDto? = null,
+)
+
+/** Same data as the title page's Details and Cast cards. Lists are empty and values null when TMDB doesn't know them. */
+data class TitleCreditsDto(
+    val tagline: String?,
+    /** US age rating (R, PG-13, TV-MA...). */
+    val certification: String?,
+    /** Movies. */
+    val directors: List<CreditPersonDto>,
+    /** Movies: each person once, with their writing jobs ("Screenplay", "Novel", "Writer"...). */
+    val writers: List<CreditPersonDto>,
+    /** TV. */
+    val createdBy: List<CreditPersonDto>,
+    /** Top billed, at most 10. */
+    val cast: List<CastMemberDto>,
+    /** Movies: production companies (at most 3). */
+    val studios: List<String>,
+    /** TV (at most 3). */
+    val networks: List<String>,
+    /** Movies, US dollars. */
+    val budget: Long?,
+    val revenue: Long?,
+    /** TV. */
+    val firstAirYear: Int?,
+    val lastAirYear: Int?,
+    val numberOfEpisodes: Int?,
+    /** TV: TMDB's status ("Returning Series", "Ended", "Canceled"...). */
+    val status: String?,
+)
+
+data class CreditPersonDto(val tmdbId: Int?, val name: String, val jobs: List<String> = emptyList())
+
+data class CastMemberDto(
+    val tmdbId: Int?,
+    val name: String,
+    val character: String?,
+    /** w185 photo on image.tmdb.org, null when TMDB has none. */
+    val profileUrl: String?,
+    /** TV: episodes this person is in. */
+    val episodes: Int?,
 )
 
 /** A public official list that has the title; `rank` only on a numbered list; `saved` = the caller saved the list. */
@@ -145,6 +188,24 @@ class ApiTitleController(
         },
         userRating = userRating,
         inLists = inLists,
+        credits = info?.credits?.let(::creditsDto),
+    )
+
+    private fun creditsDto(c: TitleCredits) = TitleCreditsDto(
+        tagline = c.tagline,
+        certification = c.certification,
+        directors = c.directors.map { CreditPersonDto(it.id, it.name) },
+        writers = c.writers.map { CreditPersonDto(it.id, it.name, it.jobs) },
+        createdBy = c.createdBy.map { CreditPersonDto(it.id, it.name) },
+        cast = c.cast.map { CastMemberDto(it.id, it.name, it.character, it.profilePath?.let { p -> "https://image.tmdb.org/t/p/w185$p" }, it.episodes) },
+        studios = c.studios,
+        networks = c.networks,
+        budget = c.budget,
+        revenue = c.revenue,
+        firstAirYear = c.firstAirYear,
+        lastAirYear = c.lastAirYear,
+        numberOfEpisodes = c.numberOfEpisodes,
+        status = c.status,
     )
 
     private fun userRating(local: LocalMedia, user: User): UserRatingDto? = when (local.type) {

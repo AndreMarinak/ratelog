@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Fork (2026-11-24): credits on movie / TV title pages. `info` is `titleInfo` (org.ratelog.extras.web.TitleInfoView);
+  `info.credits` is a TitleCreditsView, missing when TMDB has nothing (then every fragment here renders nothing).
+  Desktop (>= 1100px): Details and Cast cards under the action panel (`side`). Tablet and phone: one "Directed by · Written by"
+  line, a sideways cast row and a collapsed "More details" under the overview (`mobile`). Both are in the page; CSS shows one.
+  Styles: /title-credits.css (linked by the detail pages). "Show all" on the desktop cast: /title-credits.js.
+-->
+<body>
+
+<!--/* A person's name: a link to their page only when person pages exist (ratelog.features.people). */-->
+<th:block th:fragment="person(p)"><a th:if="${peopleEnabled == true and p.id != null}" class="person-link" th:href="|/person/${p.id}|" th:data-person-id="${p.id}" th:text="${p.name}">Name</a><span th:unless="${peopleEnabled == true and p.id != null}" class="person-name" th:data-person-id="${p.id}" th:text="${p.name}">Name</span></th:block>
+
+<!--/* "Mario Puzo (novel), Francis Ford Coppola (screenplay)" */-->
+<th:block th:fragment="people(list)"><th:block th:each="p, it : ${list}"><th:block th:replace="~{fragments/title-credits :: person(${p})}"></th:block><span th:if="${p.job != null}" class="credit-job" th:text="|(${p.job})|">(novel)</span><th:block th:unless="${it.last}">, </th:block></th:block></th:block>
+
+<!--/* Age rating chip, in the meta line after the runtime. */-->
+<span th:fragment="certification(info)" th:if="${info != null and info.credits != null and info.credits.certification != null}"
+      class="title-cert" th:title="#{title.credits.certification(${info.credits.certification})}"
+      th:text="${info.credits.certification}">R</span>
+
+<!--/* Tagline, above the overview. */-->
+<p th:fragment="tagline(info)" th:if="${info != null and info.credits != null and info.credits.tagline != null}"
+   class="title-tagline" th:text="${info.credits.tagline}">An offer you can't refuse.</p>
+
+<!--/* Studio, network, budget, box office, years, episodes: rows of a <dl>, shared by both layouts. */-->
+<th:block th:fragment="productionFacts(c)">
+    <div th:if="${c.studios != null}"><dt th:text="#{title.credits.studio(${c.studioCount})}">Studio</dt><dd th:text="${c.studios}">Paramount Pictures</dd></div>
+    <div th:if="${c.networks != null}"><dt th:text="#{title.credits.network(${c.networkCount})}">Network</dt><dd th:text="${c.networks}">AMC</dd></div>
+    <div th:if="${c.budget != null or c.revenue != null}" class="pair">
+        <div th:if="${c.budget != null}"><dt th:text="#{title.credits.budget}">Budget</dt><dd th:text="${c.budget}">$6M</dd></div>
+        <div th:if="${c.revenue != null}"><dt th:text="#{title.credits.revenue}">Box office</dt><dd th:text="${c.revenue}">$245.1M</dd></div>
+    </div>
+    <div th:if="${c.firstAirYear != null or c.numberOfEpisodes != null}" class="pair">
+        <div th:if="${c.firstAirYear != null}"><dt th:text="#{title.credits.aired}">Aired</dt>
+            <dd th:text="${c.airedRange != null} ? ${c.airedRange} : #{title.credits.years.running(${c.firstAirYear})}">2008–2013</dd></div>
+        <div th:if="${c.numberOfEpisodes != null}"><dt th:text="#{title.credits.episodes}">Episodes</dt><dd th:text="${c.numberOfEpisodes}">62</dd></div>
+    </div>
+</th:block>
+
+<!--/* A cast member's photo, or their initial in a circle. */-->
+<th:block th:fragment="avatar(m, small)"><img th:if="${m.profileUrl != null}" class="cast-photo" th:src="${m.profileUrl}" th:srcset="${small} ? ${m.profileSrcset} : null" alt="" loading="lazy" decoding="async"><span th:unless="${m.profileUrl != null}" class="cast-photo cast-initial" aria-hidden="true" th:text="${m.initial}">M</span></th:block>
+
+<!--/* Character, plus episode count for shows. */-->
+<th:block th:fragment="role(m)"><span th:if="${m.character != null or m.episodes != null}" class="cast-role"><th:block th:text="${m.character}">Don Vito Corleone</th:block><span th:if="${m.episodes != null}" class="cast-eps"><span th:if="${m.character != null}" class="sep"> · </span><th:block th:text="#{title.credits.episodes.count(${m.episodes})}">62 ep</th:block></span></span></th:block>
+
+<!--/* Desktop: Details and Cast cards in the right column, under the action panel. */-->
+<th:block th:fragment="side(info)" th:if="${info != null and info.credits != null}" th:with="c=${info.credits}">
+    <section th:if="${c.hasDetails}" class="title-about title-about-details" th:aria-label="#{title.credits.details}">
+        <h2 class="title-section-label" th:text="#{title.credits.details}">Details</h2>
+        <dl class="title-facts-list">
+            <div th:if="${!c.directors.isEmpty()}"><dt th:text="#{title.credits.director(${c.directors.size()})}">Director</dt>
+                <dd><th:block th:replace="~{fragments/title-credits :: people(${c.directors})}"></th:block></dd></div>
+            <div th:if="${!c.createdBy.isEmpty()}"><dt th:text="#{title.credits.createdby}">Created by</dt>
+                <dd><th:block th:replace="~{fragments/title-credits :: people(${c.createdBy})}"></th:block></dd></div>
+            <div th:if="${!c.writers.isEmpty()}"><dt th:text="#{title.credits.writer(${c.writers.size()})}">Writers</dt>
+                <dd><th:block th:replace="~{fragments/title-credits :: people(${c.writers})}"></th:block></dd></div>
+            <th:block th:replace="~{fragments/title-credits :: productionFacts(${c})}"></th:block>
+        </dl>
+    </section>
+    <section th:if="${c.hasCast}" class="title-about title-about-cast" th:aria-label="#{title.credits.cast}" data-cast-card>
+        <h2 class="title-section-label" th:text="#{title.credits.cast}">Cast</h2>
+        <ul class="cast-list">
+            <li th:each="m, it : ${c.cast}" class="cast-line" th:classappend="${it.index >= c.castPreviewSize} ? 'is-extra'">
+                <th:block th:replace="~{fragments/title-credits :: avatar(${m}, true)}"></th:block>
+                <span class="cast-name"><th:block th:replace="~{fragments/title-credits :: person(${m})}"></th:block></span>
+                <th:block th:replace="~{fragments/title-credits :: role(${m})}"></th:block>
+            </li>
+        </ul>
+        <!--/* Without JS every name shows (title-credits.js hides the extras and reveals this button). */-->
+        <button th:if="${c.hasMoreCast}" type="button" class="cast-more" aria-expanded="false" hidden
+                th:data-more="#{title.credits.cast.all(${c.castCount})}" th:data-less="#{title.credits.cast.fewer}">
+            <span th:text="#{title.credits.cast.all(${c.castCount})}">Show all 10</span>
+            <i data-lucide="chevron-down" aria-hidden="true"></i>
+        </button>
+        <script th:if="${c.hasMoreCast}" src="/title-credits.js" defer></script>
+    </section>
+</th:block>
+
+<!--/* Tablet and phone: under the overview. Where to watch and the action bar stay where they were. */-->
+<section th:fragment="mobile(info)" th:if="${info != null and info.credits != null and (info.credits.hasCreditLine or info.credits.hasCast or info.credits.hasMoreDetails)}"
+         th:with="c=${info.credits}" class="title-credits-mobile" th:aria-label="#{title.credits.aria}">
+    <p th:if="${c.hasCreditLine}" class="title-credit-line">
+        <span th:if="${!c.directors.isEmpty()}" class="credit-part"><span class="credit-label" th:text="#{title.credits.directedby}">Directed by</span>
+            <th:block th:each="p, it : ${c.directors}"><strong><th:block th:replace="~{fragments/title-credits :: person(${p})}"></th:block></strong><th:block th:unless="${it.last}">, </th:block></th:block></span>
+        <span th:if="${!c.lineWriters.isEmpty()}" class="credit-part"><span class="credit-label" th:text="#{title.credits.writtenby}">Written by</span>
+            <th:block th:each="p, it : ${c.lineWriters}"><strong><th:block th:replace="~{fragments/title-credits :: person(${p})}"></th:block></strong><th:block th:unless="${it.last}">, </th:block></th:block><span th:if="${c.moreWriters > 0}" class="credit-more" th:text="#{title.credits.more(${c.moreWriters})}">+2 more</span></span>
+        <span th:if="${!c.createdBy.isEmpty()}" class="credit-part"><span class="credit-label" th:text="#{title.credits.createdby}">Created by</span>
+            <th:block th:each="p, it : ${c.createdBy}"><strong><th:block th:replace="~{fragments/title-credits :: person(${p})}"></th:block></strong><th:block th:unless="${it.last}">, </th:block></th:block></span>
+    </p>
+    <ul th:if="${c.hasCast}" class="cast-row" tabindex="0" th:aria-label="#{title.credits.cast}">
+        <li th:each="m : ${c.cast}" class="cast-chip">
+            <th:block th:replace="~{fragments/title-credits :: avatar(${m}, false)}"></th:block>
+            <span class="cast-name"><th:block th:replace="~{fragments/title-credits :: person(${m})}"></th:block></span>
+            <th:block th:replace="~{fragments/title-credits :: role(${m})}"></th:block>
+        </li>
+    </ul>
+    <details th:if="${c.hasMoreDetails}" class="title-more-details">
+        <summary><span th:text="#{title.credits.moredetails}">More details</span><i data-lucide="chevron-down" aria-hidden="true"></i></summary>
+        <dl class="title-facts-list">
+            <div th:if="${c.moreWriters > 0}" class="wide"><dt th:text="#{title.credits.writer(${c.writers.size()})}">Writers</dt>
+                <dd><th:block th:replace="~{fragments/title-credits :: people(${c.writers})}"></th:block></dd></div>
+            <th:block th:replace="~{fragments/title-credits :: productionFacts(${c})}"></th:block>
+        </dl>
+    </details>
+</section>
+
+</body>
+</html>

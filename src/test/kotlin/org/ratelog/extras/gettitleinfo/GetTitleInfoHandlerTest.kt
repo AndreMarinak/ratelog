@@ -19,6 +19,7 @@ import org.ratelog.MediaType
 import org.ratelog.TmdbId
 import org.ratelog.extras.ExternalScores
 import org.ratelog.extras.ExtrasTaskRunner
+import org.ratelog.extras.TitleCredits
 import org.ratelog.extras.TitleExtrasRefresher
 import org.ratelog.extras.TmdbExtras
 import org.ratelog.extras.TmdbExtrasClient
@@ -55,6 +56,7 @@ class GetTitleInfoHandlerTest {
         numberOfSeasons = null,
         trailerYoutubeKey = "vKQi3bBA1y8",
         imdbId = "tt0133093",
+        credits = TitleCredits(tagline = "Free your mind.", certification = "R"),
     )
     private val matrixScores = ExternalScores(
         imdbId = "tt0133093", imdbRating = 8.7, imdbVotes = 2_134_567,
@@ -354,5 +356,52 @@ class GetTitleInfoHandlerTest {
         assertEquals(3, showInfo.numberOfSeasons)
         assertNull(showInfo.scores)
         assertEquals(matrixScores, movieInfo.scores)
+    }
+
+    @Test
+    fun `given a fetch then the credits come with the TMDB extras`() {
+        val info = handler().handle(query).getOrNull()!!
+
+        assertEquals("Free your mind.", info.credits?.tagline)
+        assertEquals("R", info.credits?.certification)
+    }
+
+    @Test
+    fun `given a row cached before credits existed when viewed then it is fetched again now, like a first view`() {
+        // Given: cached by the old code (no credits); V1143 made such rows due
+        repository.saveTmdb(MediaType.movie, movie, matrixExtras.copy(credits = null), clock.now, clock.now)
+        repository.saveScores(MediaType.movie, movie, matrixScores, clock.now, clock.now + Duration.ofDays(30))
+        val handler = handler()
+
+        // When
+        val info = handler.handle(query).getOrNull()!!
+
+        // Then: fetched while the page waited, so the first view already has the cast
+        assertEquals("Free your mind.", info.credits?.tagline)
+        verify(tmdbExtrasClient, times(1)).fetch(MediaType.movie, movie)
+        verify(mdbListClient, never()).fetch(any(), any())
+        assertEquals(clock.now + Duration.ofDays(7), repository.find(MediaType.movie, movie)!!.tmdbNextRefreshAt)
+    }
+
+    @Test
+    fun `given a row without credits whose refetch just failed when viewed then it waits for the retry time`() {
+        // Given: the credits refetch failed, so TMDB is deferred an hour
+        repository.saveTmdb(MediaType.movie, movie, matrixExtras.copy(credits = null), clock.now, clock.now)
+        repository.saveScores(MediaType.movie, movie, matrixScores, clock.now, clock.now + Duration.ofDays(30))
+        whenever(tmdbExtrasClient.fetch(MediaType.movie, movie)).thenReturn(TmdbExtrasError.Failed("timeout").left())
+        handler().handle(query)
+
+        // When
+        val info = handler().handle(query).getOrNull()!!
+
+        // Then: the cached extras still show, without credits, and TMDB is not asked again on every view
+        assertNull(info.credits)
+        assertEquals(136, info.runtimeMinutes)
+        verify(tmdbExtrasClient, times(1)).fetch(MediaType.movie, movie)
+
+        // And an hour later it tries again
+        whenever(tmdbExtrasClient.fetch(MediaType.movie, movie)).thenReturn(matrixExtras.right())
+        clock.advance(Duration.ofHours(1))
+        assertEquals("R", handler().handle(query).getOrNull()!!.credits?.certification)
     }
 }

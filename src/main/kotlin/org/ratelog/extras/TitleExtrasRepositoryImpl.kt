@@ -26,6 +26,7 @@ class TitleExtrasRepositoryImpl(
             runtimeMinutes = extras.runtimeMinutes,
             numberOfSeasons = extras.numberOfSeasons,
             trailerYoutubeKey = extras.trailerYoutubeKey,
+            creditsJson = extras.credits?.let { TitleCredits.toJson(it) },
             fetchedAtEpochMs = fetchedAt.toEpochMilli(),
             nextRefreshAtEpochMs = nextRefreshAt.toEpochMilli(),
         )
@@ -66,6 +67,7 @@ class TitleExtrasRepositoryImpl(
                 numberOfSeasons = numberOfSeasons,
                 trailerYoutubeKey = trailerYoutubeKey,
                 imdbId = imdbId,
+                credits = TitleCredits.fromJson(creditsJson),
             )
         },
         tmdbFetchedAt = tmdbFetchedAtEpochMs?.let(Instant::ofEpochMilli),

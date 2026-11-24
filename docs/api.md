@@ -340,7 +340,18 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
   },
   "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null},
   "inLists": [{"id": 4, "name": "Sci-fi canon", "rank": 3, "url": "/list/4"}],
-  "officialLists": [{"id": 12, "name": "IMDb Top 250", "rank": 1, "saved": true, "url": "/list/12"}]
+  "officialLists": [{"id": 12, "name": "IMDb Top 250", "rank": 1, "saved": true, "url": "/list/12"}],
+  "credits": {
+    "tagline": "Welcome to the Real World.", "certification": "R",
+    "directors": [{"tmdbId": 9340, "name": "Lana Wachowski", "jobs": []}],
+    "writers": [{"tmdbId": 9340, "name": "Lana Wachowski", "jobs": ["Writer"]}],
+    "createdBy": [],
+    "cast": [{"tmdbId": 6384, "name": "Keanu Reeves", "character": "Neo",
+              "profileUrl": "https://image.tmdb.org/t/p/w185/...", "episodes": null}],
+    "studios": ["Village Roadshow Pictures", "Groucho II Film Partnership", "Silver Pictures"], "networks": [],
+    "budget": 63000000, "revenue": 463517383,
+    "firstAirYear": null, "lastAirYear": null, "numberOfEpisodes": null, "status": null
+  }
 }
 ```
 
@@ -355,6 +366,13 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
   plain (unnumbered) list. Added in this fork.
 - `officialLists` names **every public official list** that contains the title (fork, 2026-11-24): the ones you saved first
   (`saved: true`, newest save first), then numbered lists by `rank`, then plain lists (`rank: null`) by name. `[]` when none.
+- `credits` (added 2026-11-24 in this fork) is what the title page's Details and Cast show: `tagline`, `certification` (the US
+  age rating: R, PG-13, TV-MA...), `directors` (movies, up to 3), `writers` (movies, up to 6, each person once with their TMDB
+  writing `jobs`: "Screenplay", "Novel", "Story", "Writer"...), `createdBy` (shows), `cast` (top 10 in billing order;
+  `character` and `profileUrl` can be `null`, `episodes` is set for shows), `studios` (movies) / `networks` (shows), up to 3 each,
+  `budget` / `revenue` (movies, US dollars, `null` when unknown), and for shows `firstAirYear`, `lastAirYear`,
+  `numberOfEpisodes` and `status` (TMDB's: "Returning Series", "Ended", "Canceled"...). Every `tmdbId` is a TMDB person id.
+  Empty lists and `null`s mean TMDB doesn't know; `credits` itself is `null` only when the extras couldn't be loaded.
 - Extras are cached (TMDB data weekly; scores daily for titles out under 30 days, weekly under a year, monthly after),
   so values can lag the source a little. Errors: `invalid_type`, `invalid_parameter`, `not_found`, `tmdb_not_configured`, `tmdb_error`.
 

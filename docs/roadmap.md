@@ -8,7 +8,8 @@ statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, im
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
 lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
 accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`), watchlist entries `V1141`
-(`watchlist_entries`, the watchlist independent of the status), saved lists `V1142` (`saved_lists`).
+(`watchlist_entries`, the watchlist independent of the status), saved lists `V1142` (`saved_lists`), title credits `V1143`
+(`title_extras.credits_json`).
 
 ## Build now (in suggested order)
 
@@ -142,6 +143,12 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   `PUT` / `DELETE /api/v1/lists/{id}/saved`, `GET /api/v1/lists/saved`, `officialLists` on title details
   ([docs/api.md](api.md#saved-lists)). Migration `V1142`. Details in
   [design-decisions.md](design-decisions.md#saved-lists-save-an-official-list-and-it-comes-first-2026-11-24).
+- [x] **35. Credits on title pages** (asked 2026-11-24, "is there more data we can get, director? Cast?"): director / writers,
+  the top 10 cast with photos and characters, the US age rating and the tagline, from the same TMDB extras request (cached in
+  `title_extras.credits_json`, migration `V1143`). Laptop: Details and Cast cards under the action panel (user's idea); tablet
+  and phone: a "Directed by · Written by" line, a sideways cast row and a collapsed "More details". Names link to person pages
+  only behind `ratelog.features.people` (off until those pages exist). API: `credits` on `GET /api/v1/titles/{type}/{tmdbId}`.
+  Details in [design-decisions.md](design-decisions.md#credits-on-title-pages-director-writers-cast-age-rating-tagline-2026-11-24).
 
 ## Fixes and housekeeping done
 
