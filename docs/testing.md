@@ -82,16 +82,13 @@ lists of other users), `smallfixes` (Ratings filters applying in place, the page
 user) and `secfix` (security headers / rate-limit / lockout checks). Several of them need a second user account, which the runner
 does not create yet.
 
-## Status (2026-11-23)
+## Status
 
-- Verified against master `fa3e842` on a fresh database (port 8125): `home`, `seen`, `tilerate` 162 steps at desktop / 390 / 360
-  (one 360px tick-off failure, fixed and re-run clean); `title`, `recs`, `backnav` at desktop and 390 (all pass; not yet run at 360).
-  Two full back-to-back runs and a run against the long-lived 8110 app are still to do.
-- Master `561d98c` (smoothnav + tilemenu) changed poster buttons (a "⋯" chooser on touch, hover-only with a mouse) and made filters
-  use `replaceState`. Steps that tap poster buttons will need updating: `seen` (home / Discover / search tile Seen + Watchlist),
-  `tilerate` (tile star picker, tile add to list, watchlist / list / To rate stars), `home` (bookmark; clicked by script, may still
-  work) and `recs` (series tile Seen, More like this bookmark; clicked by script). The list-tab Back checks in `home` and `backnav`
-  assume tab switches push a history entry.
+Updated for master `7addbcf` (2026-11-23): poster actions go through `t.tileAct()` (the "⋯" chooser on touch, hover + click
+with a mouse), the official toggle is used from the list's "⋯" List actions menu (with its confirm), list tabs replace the URL
+(one Back leaves the list), the watchlist is opened per type (`?type=movie` / `?type=tv`; it opens on Movies), a show rated by
+season links its ★ to the seasons, and TV season deletes save in place. Results of the last verification runs are in the
+commit message that made this change.
 
 ## Add a step
 
@@ -100,6 +97,8 @@ Suites are `tools/uitest/suites/<name>.js` modules: `{ name, description, setup(
 (`lib/browser.js`):
 
 - `t.go(url)`, `t.navClick(sel)`, `t.press(handle)` / `t.pressSel(sel)` (tap on phones, click on desktop), `t.waitFor(fn, arg, ms)`
+- `t.tileAct(stack, 'watchlist' | 'seen' | 'rate' | 'lists')`: a poster's quick action as a person uses it (opens the "⋯"
+  chooser on touch viewports, hovers the poster with a mouse). Never click the hidden poster buttons by script.
 - `t.mark()` + `t.stillHere(token)`: the action saved in place (no reload / navigation)
 - `t.toast(text?)`, `t.noOverflow()`, `t.shot(name, fullPage?)`, `t.assert(cond, msg)`
 - `t.api.must(method, path, body)` / `t.api.call(...)` (the run's token), `t.data` (what `setup` returned, plus `prefix`), `t.mobile`, `t.vp`

@@ -78,34 +78,38 @@ module.exports = {
     await t.step('bookmark adds to watchlist', async () => {
       await t.go('/');
       const title = await page.evaluate(() => {
-        const f = [...document.querySelectorAll('form.tile-watchlist:not([hidden])')].find((x) => !x.classList.contains('is-on'));
+        // A movie: the watchlist page shows movies or TV, and opens on Movies.
+        const f = [...document.querySelectorAll('form.tile-watchlist:not([hidden])')].find((x) => !x.classList.contains('is-on') && x.closest('[data-tile-actions]')?.dataset.key.startsWith('movie:'));
         if (!f) return null;
         f.id = 'uitest-bookmark';
         return f.closest('.home-tile-wrap').querySelector('.home-tile-title').innerText;
       });
       assert(title, 'no bookmark button');
       // Saves in place: no reload (the marker survives), the button flips, the scroll position stays.
-      await page.evaluate(() => window.scrollTo({ top: 400, behavior: 'instant' }));
       const token = await t.mark();
-      await page.evaluate(() => document.querySelector('#uitest-bookmark button').click());
+      const stack = await page.evaluateHandle(() => document.querySelector('#uitest-bookmark').closest('[data-tile-actions]'));
+      await t.tileAct(stack.asElement(), 'watchlist');
+      const y0 = await page.evaluate(() => window.scrollY);
       await t.waitFor(() => document.querySelector('#uitest-bookmark.is-on'));
       await t.stillHere(token);
       const y = await page.evaluate(() => window.scrollY);
-      assert(y >= 300, `scroll jumped to ${y}`);
-      await t.go('/watchlist');
+      assert(Math.abs(y - y0) < 50, `scroll jumped from ${y0} to ${y}`);
+      await t.go('/watchlist?status=want_to_watch&type=movie');
       const inList = await page.evaluate((x) => document.body.innerText.includes(x), title);
       await t.shot('watchlist-after-bookmark');
       assert(inList, `${title} not on /watchlist`);
       // Undo: the run's restore would also put it back, but the step leaves the page as it found it.
       await t.go('/');
-      const undone = await page.evaluate((x) => {
+      const undo = await page.evaluateHandle((x) => {
         const w = [...document.querySelectorAll('.home-tile-wrap')].find((e) => e.querySelector('.home-tile-title')?.innerText === x && e.querySelector('form.tile-watchlist.is-on'));
-        if (!w) return false;
+        if (!w) return null;
         w.querySelector('form.tile-watchlist').id = 'uitest-unbookmark';
-        w.querySelector('form.tile-watchlist button').click();
-        return true;
+        return w.querySelector('[data-tile-actions]');
       }, title);
-      if (undone) await t.waitFor(() => !document.querySelector('#uitest-unbookmark.is-on'));
+      if (undo.asElement()) {
+        await t.tileAct(undo.asElement(), 'watchlist');
+        await t.waitFor(() => !document.querySelector('#uitest-unbookmark.is-on'));
+      }
       return `${title}; no reload, scroll kept, on /watchlist, undone`;
     });
 
@@ -279,7 +283,10 @@ module.exports = {
       const toggle = async () => {
         const was = await badge();
         const token = await t.mark();
-        await page.evaluate(() => document.querySelector('form.list-official-toggle [type=submit]').click());
+        // Since 2026-11-23 the toggle sits in the list's "⋯" List actions menu and asks first (confirm, accepted).
+        await t.pressSel('details[data-list-actions] > summary');
+        await t.waitFor(() => document.querySelector('details[data-list-actions]')?.open);
+        await t.pressSel('details[data-list-actions] form.list-official-toggle [type=submit]');
         await t.waitFor((w) => !!document.querySelector('.list-official-badge') !== w, was);
         await t.stillHere(token);
         return badge();
@@ -308,7 +315,7 @@ module.exports = {
       return txt.slice(0, 80);
     });
 
-    await t.step('list page: back link, progress, seen filter', async () => {
+    await t.step('list page: back link, progress, seen filter (one Back leaves)', async () => {
       await t.go('/lists');
       await t.go(`/list/${progressList}`);
       const a = await page.evaluate(() => ({
@@ -330,10 +337,12 @@ module.exports = {
       const cards = await page.evaluate(() => document.querySelectorAll('.list-grid .list-card').length);
       await t.stillHere(token);
       assert(cards === 2, `Not seen tab shows ${cards} titles (expected 2)`);
-      await page.goBack();
-      await t.waitFor(() => !location.search.includes('show=unseen') && /all/i.test(document.querySelector('.list-filter-tabs .active')?.innerText || ''));
+      // Tabs replace the URL (2026-11-23, "one Back leaves the page"): Back goes to /lists, not to the All tab.
+      await page.goBack({ waitUntil: 'networkidle2' });
+      assert(new URL(page.url()).pathname === '/lists', `Back went to ${page.url()}`);
+      await t.go(`/list/${progressList}`);
       await t.navClick('.list-back');
-      assert(page.url().endsWith('/lists'), `back went to ${page.url()}`);
+      assert(page.url().endsWith('/lists'), `back link went to ${page.url()}`);
       return `"${a.backText}"; ${a.progress}; tabs ${a.tabs.join(' / ')}; unseen tab: ${unseen}`;
     });
 

@@ -60,6 +60,11 @@ module.exports = {
       if (info) await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
       return info;
     };
+    /** Uses the quick action `act` of the poster that holds the element tagged `id` (the "⋯" chooser on touch, hover with a mouse). */
+    const posterAct = async (id, act) => {
+      const stack = await page.evaluateHandle((x) => document.getElementById(x).closest('[data-tile-actions]'), id);
+      return t.tileAct(stack.asElement(), act);
+    };
     /** Clicks an element where it can be seen (not under the open picker / prompt), scrolling the page if needed. */
     const tapVisible = async (id) => {
       let point = null;
@@ -120,11 +125,11 @@ module.exports = {
       const token = await t.mark();
       const fit = await fitCheck();
       assert(fit.count === 0, 'fit: ' + fit.bad.join('; '));
-      const target = await tag('target-star', () => [...document.querySelectorAll('.home-row:not(#row-coming-soon) a[data-tile-rate]:not([data-score])')]
+      const target = await tag('target-star', () => [...document.querySelectorAll('.home-row:not(#row-coming-soon) a[data-tile-rate="movie"]:not([data-score])')]
         .find((a) => !a.closest('[data-tile-actions]').querySelector('.tile-seen.is-on')));
       assert(target, 'no unrated movie tile');
       const key = target.split(' ')[0];
-      await page.click('#target-star');
+      await posterAct('target-star', 'rate');
       await popOpen();
       const info = await page.evaluate(() => {
         const p = document.querySelector('[data-rate-pop]');
@@ -138,6 +143,9 @@ module.exports = {
       await page.click('[data-rate-pop] .tile-rate-score-btn[value="7"]');
       const toast = await t.toast();
       await t.waitFor((k) => [...document.querySelectorAll(`[data-tile-actions][data-key="${k}"] .tile-rate`)].every((s) => s.classList.contains('is-on')), key);
+      // The "★ 7.0" mark fades in (CSS transition): wait for it to finish before reading its opacity.
+      await page.mouse.move(2, 2);
+      await t.waitFor((k) => getComputedStyle(document.querySelector(`[data-tile-actions][data-key="${k}"] .tile-rate`)).opacity === '1', key, 5000).catch(() => {});
       const after = await page.evaluate((k) => ({
         chips: [...document.querySelectorAll(`[data-tile-actions][data-key="${k}"] .tile-rate-score`)].map((s) => s.textContent),
         seen: [...document.querySelectorAll(`[data-tile-actions][data-key="${k}"] .tile-seen`)].every((s) => s.classList.contains('is-on') && s.classList.contains('is-locked')),
@@ -181,7 +189,7 @@ module.exports = {
       const target = await tag('target-list', () => [...document.querySelectorAll('.home-row:not(#row-your-lists) a[data-tile-lists]:not(.is-on)')][1]);
       assert(target, 'no list button');
       const key = target.split(' ')[0];
-      await page.click('#target-list');
+      await posterAct('target-list', 'lists');
       await t.waitFor(() => { const m = document.querySelector('[data-tile-sheet] #addToListModal'); return m && m.classList.contains('visible'); });
       await t.shot('home-list-sheet');
       const found = await page.evaluate((n) => {
@@ -205,7 +213,7 @@ module.exports = {
       await t.go('/?q=the+matrix');
       const target = await tag('target-star', () => document.querySelector('[data-tile-actions][data-key="movie:603"] a[data-tile-rate]'));
       assert(target, 'no Matrix tile');
-      await page.click('#target-star');
+      await posterAct('target-star', 'rate');
       await popOpen();
       const info = await page.evaluate(() => {
         const p = document.querySelector('[data-rate-pop]');
@@ -223,7 +231,7 @@ module.exports = {
     await t.step('search: delete a quick rating (confirm step), stays seen', async () => {
       await t.go('/?q=the+matrix');
       await tag('target-star', () => document.querySelector('[data-tile-actions][data-key="movie:603"] a[data-tile-rate]'));
-      await page.click('#target-star');
+      await posterAct('target-star', 'rate');
       await popOpen();
       await page.click('[data-rate-pop] [data-pop-delete]');
       await t.waitFor(() => document.querySelector('[data-rate-pop] .tile-rate-danger')?.offsetParent);
@@ -240,7 +248,7 @@ module.exports = {
       await t.go('/?q=heat');
       const target = await tag('target-star', () => document.querySelector('[data-tile-actions][data-key="movie:949"] a[data-tile-rate]'));
       assert(target, 'no Heat tile');
-      await page.click('#target-star');
+      await posterAct('target-star', 'rate');
       await popOpen();
       const info = await page.evaluate(() => { const p = document.querySelector('[data-rate-pop]'); return { formHidden: p.querySelector('[data-pop-form]').hidden, detailedShown: !p.querySelector('[data-pop-detailed]').hidden, href: p.querySelector('[data-pop-edit]').getAttribute('href'), del: p.querySelector('[data-pop-delete-form]').hidden }; });
       assert(info.formHidden && info.detailedShown && info.href === '/movie/949?rate=edit' && info.del, JSON.stringify(info));
@@ -266,16 +274,22 @@ module.exports = {
       return JSON.stringify(modal);
     });
 
-    await t.step('search: TV tiles show the show score and link the star to the seasons', async () => {
+    await t.step('search: a show rated by season shows its average; the picker links to the seasons', async () => {
       await t.go('/?q=the+bear');
       const info = await page.evaluate(() => {
         const a = document.querySelector('[data-tile-actions][data-key="tv:136315"] .tile-rate');
-        return a && { href: a.getAttribute('href'), picker: a.hasAttribute('data-tile-rate'), chip: a.querySelector('.tile-rate-score')?.textContent };
+        return a && { href: a.getAttribute('href'), seasons: a.dataset.seasons === 'true', chip: a.querySelector('.tile-rate-score')?.textContent };
       });
-      assert(info && info.href === '/tv/136315#seasons' && !info.picker && info.chip === '8.0', JSON.stringify(info));
+      assert(info && info.href === '/tv/136315#seasons' && info.seasons && info.chip === '8.0', JSON.stringify(info));
       await tag('tv-star', () => document.querySelector('[data-tile-actions][data-key="tv:136315"] .tile-rate'));
       await t.shot('search-tv');
-      await t.navClick('#tv-star');
+      // A show rated by season: the picker shows the average and "Rate seasons…", which goes to its seasons.
+      await posterAct('tv-star', 'rate');
+      await popOpen();
+      const edit = await page.evaluate(() => { const p = document.querySelector('[data-rate-pop]'); const a = p.querySelector('[data-pop-edit]'); return { href: a.getAttribute('href'), shown: !p.querySelector('[data-pop-detailed]').hidden }; });
+      assert(edit.shown && edit.href === '/tv/136315#seasons', `picker: ${JSON.stringify(edit)}`);
+      await t.shot('search-tv-picker');
+      await t.navClick('[data-rate-pop] [data-pop-edit]');
       assert(page.url().endsWith('/tv/136315#seasons'), page.url());
       return JSON.stringify(info);
     });
@@ -314,7 +328,7 @@ module.exports = {
       const target = await tag('w-star', (k) => document.querySelector(`.watchlist-item:not([hidden]) [data-key="${k}"] a[data-tile-rate]`), `movie:${M.dune2}`);
       assert(target, 'Dune: Part Two has no star on To watch');
       const before = await page.evaluate(() => [...document.querySelectorAll('.watchlist-tabs .status-count')].map((e) => e.textContent).join(','));
-      await page.click('#w-star');
+      await posterAct('w-star', 'rate');
       await popOpen();
       await page.click('[data-rate-pop] .tile-rate-score-btn[value="7"]');
       await t.toast();
@@ -334,7 +348,7 @@ module.exports = {
       const target = await tag('target-star', () => document.querySelector('.list-item [data-key="movie:680"] a[data-tile-rate]:not([data-score])'));
       await t.shot('list-before');
       assert(target, 'Pulp Fiction is not unrated on the seeded list');
-      await page.click('#target-star');
+      await posterAct('target-star', 'rate');
       await popOpen();
       await page.click('[data-rate-pop] .tile-rate-score-btn[value="6"]');
       await t.toast();
@@ -384,7 +398,7 @@ module.exports = {
       await t.shot('ratings-movies', true);
       const star = await tag('rank-star', () => document.querySelector('.rank-item [data-key="movie:949"] a[data-tile-rate]'));
       assert(star, 'Heat not on the ranking');
-      await page.click('#rank-star');
+      await posterAct('rank-star', 'rate');
       await popOpen();
       await t.shot('ratings-picker');
       await page.keyboard.press('Escape');
@@ -401,7 +415,7 @@ module.exports = {
       assert(before.tiles > 0, JSON.stringify(before));
       const target = await tag('u-star', (k) => document.querySelector(`.unrated-grid [data-key="${k}"] a[data-tile-rate]`), `movie:${M.inception}`);
       assert(target, 'Inception (seen, unrated) not on To rate');
-      await page.click('#u-star');
+      await posterAct('u-star', 'rate');
       await popOpen();
       await t.shot('unrated-picker');
       await page.click('[data-rate-pop] .tile-rate-score-btn[value="8"]');

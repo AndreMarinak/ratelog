@@ -148,6 +148,35 @@ async function makeContext(browser, opts) {
     },
     async pressSel(selector) { const h = await page.$(selector); t.assert(h, `missing ${selector}`); await t.press(h); },
 
+    /**
+     * Uses a poster's quick action the way a person does: `act` is watchlist, seen, rate or lists. On touch screens the
+     * poster shows one "⋯" button that opens a chooser (tile-actions.js); with a mouse the buttons appear on hover.
+     * `stack` is a [data-tile-actions] element (handle) or a selector for one. Returns 'menu' or 'hover'.
+     */
+    async tileAct(stack, act) {
+      const s = typeof stack === 'string' ? await page.$(stack) : stack;
+      t.assert(s && (await s.evaluate((el) => !!el)), `no poster actions ${typeof stack === 'string' ? stack : ''}`);
+      const menuBtn = await s.$('[data-tile-menu]');
+      const touch = !!menuBtn && (await menuBtn.evaluate((b) => b.getClientRects().length > 0 && getComputedStyle(b).display !== 'none'));
+      if (touch) {
+        await t.press(menuBtn);
+        await t.waitFor(() => { const m = document.querySelector('[data-menu-pop]'); return m && !m.hidden; });
+        const item = await page.$(`[data-menu-pop]:not([hidden]) [data-menu-act="${act}"]:not([hidden])`);
+        t.assert(item, `the poster's "⋯" chooser has no ${act} row`);
+        await t.press(item);
+        return 'menu';
+      }
+      const sel = { watchlist: 'form.tile-watchlist button', seen: 'form.tile-seen button', rate: 'a.tile-rate', lists: 'a.tile-list' }[act];
+      const control = await s.$(sel);
+      t.assert(control, `no ${act} button on the poster`);
+      await control.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' }));
+      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+      await s.hover(); // the buttons are hover-only with a mouse
+      await control.hover();
+      await control.click();
+      return 'hover';
+    },
+
     /** Waits for a visible toast (any of the app's toast kinds) whose text differs from the last one, or contains `want`. */
     async toast(want) {
       const sel = '.tile-toast.visible, #browseToast.visible, .watchlist-toast.visible, .inplace-toast.visible, .home-toast.visible';

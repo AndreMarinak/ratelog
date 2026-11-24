@@ -96,10 +96,9 @@ module.exports = {
         const { token } = await open('/movie/863');
         await loadRows();
         const before = await page.$eval('[data-related-progress]', (el) => el.innerText);
-        await page.evaluate(() => {
-          const wrap = [...document.querySelectorAll('#related-series .home-tile-wrap')].find((x) => x.querySelector('.home-tile-title').innerText.trim() === 'Toy Story');
-          wrap.querySelector('form[data-tile-act="seen"] button').click();
-        });
+        const ts1 = await page.evaluateHandle(() => [...document.querySelectorAll('#related-series .home-tile-wrap')]
+          .find((x) => x.querySelector('.home-tile-title').innerText.trim() === 'Toy Story').querySelector('[data-tile-actions]'));
+        await t.tileAct(ts1.asElement(), 'seen');
         await t.waitFor((b) => document.querySelector('[data-related-progress]').innerText !== b, before);
         const on = await page.evaluate(() => !![...document.querySelectorAll('#related-series .home-tile-wrap')].find((x) => x.querySelector('.home-tile-title').innerText.trim() === 'Toy Story').querySelector('.tile-seen.is-on'));
         await t.stillHere(token);
@@ -123,13 +122,14 @@ module.exports = {
         await loadRows();
         const first = await page.evaluate(() => document.querySelector('#related-more .home-tile-wrap .home-tile-title').innerText.trim());
         const sel = '#related-more .home-tile-wrap form[data-tile-act="watchlist"]';
-        await page.evaluate((s) => document.querySelector(s + ' button').click(), sel);
-        await t.waitFor((s) => document.querySelector(s).classList.contains('is-on'), sel);
+        const stack = '#related-more .home-tile-wrap [data-tile-actions]';
+        await t.tileAct(stack, 'watchlist');
+        await t.waitFor((x) => document.querySelector(x).classList.contains('is-on'), sel);
         await t.stillHere(token);
         await rowShot('more-bookmarked', '#related-more');
-        await page.evaluate((s) => document.querySelector(s + ' button').click(), sel);
-        await t.waitFor((s) => !document.querySelector(s).classList.contains('is-on'), sel);
-        await page.evaluate(() => document.querySelector('#related-more .home-tile-wrap form[data-tile-act="seen"] button').click());
+        await t.tileAct(stack, 'watchlist');
+        await t.waitFor((x) => !document.querySelector(x).classList.contains('is-on'), sel);
+        await t.tileAct(stack, 'seen');
         await t.waitFor(() => document.querySelector('#related-more .home-tile-wrap .tile-seen').classList.contains('is-on'));
         const stays = await page.evaluate((x) => document.querySelector('#related-more .home-tile-wrap .home-tile-title').innerText.trim() === x, first);
         assert(stays, 'tile left the row at once');

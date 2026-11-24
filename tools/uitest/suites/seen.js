@@ -80,19 +80,19 @@ module.exports = {
       assert(key, 'no unseen, unbookmarked trending tile');
       const token = await t.mark();
       const sel = `#row-trending-movies [data-tile-actions][data-key="${key}"]`;
-      await t.pressSel(`${sel} .tile-seen button`);
+      await t.tileAct(`${sel}`, 'seen');
       await t.waitFor((s) => document.querySelector(s + ' .tile-seen.is-on') && document.querySelector(s + ' .tile-watchlist[hidden]'), sel);
       await t.stillHere(token);
       const nudge = await page.evaluate(() => !!document.querySelector('.title-nudge:not([hidden])'));
       assert(!nudge, 'Rate it? showed on a tile');
       const toast = await page.evaluate(() => document.querySelector('.tile-toast.visible')?.innerText);
       await t.shot('home-tile-seen');
-      await t.pressSel(`${sel} .tile-seen button`);
+      await t.tileAct(`${sel}`, 'seen');
       await t.waitFor((s) => document.querySelector(s + ' .tile-seen:not(.is-on)') && !document.querySelector(s + ' .tile-watchlist[hidden]'), sel);
-      await t.pressSel(`${sel} .tile-watchlist button`);
+      await t.tileAct(`${sel}`, 'watchlist');
       await t.waitFor((s) => document.querySelector(s + ' .tile-watchlist.is-on'), sel);
       const synced = await page.evaluate((k) => [...document.querySelectorAll(`[data-tile-actions][data-key="${k}"] .tile-watchlist`)].every((f) => f.classList.contains('is-on')), key);
-      await t.pressSel(`${sel} .tile-watchlist button`);
+      await t.tileAct(`${sel}`, 'watchlist');
       await t.waitFor((s) => document.querySelector(s + ' .tile-watchlist:not(.is-on)'), sel);
       await t.stillHere(token);
       assert(synced, 'the same title elsewhere on the page did not flip');
@@ -107,9 +107,9 @@ module.exports = {
       await t.waitFor((s) => document.querySelector(s), sel, 30000);
       const key = await page.$eval(sel, (s) => s.dataset.key);
       const one = `.discover-row [data-tile-actions][data-key="${key}"]`;
-      await t.pressSel(`${one} .tile-seen button`);
+      await t.tileAct(`${one}`, 'seen');
       await t.waitFor((s) => document.querySelector(s + ' .tile-seen.is-on'), one);
-      await t.pressSel(`${one} .tile-seen button`);
+      await t.tileAct(`${one}`, 'seen');
       await t.waitFor((s) => document.querySelector(s + ' .tile-seen:not(.is-on)'), one);
       await t.stillHere(token);
       await t.noOverflow();
@@ -118,9 +118,9 @@ module.exports = {
       const token2 = await t.mark();
       const gkey = await page.$eval('#browseGrid [data-tile-actions]:has(.tile-seen:not(.is-on))', (s) => s.dataset.key);
       const g = `#browseGrid [data-tile-actions][data-key="${gkey}"]`;
-      await t.pressSel(`${g} .tile-seen button`);
+      await t.tileAct(`${g}`, 'seen');
       await t.waitFor((s) => document.querySelector(s + ' .tile-seen.is-on'), g);
-      await t.pressSel(`${g} .tile-seen button`);
+      await t.tileAct(`${g}`, 'seen');
       await t.waitFor((s) => document.querySelector(s + ' .tile-seen:not(.is-on)'), g);
       await t.stillHere(token2);
       await t.shot('discover-grid');
@@ -147,11 +147,11 @@ module.exports = {
       }
       assert(target, 'no released result to toggle');
       const token = await t.mark();
-      const s = `.search-tile-wrap[data-key="${target.key}"]`;
-      await t.pressSel(`${s} .tile-seen button`);
+      const s = `.search-tile-wrap[data-key="${target.key}"] [data-tile-actions]`;
+      await t.tileAct(`${s}`, 'seen');
       await t.waitFor((x) => document.querySelector(x + ' .tile-seen.is-on'), s);
       await t.shot('search');
-      await t.pressSel(`${s} .tile-seen button`);
+      await t.tileAct(`${s}`, 'seen');
       await t.waitFor((x) => document.querySelector(x + ' .tile-seen:not(.is-on)'), s);
       await t.stillHere(token);
       await t.noOverflow();
@@ -307,7 +307,7 @@ module.exports = {
     const count = (status) => page.$eval(`.watchlist-tabs [data-status="${status}"] .status-count`, (e) => Number(e.innerText));
 
     await t.step('watchlist: Remove in place with Undo, counts move', async () => {
-      await t.go('/watchlist');
+      await t.go('/watchlist?status=want_to_watch&type=movie');
       const before = await count('want_to_watch');
       const removeVisible = await page.evaluate(() => [...document.querySelectorAll('.watchlist-item')].every((i) => {
         const b = i.querySelector('.watchlist-act.is-remove');
@@ -335,16 +335,20 @@ module.exports = {
     });
 
     await t.step('watchlist: Seen and TV Watching move tiles in place', async () => {
-      await t.go('/watchlist');
-      const token = await t.mark();
+      // The watchlist shows movies or TV, not both (it opens on Movies): Dune on the movie view, The Last of Us on TV.
+      await t.go('/watchlist?status=want_to_watch&type=movie');
+      let token = await t.mark();
       const seen0 = await count('watched');
-      const watching0 = await count('watching');
       const dune = await itemByKey(`movie:${M.dune2}`, titles.dune2);
       assert(await dune.evaluate((i) => !!i), `${titles.dune2} not on the watchlist`);
       await t.press(await dune.$('.watchlist-act.is-seen'));
       await t.waitFor(() => /seen/i.test(document.querySelector('.watchlist-toast.visible')?.innerText || ''));
       assert(await dune.evaluate((i) => i.hidden), `${titles.dune2} still on To watch`);
       assert((await count('watched')) === seen0 + 1, 'Seen count did not move');
+      await t.stillHere(token);
+      await t.go('/watchlist?status=want_to_watch&type=tv');
+      token = await t.mark();
+      const watching0 = await count('watching');
       const tlou = await itemByKey(`tv:${TV.tlou}`, titles.tlou);
       assert(await tlou.evaluate((i) => !!i), `${titles.tlou} not on the watchlist`);
       await t.press(await tlou.$('.watchlist-act.is-watching'));

@@ -107,10 +107,14 @@ module.exports = {
       const season = await page.evaluate(() => document.querySelector('#deleteTvShowRatingModal input[name="seasonNumber"]')?.value);
       assert(season === '1', `confirmation targets season ${season}`);
       await t.shot('tv-confirm');
-      await t.navClick('#deleteTvShowRatingModal button[type=submit]');
+      // Since 2026-11-23 season deletes save in place (the season cards and the action panel are swapped in).
+      const token = await t.mark();
+      await t.pressSel('#deleteTvShowRatingModal button[type=submit]');
+      await t.waitFor(() => !document.querySelector('[data-open-modal="rateTvShowModal"][data-modal-mode="edit"][data-season="1"]'));
+      await t.stillHere(token);
       const gone = (await t.api.call('GET', `/ratings/tv/${BREAKING_BAD}`)).status;
       assert(gone === 404, `season rating still there (API ${gone})`);
-      return 'season 1 deleted (API 404)';
+      return 'season 1 deleted in place (API 404)';
     }, { retry: false });
 
     await t.step('error pages: 404 page, not a JSON 500', async () => {
