@@ -10,6 +10,7 @@ import org.ratelog.config.updategeneralconfig.UpdateGeneralConfigHandlerError
 import org.ratelog.user.User
 import org.ratelog.user.listusers.ListUsersHandler
 import org.ratelog.user.listusers.ListUsersQuery
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,6 +23,8 @@ class ConfigurationController(
     private val listUsersHandler: ListUsersHandler,
     private val getGeneralConfigHandler: GetGeneralConfigHandler,
     private val updateGeneralConfigHandler: UpdateGeneralConfigHandler,
+    /** Fork: only to tell the admin page that the MDBList key currently comes from the environment. Never sent to the page. */
+    @Value("\${MDBLIST_API_KEY:}") private val mdblistEnvKey: String = "",
 ) {
 
     @GetMapping("/admin/configuration")
@@ -45,12 +48,21 @@ class ConfigurationController(
             .firstOrNull { it.key == ConfigKey.TMDB_API_KEY }
             ?.value
             .orEmpty()
+        val mdblistApiKeyValue = generalConfigs
+            .firstOrNull { it.key == ConfigKey.MDBLIST_API_KEY }
+            ?.value
+            ?.trim()
+            .orEmpty()
         model.addAttribute("users", users)
         model.addAttribute("currentUserId", currentUser.id!!.value)
         model.addAttribute("currentUserRole", currentUser.role.name)
         // Fork: secrets never go back to the browser; the page only shows whether a key is set and its last characters.
         model.addAttribute("tmdbApiKeyConfigured", tmdbApiKeyValue.isNotEmpty())
         model.addAttribute("tmdbApiKeyHint", maskedHint(tmdbApiKeyValue))
+        // Fork (2026-11-23): the MDBList key is pasted the same way; the env var is only a fallback.
+        model.addAttribute("mdblistApiKeyConfigured", mdblistApiKeyValue.isNotEmpty())
+        model.addAttribute("mdblistApiKeyHint", maskedHint(mdblistApiKeyValue))
+        model.addAttribute("mdblistApiKeyFromEnv", mdblistApiKeyValue.isEmpty() && mdblistEnvKey.isNotBlank())
         return "admin/configuration"
     }
 
@@ -65,7 +77,7 @@ class ConfigurationController(
             redirectAttributes.addFlashAttribute("error", "admin.error.forbidden")
             return "redirect:/admin/configuration"
         }
-        // Fork: this form only sets the TMDB key; other settings (the remember-me signing key) are not editable here.
+        // Fork: these forms only set the TMDB and MDBList keys; the remember-me signing key is not editable here.
         val key = ConfigKey.parse(keyValue).getOrNull()?.takeIf { it in FORM_EDITABLE_KEYS }
         if (key == null) {
             redirectAttributes.addFlashAttribute("error", "config.general.error.invalid.key")
@@ -92,7 +104,7 @@ class ConfigurationController(
     }
 
     companion object {
-        val FORM_EDITABLE_KEYS = setOf(ConfigKey.TMDB_API_KEY)
+        val FORM_EDITABLE_KEYS = setOf(ConfigKey.TMDB_API_KEY, ConfigKey.MDBLIST_API_KEY)
         private const val VISIBLE_SUFFIX = 4
 
         /** "…abcd" for a stored secret: only the last 4 characters, and nothing at all for a value too short to hide. */

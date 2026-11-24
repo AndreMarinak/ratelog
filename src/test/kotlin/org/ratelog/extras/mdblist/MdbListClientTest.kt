@@ -18,7 +18,7 @@ class MdbListClientTest {
     private val clock = MutableClock()
     private val fixture = requireNotNull(javaClass.getResource("/mdblist/movie-603.json")).readText()
 
-    private fun client(apiKey: String = "test-key") = MdbListClient(apiKey, baseUrl = server.baseUrl, clock = clock)
+    private fun client(apiKey: String = "test-key") = MdbListClient({ apiKey }, baseUrl = server.baseUrl, clock = clock)
 
     @AfterEach
     fun tearDown() = server.close()
@@ -119,8 +119,25 @@ class MdbListClientTest {
     }
 
     @Test
+    fun `a newly saved key is used on the next call and lifts the pause the old key earned`() {
+        var key = "old-key"
+        val client = MdbListClient({ key }, baseUrl = server.baseUrl, clock = clock)
+        server.reply = { Reply(401, """{"error":"Invalid API key!"}""") }
+        assertTrue(client.fetch(MediaType.movie, TmdbId(603)).leftOrNull() is MdbListError.Failed)
+        assertTrue(client.isPaused())
+
+        key = "new-key"
+        server.reply = { Reply(200, fixture) }
+
+        assertTrue(client.isConfigured())
+        assertFalse(client.isPaused())
+        assertTrue(client.fetch(MediaType.movie, TmdbId(603)).isRight())
+        assertTrue(server.requests.last().contains("apikey=new-key"))
+    }
+
+    @Test
     fun `given MDBList is unreachable then reports Failed`() {
-        val unreachable = MdbListClient("k", baseUrl = "http://127.0.0.1:1", clock = clock)
+        val unreachable = MdbListClient({ "k" }, baseUrl = "http://127.0.0.1:1", clock = clock)
         assertTrue(unreachable.fetch(MediaType.movie, TmdbId(603)).leftOrNull() is MdbListError.Failed)
     }
 }

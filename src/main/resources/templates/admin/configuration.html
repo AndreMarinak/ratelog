@@ -37,6 +37,35 @@
         </form>
     </section>
 
+    <!--/* Fork (2026-11-23): the MDBList key, pasted the same way as the TMDB key; the stored key never comes back to the page. */-->
+    <section class="card">
+        <form th:action="@{/admin/configuration/general}" method="post" class="form-general-config form-mdblist-key">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="key" value="mdblist_api_key" />
+
+            <div class="form-group">
+                <label for="mdblistApiKey" th:text="#{config.general.mdblist.api.key.label}">MDBList API key</label>
+                <input type="password"
+                       id="mdblistApiKey"
+                       name="value"
+                       autocomplete="new-password"
+                       th:placeholder="${mdblistApiKeyConfigured} ? #{security.config.key.replace.placeholder} : ''" />
+                <p class="help-text" th:if="${mdblistApiKeyConfigured}"
+                   th:text="${mdblistApiKeyHint != null} ? #{security.config.key.configured.hint(${mdblistApiKeyHint})} : #{security.config.key.configured}">
+                    A key is configured (ends in …abcd). Type a new key to replace it.
+                </p>
+                <p class="help-text" th:if="${mdblistApiKeyFromEnv}" th:text="#{config.general.mdblist.api.key.env}">
+                    Set by the server's MDBLIST_API_KEY variable. A key saved here takes priority.
+                </p>
+                <p class="help-text" th:text="#{config.general.mdblist.api.key.help}">
+                    Shows IMDb, Rotten Tomatoes, Metacritic and Letterboxd scores on title pages.
+                </p>
+            </div>
+
+            <button type="submit" class="primary" th:text="#{config.general.save}">Save</button>
+        </form>
+    </section>
+
     <br>
 
     <h2 th:text="#{config.users.title}">Users</h2>

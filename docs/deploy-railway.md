@@ -20,7 +20,7 @@ In the Railway project:
 | `ADMIN_PASSWORD` | a password of 12+ characters; replaces the seeded `admin`/`admin` login on first start |
 | `TMDB_API_KEY` | TMDB v3 "API Key" (32 characters). When set, it overrides the value in Admin > Configuration on every start |
 | `PORT` | `8080` (pin it so it matches the domain's target port) |
-| `MDBLIST_API_KEY` | optional: [MDBList](https://mdblist.com/preferences/) API key for IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores on title pages (free tier: 1,000 requests/day; scores are cached). Without it the scores are hidden. |
+| `MDBLIST_API_KEY` | optional: [MDBList](https://mdblist.com/preferences/) API key for IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores on title pages (free tier: 1,000 requests/day; scores are cached). Without it the scores are hidden. Easier: paste the key on **Admin → Configuration** ("MDBList API key", like the TMDB key); a saved key wins over this variable and works without a redeploy. |
 | `JAVA_TOOL_OPTIONS` | optional: `-XX:MaxRAMPercentage=75` |
 
 Optional security settings (the defaults are right for Railway; see "Security hardening" in [design-decisions.md](design-decisions.md)):

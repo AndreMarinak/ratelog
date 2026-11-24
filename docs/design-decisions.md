@@ -32,6 +32,12 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Statuses are separate from upstream's "follow"** (follow = release dates in Premieres). Rating a title auto-sets Watched (from none / Want to watch / Watching) via a repository wrapper, so upstream rating handlers stay untouched. *(Shows: see the TV rule below.)*
 - **Tags are per user**; the Top-page tag filter narrows the list but keeps overall ranks (same as the genre filter).
 - **External scores via MDBList.** There's no free official source: Rotten Tomatoes licenses only to partners and bans scraping; IMDb's API costs ~$400k/yr; OMDb lacks RT audience scores and TV. MDBList returns IMDb, RT critics/audience, Metacritic and Letterboxd in one call (free 1,000/day). Cached per title (daily for new releases, weekly within a year, monthly older, 7 days for "no data"), process-wide backoff on 429. RT is labeled "Rotten Tomatoes®" and linked; the app never scrapes RT itself. Fine for a private, login-only household instance; not for a public site.
+- **The MDBList key is pasted on Admin → Configuration** (user, 2026-11-23: "make it the same where I paste it in"). Same
+  form as the TMDB key: a password field that starts empty, only the last 4 characters shown back ("…abcd"), empty = keep. The
+  saved key wins over `MDBLIST_API_KEY` (still the fallback, noted on the page when it's the only source) and is read on every
+  lookup (`ConfigMdbListKeySource`, one indexed row), so it works without a restart; a different key also lifts the
+  one-hour pause a rejected key causes. Unlike the TMDB key, the variable is not copied into the database at startup, so a
+  key pasted on the page is never overwritten by a redeploy.
 - **Quick watchlist toggle by TMDB id** (`POST /watchlist/toggle`): poster tiles only know TMDB ids, so the endpoint saves the title locally if needed. The bookmark only toggles *Want to watch*; Watching/Watched/Dropped are left alone (changed on the title page).
 - **"New list" inside the add-to-list modal** creates the list and adds the title in one step, then opens the list (same destination as adding to an existing list). *(With JS it saves in place since the reload audit; moved to the top of the sheet, see "In your lists" below.)*
 - **Confirmation before destructive one-click actions** (remove from list, remove tag, revoke token) uses a `data-confirm` attribute + native `confirm()` (`static/confirm.js`): works inside modals and without extra UI code.
@@ -575,6 +581,11 @@ the movie already" / "also the green eye is a bit bright/stands out little too m
   the app needs JS too, and showing the four buttons until the script runs would flash them on every page load.
 - This replaces the visibility rule of "Rate and add to list from any poster" above ("off controls ... always visible on touch
   and at 900px and below", the bright green eye).
+- **Smaller chips on narrow posters, phones only** (user, 2026-11-23: "on the lists it looks perfect but homepage and discover
+  not so much", then "the 3 dots and even the eye and rating look off"): Home / Discover rows (~98px posters) and the Discover /
+  search grid (~105px) get a 24px "⋯" and 22px marks tucked 4px into the corners (tap areas stay 44px), and a rated title shows
+  only "★ 7.0": rated already means seen, so the eye said the same thing twice and, with the score, covered three quarters of
+  the poster's bottom. Lists, the watchlist and the rankings keep the larger chips; mouse devices are unchanged.
 
 ## When the page reloads (audit 2026-11-23)
 

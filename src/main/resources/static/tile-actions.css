@@ -784,3 +784,45 @@ button.tile-menu-item {
 .tile-menu-item[data-menu-act="rate"].is-on .tile-menu-icon {
   color: var(--rate-star);
 }
+
+/* Fork (user, 2026-11-23: "on the lists it looks perfect but homepage and discover not so much", then "the 3 dots and even the
+   eye and rating look off"): on phones the row posters on Home and Discover (~98px wide) and the Discover / search grid
+   (~105px) are too narrow for the list-size chips: the "⋯" read as sitting left of the corner and the eye + score covered
+   three quarters of the poster's bottom (its title art). There: smaller chips tucked 4px into the corners, and a rated title
+   shows only "★ 7.0" (rated already means seen, so the eye was saying the same thing twice). Tap areas stay 44px. Lists,
+   the watchlist and the rankings keep the larger chips (the user: those look right). Mouse devices are unchanged. */
+@media (hover: none) {
+  :is(.home-tile-wrap, .browse-tile) .tile-actions {
+    --tile-act-size: 22px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  :is(.home-tile-wrap, .browse-tile) .tile-menu-btn {
+    width: 24px;
+    height: 24px;
+
+    &::before {
+      inset: -10px;
+    }
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  :is(.home-tile-wrap, .browse-tile) .tile-act svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  :is(.home-tile-wrap, .browse-tile) .tile-rate.is-on {
+    font-size: 0.75rem;
+    padding: 0 6px 0 5px;
+  }
+
+  :is(.home-tile-wrap, .browse-tile) .tile-actions:has(.tile-rate.is-on) .tile-seen {
+    display: none;
+  }
+}

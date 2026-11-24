@@ -95,6 +95,8 @@ accounts and roles `V1130–1139`.
 
 ## Fixes and housekeeping done
 
+- [x] **MDBList key on Admin → Configuration** (requested 2026-11-23): paste the scores key like the TMDB key (masked, works at
+  once, wins over `MDBLIST_API_KEY`). See [design-decisions](design-decisions.md).
 - [x] **24. "All seen" in list tick-off mode** (requested 2026-11-23): one tap (after a confirmation) marks every unseen,
   released title in the list as seen, with the same rules as the poster eye. No migration.
 - [x] **25. Poster actions that don't cover the poster** (requested 2026-11-23, "these buttons cover a lot of the tiles"): at
