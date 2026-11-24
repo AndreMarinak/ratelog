@@ -61,7 +61,11 @@ function makeApi(base, token) {
 
 // ---------- seeding helpers ----------
 
-/** Puts a title into an exact state: rating (quick number, detailed object, or null) and status (string or null). */
+/**
+ * Puts a title into an exact state: rating (quick number, detailed object, or null) and status (string or null).
+ * Since the watchlist is independent of the status (2026-11-24): `want_to_watch` means exactly "on the watchlist, no
+ * status", any other status means "that status, not on the watchlist", null clears both.
+ */
 async function setTitle(api, type, tmdbId, { score, detailed, status } = {}) {
   const t = type === 'tv' ? 'tv' : 'movie';
   if (t === 'movie') {
@@ -69,8 +73,13 @@ async function setTitle(api, type, tmdbId, { score, detailed, status } = {}) {
     else if (detailed) await api.must('PUT', `/ratings/movie/${tmdbId}`, detailed);
     else if (score === null || detailed === null) await api.must('DELETE', `/ratings/movie/${tmdbId}`, undefined, [204, 404]);
   }
-  if (status) await api.must('PUT', `/statuses/${t}/${tmdbId}`, { status });
-  else if (status === null) await api.must('DELETE', `/statuses/${t}/${tmdbId}`, undefined, [204, 404]);
+  if (status === 'want_to_watch') {
+    await api.must('DELETE', `/statuses/${t}/${tmdbId}`, undefined, [204, 404]);
+    await api.must('PUT', `/statuses/${t}/${tmdbId}`, { status });
+  } else if (status) {
+    await api.must('DELETE', `/watchlist/${t}/${tmdbId}`, undefined, [200, 404]);
+    await api.must('PUT', `/statuses/${t}/${tmdbId}`, { status });
+  } else if (status === null) await api.must('DELETE', `/statuses/${t}/${tmdbId}`, undefined, [204, 404]);
 }
 
 /** Sets a show's season ratings to exactly `seasons` ({1: 8}); other rated seasons are deleted. */
@@ -119,7 +128,10 @@ async function snapshot(api) {
   const s = { movie: {}, tv: {}, status: {} };
   for (const m of ratings.movies || []) s.movie[m.tmdbId] = m;
   for (const tv of ratings.tv || []) s.tv[tv.tmdbId] = tv;
-  for (const it of statuses.items || []) s.status[`${it.type === 'tv' ? 'tv' : 'movie'}:${it.tmdbId}`] = it.status;
+  // A seen title can be on the watchlist too (2026-11-24): `watched+watchlist`.
+  for (const it of statuses.items || []) {
+    s.status[`${it.type === 'tv' ? 'tv' : 'movie'}:${it.tmdbId}`] = it.status + (it.onWatchlist && it.status !== 'want_to_watch' ? '+watchlist' : '');
+  }
   return s;
 }
 
@@ -154,9 +166,11 @@ async function restore(api, before) {
       for (const s of bs) await api.must('PUT', `/ratings/tv/${id}/seasons/${s.season}`, ratingBody(s));
     }
     // Ratings set statuses as a side effect, so the status goes back last.
-    const st = before.status[key];
-    if (st) await api.must('PUT', `/statuses/${type}/${id}`, { status: st });
-    else await api.must('DELETE', `/statuses/${type}/${id}`, undefined, [204, 404]);
+    const [st, listed] = (before.status[key] || '').split('+');
+    if (st) {
+      await setTitle(api, type, id, { status: st });
+      if (listed) await api.must('PUT', `/watchlist/${type}/${id}`);
+    } else await api.must('DELETE', `/statuses/${type}/${id}`, undefined, [204, 404]);
   }
   return keys.size;
 }

@@ -80,14 +80,16 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
 }
 ```
 
-- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen}`. `position` is the 1-based place in the list
+- **ListItem**: `{position, tmdbId, type, title, year, posterUrl, status, score, seen, onWatchlist}`. `position` is the 1-based place in the list
   (the rank the list page shows).
-  `status` is your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or `null`; `score` is your rating or `null`.
-- `seen` is `true` when its status is `watched`, or when you rated it: a movie with any status, a show only if it has no status (a show you're Watching, have on your watchlist or Dropped isn't seen, even with rated seasons). Watching, Want to watch and Dropped are otherwise not seen. Rating a show's season sets it to `watching`, and to `watched` once every aired season is rated.
+  `status` is your watch status (`want_to_watch`, `watching`, `watched`, `dropped`) or `null`; `score` is your rating or `null`;
+  `onWatchlist` (2026-11-24) is whether it is on your watchlist, independent of `status` (see [Watchlist](#watchlist)).
+- `seen` is `true` when its status is `watched`, or when you rated it: a movie with any status, a show only if it has no status (a show you're Watching or Dropped isn't seen, even with rated seasons). Being on the watchlist never changes `seen`. Watching, Want to watch and Dropped are otherwise not seen. Rating a show's season sets it to `watching`, and to `watched` once every aired season is rated.
 - `progress.total` counts the items in the response. Items are in list order, and `position` is 1, 2, 3... with no gaps
   (before list order it was the stored sort key, which could have gaps after removals).
-- To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
-  `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
+- To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen && !onWatchlist` and send
+  them to `POST /api/v1/statuses` with `"status": "want_to_watch"` (or `PUT /api/v1/watchlist/...` one by one). Filter first:
+  `want_to_watch` replaces a `watching` / `dropped` status (a `watched` one stays, see [Watchlist](#watchlist)).
   The list page's "Add N unseen to watchlist" (in its "⋯" menu) applies the same filter and never changes an existing status.
 
 ### Official lists
@@ -341,15 +343,15 @@ Row ids, in this order:
 | id | What |
 |---|---|
 | `continue_watching` | Your titles with status `watching`, latest change first |
-| `up_next` | Your `want_to_watch` titles, latest change first |
+| `up_next` | Your watchlist, newest added first, seen titles you put there to rewatch included (2026-11-24) |
 | `recently_rated` | Your ratings, newest first (a show once, at its latest season rating) |
 | `your_lists` | Your lists, public and private, most recently changed first |
 | `trending_movies`, `trending_tv` | TMDB trending this week |
 | `in_theaters` | TMDB now playing in your region |
 | `coming_soon` | TMDB upcoming in your region, future release dates only, soonest first |
 
-**HomeTitle**: `{tmdbId, type, title, year, posterUrl, status, score, releaseDate}`. `status` (`want_to_watch`, `watching`, `watched`, `dropped`) and `score`
-are yours, `null` when you have none. `releaseDate` is an ISO date: TMDB's on TMDB rows, the stored one on your own rows.
+**HomeTitle**: `{tmdbId, type, title, year, posterUrl, status, score, releaseDate, onWatchlist}`. `status` (`want_to_watch`, `watching`, `watched`, `dropped`) and `score`
+are yours, `null` when you have none; `onWatchlist` is whether it is on your watchlist (a `watched` title in `up_next` is a rewatch). `releaseDate` is an ISO date: TMDB's on TMDB rows, the stored one on your own rows.
 
 **HomeList**: `{id, name, isPublic, itemCount, url, posterUrls}`. `posterUrls` are the first (up to 4) posters, in list order.
 
@@ -380,7 +382,7 @@ seen by default, the API only with `hideSeen=true`**. Every parameter is optiona
 | `runtime` | `short` (40-89 min), `medium` (90-150), `long` (over 150) | movies only |
 | `popular` | `week` (TMDB trending this week), `now` (by popularity), `alltime` (most voted) | overrides `sort` |
 | `sort` | `popularity` (default), `rating` (needs 300 votes for movies / 200 for TV), `newest` (up to today), `oldest`, `title` | |
-| `hideRated`, `hideWatchlist` | `true` / `false` (`1`/`0`) | leave out titles you rated / that are on your Want to watch list |
+| `hideRated`, `hideWatchlist` | `true` / `false` (`1`/`0`) | leave out titles you rated / that are on your watchlist (seen ones included) |
 | `hideSeen` | `true` / `false` (`1`/`0`); API default `false` | leave out titles you've seen: rated (any season, for TV) or marked Watched. The `/discover` page defaults to `true` and writes `hideSeen=0` when showing them |
 | `page` | `1`-`500` | |
 
@@ -402,7 +404,7 @@ seen by default, the API only with `hideSeen=true`**. Every parameter is optiona
   Results are about 20 per page, fewer when hidden.
 - `popular=week` reads TMDB's trending list: `genre`, `language`, `decade`/`year` and `minRating` are checked on its results, but
   `provider` and `runtime` can't be, and come back in `ignored` (so does a `sort` or `decade` overridden by another parameter).
-- `userScore` / `status` are your own rating and watch status (null if none). Titles are titled in your metadata language.
+- `userScore` / `status` are your own rating and watch status (null if none), `onWatchlist` whether it's on your watchlist. Titles are titled in your metadata language.
 - TMDB pages are cached for about 45 minutes. Errors: `invalid_type`, `invalid_parameter` (400), `tmdb_not_configured` (503), `tmdb_error` (502).
 
 ```bash
@@ -436,6 +438,8 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/
 ## Statuses (watchlist)
 
 Each title can have one status per user: `want_to_watch`, `watching`, `watched` or `dropped` (or none).
+*(Since 2026-11-24 `want_to_watch` means "on the watchlist", which is independent of the others: a `watched` title can be on
+the watchlist too. `status` then reads `watched` and `onWatchlist` is `true`. See [Watchlist](#watchlist).)*
 Also accepted on input: `WANT_TO_WATCH`, `want-to-watch`, `watchlist`, `plan_to_watch` (= want_to_watch), `seen`, `completed` (= watched).
 Statuses are separate from following a title (premiere tracking). Rating a title in Ratelog sets it to `watched` automatically
 unless it is `dropped`. The web page is `/watchlist`.
@@ -444,13 +448,16 @@ unless it is `dropped`. The web page is `/watchlist`.
 |---|---|---|---|
 | GET | `/api/v1/statuses` | optional `status`, `type` | `{items: [StatusItem], counts: {want_to_watch, watching, watched, dropped}}` |
 | PUT | `/api/v1/statuses/{type}/{tmdbId}` | `{status}` | `StatusChange` (the title is saved locally first if needed) |
-| DELETE | `/api/v1/statuses/{type}/{tmdbId}` | | `204`, or `404` if the title has no status |
+| DELETE | `/api/v1/statuses/{type}/{tmdbId}` | | `204` (status and watchlist cleared), or `404` if the title has neither |
 | POST | `/api/v1/statuses` | `{status?, items: [StatusItemInput]}` | `BulkStatusResult` |
 
-**StatusItem**: `{tmdbId, type, title, year, posterUrl, status, score, updatedAt}`. `score` is your own score (null if unrated); newest first.
-`counts` respects the `type` filter.
+**StatusItem**: `{tmdbId, type, title, year, posterUrl, status, score, updatedAt, onWatchlist, seen}`. `score` is your own score (null if unrated); newest first.
+`counts` respects the `type` filter. `status=want_to_watch` lists everything on the watchlist (newest added first), rewatches
+included: their `status` is `watched` and `seen` is `true`; `counts.want_to_watch` counts them and so does `counts.watched`.
+Without a `status` filter each title is listed once, under its `status`.
 
-**StatusChange**: `{tmdbId, type, title, year, posterUrl, status, previousStatus}`.
+**StatusChange**: `{tmdbId, type, title, year, posterUrl, status, previousStatus, onWatchlist}`. `status` and `previousStatus`
+are the title's status after and before (so `want_to_watch` on a Watched title answers `watched` / `watched`, `onWatchlist: true`).
 
 **StatusItemInput**: an Item (see above: `{tmdbId, type}` or `{title, year?, type?}`) plus `status`. The top-level `status` is the default
 for items without one. Same strict title matching as list items; at most **100 items per request**.
@@ -474,6 +481,34 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/
 curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
   -d '{"status":"dropped"}' "$RATELOG_URL/api/v1/statuses/movie/949"
 curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/statuses?status=want_to_watch&type=movie"
+```
+
+## Watchlist
+
+Since 2026-11-24 the watchlist is independent of the status: any title can be on it, seen (`watched` or rated) or not, and
+being on it never makes a title unseen (a rewatch). Every response that has `status` also has **`onWatchlist`** (statuses,
+list items, Home titles, Discover results, recommendations and list suggestions). `status` stays backward compatible: a title
+only on the watchlist reads `want_to_watch`; a Watched one on it reads `watched` with `onWatchlist: true`.
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| PUT | `/api/v1/watchlist/{type}/{tmdbId}` | | `WatchlistState` (the title is saved locally first if needed) |
+| DELETE | `/api/v1/watchlist/{type}/{tmdbId}` | | `WatchlistState`, or `404` if it isn't on your watchlist |
+
+**WatchlistState**: `{tmdbId, type, title, year, posterUrl, onWatchlist, status, seen, changed}`. `status` is your own status
+(`watching`, `watched`, `dropped` or `null`, never `want_to_watch` here) and is not changed by either call, except that adding
+a `watching` / `dropped` title replaces that status (it moves to To watch, like the web page). `changed` is `false` when it was
+already in that state.
+
+- **What takes a title off by itself:** marking it seen (`watched`, or rating it) when it was unseen when you added it, as
+  before. A title you added while already seen stays when you rate it or mark it watched again. `watching` / `dropped` take it
+  off. `DELETE /api/v1/statuses/...` clears both the status and the watchlist.
+- `PUT /api/v1/statuses/{type}/{tmdbId}` with `want_to_watch` (and the bulk `POST /api/v1/statuses`) still adds to the
+  watchlist, now the same as `PUT /api/v1/watchlist/...`: a `watched` title stays `watched`.
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/watchlist/movie/949"
+curl -s -X DELETE -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/watchlist/tv/1396"
 ```
 
 ## Recommendations
