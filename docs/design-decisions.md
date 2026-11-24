@@ -490,8 +490,9 @@ three filters took four swipes. Code: `static/view-swap.js` (new, generic), `lis
   `data-view` on the region (with an id), `data-view-links="<name>"` on each group of links. Focus goes back to the same control
   (the menu's trigger, the switch, the active tab), the results fade after 150 ms and loader.js's thin bar shows after 400 ms,
   and a newer click cancels an older one. The full Discover page is what's fetched (no new fragment endpoint): it costs the same
-  TMDB call the grid makes anyway (measured in the browser check), and swapping the whole view is simpler than keeping the bar
-  and a partial grid in step.
+  TMDB call the grid makes anyway, and swapping the whole view is simpler than keeping the bar and a partial grid in step.
+  Measured locally: swaps took 107-472 ms; the same view as a full page was 110-434 ms and 132 KB against 129-342 ms and 73 KB
+  for the grid-only `partial=1` fragment, so the time is TMDB's, not the page size.
 - **Without JS, or on any error, the links load their page** exactly as before (progressive enhancement); a modified click (new
   tab) is left to the browser.
 - **Modes and page switches still load a page, but replace the entry:** the list's tick-off mode ("Mark what you've seen" /

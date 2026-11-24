@@ -75,7 +75,8 @@ Problems found while building and running the fork: what happened, the cause, an
 - **Every Ratings filter and list tab added a history entry** (2026-11-23, user: "the back button thing is REAL annoying on the
   phone"): `ratings-filters.js` and `list-filter.js` used `history.pushState`, so the phone's Back stepped back through each filter
   before leaving the page. They now replace the URL (keeping back-nav.js's state); Discover, the list Sort menu and the watchlist
-  tabs switch in place too instead of loading a page.
+  tabs switch in place too instead of loading a page. Housekeeping in the same change: `browse.js` still had a grid bookmark
+  handler for `form.browse-bookmark`, which no template renders since the poster quick actions (`tile-actions.js`); removed.
 - **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
   visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").
   `/fonts/**` is now public like the stylesheets.
