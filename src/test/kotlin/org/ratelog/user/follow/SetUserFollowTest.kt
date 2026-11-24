@@ -64,9 +64,10 @@ class SetUserFollowTest {
         val request = MockHttpServletRequest().apply { addHeader("Referer", "https://example.test/community?limit=10") }
         assertEquals("redirect:/community?limit=10", controller.setFollow(me, id, true, null, request, RedirectAttributesModelMap()))
 
-        // A full URL keeps only its path (BackPath), a protocol-relative one is refused: the profile is the fallback.
-        assertEquals("redirect:/x", controller.setFollow(me, id, false, "https://evil.test/x", MockHttpServletRequest(), RedirectAttributesModelMap()))
-        assertEquals("redirect:/profile/$id", controller.setFollow(me, id, false, "//evil.test/x", MockHttpServletRequest(), RedirectAttributesModelMap()))
+        // Off-site values keep only their path (BackPath), so the redirect stays on this site; no path: the profile.
+        listOf("https://evil.test/x", "//evil.test/x").forEach { back ->
+            assertEquals("redirect:/x", controller.setFollow(me, id, false, back, MockHttpServletRequest(), RedirectAttributesModelMap()), back)
+        }
         assertEquals("redirect:/profile/$id", controller.setFollow(me, id, false, "javascript:alert(1)", MockHttpServletRequest(), RedirectAttributesModelMap()))
     }
 
