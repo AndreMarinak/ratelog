@@ -95,3 +95,6 @@ $RECYCLE.BIN/
 
 ### AI Agents ###
 AGENTS.md
+
+# Account backups from tools/export-account.py: personal data, never committed.
+/backups/

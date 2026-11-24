@@ -63,3 +63,23 @@ If you're locked out (e.g. `ADMIN_PASSWORD` was set to the wrong text on first s
    ```
    Expect `UPDATE 1`, then `\q`.
 3. Log in with the temporary password and immediately change it (Profile → pencil).
+
+## Back up an account
+
+`tools/export-account.py` copies one account's data through the API (read-only) into `backups/<username>-<date>-<time>/`,
+which `.gitignore` keeps out of git (the files are personal data; never commit or share them). Added 2026-11-24 at the
+user's request ("make a copy of all my data so far and keep it git ignored in repo").
+
+```
+python tools/export-account.py --token-file path/to/token.txt          # live site by default
+python tools/export-account.py --base http://localhost:8085 --token-file t.txt --out backups/test
+```
+
+- Token: Profile > key icon (`/settings/api`), in a file (`--token-file`) or `RATELOG_TOKEN`; it is never printed. Any token
+  reads everything of its own account, so no special token is needed.
+- Files: `ratings.json` (movies, shows with whole-show and season scores, detailed categories, reviews), `statuses.json`
+  (statuses and `onWatchlist`), `lists.json` (your lists with their items in order), `saved_lists.json`, `tags.json`,
+  `stats_all_time.json`, `me.json`, `ratings.csv` (one row per movie, show and season, for a spreadsheet) and
+  `manifest.json` (time, server, counts).
+- Not included (no API to read them): people you follow, titles followed for premieres, account settings, API tokens.
+- This is not a database backup: for the whole site use Railway's Postgres backups.

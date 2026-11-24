@@ -159,6 +159,9 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
 
 ## Fixes and housekeeping done
 
+- [x] **Account backup** (asked 2026-11-24, "make a copy of all my data so far and keep it git ignored in repo"):
+  `tools/export-account.py` saves an account's ratings, statuses, lists, saved lists, tags and stats through the API into
+  git-ignored `backups/`. No server change. How to run it: [deploy-railway.md](deploy-railway.md#back-up-an-account).
 - [x] **iPhone poster corners, one mark per poster, cast photos link, list delete lands on Lists, saved lists out of My lists**
   (asked 2026-11-24): the "⋯" sat 12px in from the corner in Safari only (overlay `width: 100%` now); a rated poster shows only
   "★ 7.0", the eye only when seen and unrated; the whole cast entry opens the person page; deleting a list goes to `/lists`
