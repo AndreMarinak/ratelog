@@ -8,7 +8,7 @@ statuses/watchlist `V1020–1029`, tags `V1030–1039`, diary `V1040–1049`, im
 smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`, dashboard `V1090–1099`,
 lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
 accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`), watchlist entries `V1141`
-(`watchlist_entries`, the watchlist independent of the status).
+(`watchlist_entries`, the watchlist independent of the status), saved lists `V1142` (`saved_lists`).
 
 ## Build now (in suggested order)
 
@@ -127,6 +127,16 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   rating a rewatch doesn't. API: `onWatchlist` on statuses, list items, Home, Discover and recommendations, plus
   `PUT/DELETE /api/v1/watchlist/{type}/{tmdbId}` ([docs/api.md](api.md#watchlist)); `/api/v1/statuses` stays compatible.
   Details in [design-decisions.md](design-decisions.md#rewatch-the-watchlist-is-independent-of-seen-2026-11-24).
+- [x] **33. Saved lists** (requested 2026-11-24: "being able to favorite an official list and that pins it to front of official
+  lists and then when I go to add that movie to list that one shows up but I can't check or uncheck bc its official"; the
+  user will say whether they like it): a Save / Saved toggle on official list pages and cards (in place). Saved lists come first
+  in every Official lists section (Lists tab, `/lists/official`, Discover, still by Movies / TV) and show under My lists and the
+  home "Your lists" row with your progress. Title pages show every public official list with the title as chips ("#12 in IMDb
+  Top 250", saved ones first and highlighted, three then "+N more"); the add-to-list sheet stays your own lists plus one
+  read-only "Also in your saved lists" line. Hidden or un-marked lists keep the save but are shown nowhere. API:
+  `PUT` / `DELETE /api/v1/lists/{id}/saved`, `GET /api/v1/lists/saved`, `officialLists` on title details
+  ([docs/api.md](api.md#saved-lists)). Migration `V1142`. Details in
+  [design-decisions.md](design-decisions.md#saved-lists-save-an-official-list-and-it-comes-first-2026-11-24).
 
 ## Fixes and housekeeping done
 

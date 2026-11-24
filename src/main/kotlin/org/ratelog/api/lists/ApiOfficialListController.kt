@@ -18,9 +18,14 @@ data class OfficialListDto(
     /** The account that owns it (only the owner can change its titles; admins can un-mark it). */
     val owner: String,
     val progress: ListProgressDto,
+    /** The token user saved it (fork, saved lists 2026-11-24); saved lists come first. */
+    val saved: Boolean = false,
 )
 
-/** `GET /api/v1/lists/official` (fork): every official list, most recently active first. The literal path wins over `/{id}`. */
+/**
+ * `GET /api/v1/lists/official` (fork): every official list, the token user's saved ones first (newest save first), then
+ * the rest most recently active first. The literal path wins over `/{id}`.
+ */
 @RestController
 @RequestMapping("/api/v1/lists")
 class ApiOfficialListController(
@@ -28,7 +33,7 @@ class ApiOfficialListController(
 ) {
     @GetMapping("/official")
     fun official(@CurrentUser user: User): List<OfficialListDto> =
-        handler.handle(user.id!!).map { (list, seen) ->
+        handler.handle(user.id!!).map { (list, seen, saved) ->
             OfficialListDto(
                 id = list.id.value,
                 name = list.name,
@@ -38,6 +43,7 @@ class ApiOfficialListController(
                 url = "/list/${list.id.value}",
                 owner = list.ownerUsername,
                 progress = ListProgressDto(seen = seen, total = list.itemCount),
+                saved = saved,
             )
         }
 }

@@ -948,6 +948,58 @@ independent. Code: `watchlist/WatchlistEntry.kt` (+ DAO, repository methods on `
 - Supersedes "Watchlist on an unrated Seen asks first" and the "Watchlist = Want to watch" part of "Seen / Watchlist instead
   of four statuses".
 
+### Saved lists: save an official list and it comes first (2026-11-24)
+
+The user, 2026-11-24: *"For users, when I go to add a movie to a list it doesn't show any official lists, bc it shouldn't,
+maybe something like being able to favorite an official list and that pins it to front of official lists and then when I go
+to add that movie to list that one shows up but I can't check or uncheck bc its official?"* They agreed to the design below
+and said *"I'll tell you if I like it"*, so every rule sits in one small, easy-to-change place (named per point). Code:
+`org.ratelog.customlist.saved` (`SavedList.kt` with `SavedListPolicy` and `SavedFirst`, `set/`, `browse/`, `intitle/`, `web/`),
+`api/lists/ApiSavedListController`, `templates/fragments/saved-lists.html`, `static/saved-lists.{css,js}`. Migration `V1142`.
+
+- **Save, like a playlist.** A "Save" / "Saved" toggle (`circle-plus` / `circle-check`, accent when saved) on official list
+  pages (beside the title, before the "⋯" menu; owners and admins see it too) and on official list cards (the Lists tab's
+  Official row, `/lists/official`, Discover's Official row, and the saved cards under My lists), over the cover's top-right
+  corner, a sibling of the card link (never inside it). Not on the home "Your lists" row: that shelf stays plain. "Save"
+  rather than "favorite" or "pin" because the list is kept like a playlist and the word reads the same on a card and a page.
+- **Stored per user** in `saved_lists(user_id, list_id, saved_at_epoch_ms)` (V1142), primary key user + list, both foreign
+  keys cascade. The table allows any list; **only official, public lists can be saved for now** (`SavedListPolicy.canSave`),
+  so ordinary public lists could be allowed later by changing that one function. Saving twice keeps the first time.
+  Un-saving always works on a list you saved, even after it stopped being official or became private.
+- **Hidden or un-marked lists keep their row but are shown nowhere** (`SavedListPolicy.visible`): if an official list is made
+  private or un-marked, your save stays, but the list leaves your Official sections, My lists, Home, the title page and the
+  sheet; it comes back (first again) once it is public and official again. Someone else's private list stays a 404.
+- **Saved lists come first** in every Official lists section (Lists tab row, `/lists/official`, Discover's row and
+  `GET /api/v1/lists/official`): newest save first, then the rest in the section's usual order (most recently active).
+  `SavedFirst.order`, applied after Discover's Movies / TV filter, so that filter still decides which lists are in the row.
+  Saving from a card moves it to the front in place (a short accent glow; a row scrolled sideways scrolls back to the start);
+  un-saving puts it back at its place in the usual order (`data-base-order`).
+- **"Your lists" includes them.** The Lists tab's My lists shows your own lists, then your saved official lists (newest save
+  first) with the Official badge, your "3/10 seen" and the toggle. The home "Your lists" row adds them after your own (badge
+  and progress, no toggle), still at most 20, and adds the row when you have no lists of your own
+  (`SavedListsHomeInterceptor`, so the home slice is untouched). An admin's own official list is never listed twice.
+- **Title page: "Official lists" chips** under the scores (both layouts): every public official list that has the title,
+  not just saved ones, as "#12 in IMDb Top 250" on a numbered list and just the name on a plain one, each a link to the list.
+  Order (`OfficialTitleListsOrder`): saved first (accent chips with a check, newest save first), then numbered lists by the
+  title's rank (a #3 says more than a #180), then plain lists by name. Three chips, the rest behind "+N more" (a `<details>`,
+  so it works without JS; "Show less" closes it). On phones the chips are one line that scrolls sideways, so they don't stack
+  four lines above the action buttons. One query (`OfficialTitleListsDAO`: the title by type + local id across public
+  official lists, the rank computed like `ListMembershipDAO`, `NULL` when the list isn't numbered, plus the viewer's save
+  time). Hidden official lists are left out, for their owner too (it is in their own lists in the sheet).
+- **The add-to-list sheet stays your own lists.** Admins still see the official lists they own as normal checkable rows. Under
+  the rows, one quiet read-only line for saved official lists with the title that you don't own: "Also in your saved lists:
+  IMDb Top 250 (#12), AFI 100", each a link, no checkboxes. On the title page and in a poster's sheet (`GET /tile/lists`), from
+  the same interceptor and query (`OfficialTitleListsInterceptor`).
+- **In place:** the toggle posts to `POST /list/{id}/saved` (`saved=true|false`, the state asked for, never "toggle"); with
+  `X-Requested-With: fetch` it answers JSON and `saved-lists.js` flips every toggle of that list on the page, reorders the
+  Official section, refreshes the Lists tab's My lists from a fresh copy of the page, and shows a toast ("Saved "IMDb Top 250".
+  It's first in Official lists now."). A 429 shows the server's message. Without JS it is a plain POST that comes back to the
+  page (the Referer) with a flash message. The script loads from the nav (like `inplace.js`), so a row swapped in by Discover's
+  Movies / TV switch works too.
+- **API:** `PUT` / `DELETE /api/v1/lists/{id}/saved`, `GET /api/v1/lists/saved`, `saved` on official lists and `officialLists`
+  on title details ([api.md](api.md#saved-lists)). The JSON home (`GET /api/v1/home`) is unchanged: its `your_lists` row is
+  still only your own lists.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -981,6 +1033,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | List page "Suggested for this list": + Add | — | in place (`list-suggest.js`, JSON answer): the tile turns "Added", the list region refreshes with the new title at the end and its rank, the poster flashes, toast; no JS = form post back to the list |
 | List page "Suggested for this list": More suggestions, Start over, Not interested | — | in place: the row is fetched again (or the tile fades out); the list itself isn't touched |
 | Lists tab "Load more" | reload | appends in place |
+| Save / Saved on an official list (list page, official cards, saved cards under My lists) | — | in place (`saved-lists.js`, JSON answer, 2026-11-24): every toggle of the list flips, the card moves to the front of its Official section (or back to its place), My lists refreshes, toast; no JS = form post back to the page |
 | Profile follow / unfollow user | reload | in place |
 | Community People / profile Follow, Following (unfollow asks first on touch screens) | — | in place (`data-inplace`): the button, "Following 2 of 5" and the Activity feed refresh, toast |
 | Title page Seen, Watchlist, Watching / Dropped | reload | in place (`title-actions.js`, JSON answer): every toggle updates from the server's state (Watchlist posts `/watchlist/set` since 2026-11-24, no confirm) |

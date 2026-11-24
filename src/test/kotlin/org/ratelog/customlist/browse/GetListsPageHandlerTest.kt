@@ -22,7 +22,7 @@ class GetListsPageHandlerTest {
     private val users = InMemoryUserRepository()
     private val customLists = InMemoryCustomListRepository()
     private val movies = InMemoryMovieRepository()
-    private val handler = GetListsPageHandler(InMemoryListSummaryRepository(customLists, users, movies), users)
+    private val handler = GetListsPageHandler(InMemoryListSummaryRepository(customLists, users, movies), users, org.ratelog.test.InMemorySavedListRepository())
 
     private lateinit var me: User.Id
     private lateinit var friend: User.Id

@@ -24,7 +24,7 @@ class OfficialListsPageController(
         model: Model,
     ): String {
         val lists = handler.handle(user.id!!, containing = OfficialListsType.parse(type))
-        model.addAttribute("officialCards", lists.map { it.list.toOfficialCard(it.seen) })
+        model.addAttribute("officialCards", lists.map { it.list.toOfficialCard(it.seen, saved = it.saved, baseOrder = it.baseOrder) })
         return "lists-official"
     }
 }

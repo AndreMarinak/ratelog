@@ -8,6 +8,8 @@ import org.ratelog.api.media.ImportException
 import org.ratelog.api.media.LocalMedia
 import org.ratelog.api.media.MediaImporter
 import org.ratelog.customlist.membership.ListMembershipRepository
+import org.ratelog.customlist.saved.intitle.OfficialTitleListsOrder
+import org.ratelog.customlist.saved.intitle.OfficialTitleListsRepository
 import org.ratelog.extras.gettitleinfo.GetTitleInfo
 import org.ratelog.extras.gettitleinfo.GetTitleInfoHandler
 import org.ratelog.extras.gettitleinfo.TitleInfo
@@ -48,7 +50,12 @@ data class TitleDetailDto(
     val userRating: UserRatingDto?,
     /** The caller's own lists that contain the title (newest list first), empty when none. */
     val inLists: List<TitleListDto> = emptyList(),
+    /** Fork (saved lists, 2026-11-24): every public official list with the title, the caller's saved ones first. */
+    val officialLists: List<TitleOfficialListDto> = emptyList(),
 )
+
+/** A public official list that has the title; `rank` only on a numbered list; `saved` = the caller saved the list. */
+data class TitleOfficialListDto(val id: Long, val name: String, val rank: Int?, val saved: Boolean, val url: String)
 
 /** One of the caller's lists that has the title; `rank` is its place in the list (1 = first), as the list page shows it, or null on a plain list. */
 data class TitleListDto(val id: Long, val name: String, val rank: Int?, val url: String)
@@ -90,6 +97,7 @@ class ApiTitleController(
     private val ratingRepository: RatingRepository,
     private val tvRatingRepository: TvRatingRepository,
     private val listMembershipRepository: ListMembershipRepository,
+    private val officialTitleListsRepository: OfficialTitleListsRepository,
 ) {
     /** One title with TMDB extras, external scores (when available) and the caller's own rating. */
     @GetMapping("/{type}/{tmdbId}")
@@ -101,7 +109,9 @@ class ApiTitleController(
         val info = getTitleInfoHandler.handle(GetTitleInfo(mediaType, TmdbId(tmdbId))).getOrNull()
         val inLists = listMembershipRepository.findListsContaining(user.id!!, local.type, local.id)
             .map { TitleListDto(it.listId.value, it.name, it.rank, "/list/${it.listId.value}") }
-        return toDto(local, info, userRating(local, user), inLists)
+        val officialLists = OfficialTitleListsOrder.sort(officialTitleListsRepository.findContaining(user.id, local.type, local.id))
+            .map { TitleOfficialListDto(it.listId.value, it.name, it.rank, it.saved, "/list/${it.listId.value}") }
+        return toDto(local, info, userRating(local, user), inLists).copy(officialLists = officialLists)
     }
 
     private fun toDto(local: LocalMedia, info: TitleInfo?, userRating: UserRatingDto?, inLists: List<TitleListDto>) = TitleDetailDto(

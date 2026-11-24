@@ -56,6 +56,11 @@ class ApiTitleControllerTest {
         ratings,
         tvRatings,
         InMemoryListMembershipRepository(lists),
+        org.ratelog.test.InMemoryOfficialTitleListsRepository(
+            lists,
+            org.ratelog.test.InMemoryOfficialListRepository(lists),
+            org.ratelog.test.InMemorySavedListRepository(lists),
+        ),
     )
     private val user = UserFactory.aUser(id = 1)
 

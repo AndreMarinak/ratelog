@@ -28,6 +28,7 @@
                  hasProgress=${progress != null and progress.total > 0}">
     <div class="list-head-row">
         <h1 class="list-head-title" th:text="${list.name}">List Name</h1>
+        <th:block th:replace="~{fragments/saved-lists :: listButton(${listSaved}, ${official})}"></th:block>
 
         <details th:if="${canAdd or canReorder or canToggle or isOwner == true}" class="list-actions" data-list-actions>
             <summary class="list-actions-trigger" th:title="#{list.actions}" th:aria-label="#{list.actions}">

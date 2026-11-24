@@ -15,7 +15,17 @@ data class ListCardView(
     val seenCount: Int? = null,
     /** Shows the "Official" badge in place of the owner / visibility (fork, official lists). */
     val isOfficial: Boolean = false,
+    /**
+     * Fork, saved lists (2026-11-24): the card's Save toggle (fragments/saved-lists.html :: card). Null = no toggle,
+     * true = "Saved", false = "Save". Only official cards have one.
+     */
+    val saved: Boolean? = null,
+    /** Its place in its section before saved lists moved up: where saved-lists.js puts it back when it is un-saved. */
+    val baseOrder: Int = 0,
 ) {
+    /** POST target of the Save toggle (SetListSavedController). */
+    val saveHref: String get() = "$href/saved"
+
     /** A private official list: only its owner sees it, badged "Official · Hidden" (only public official lists are shown to everyone). */
     val isHiddenOfficial: Boolean get() = isOfficial && !isPublic
 }
