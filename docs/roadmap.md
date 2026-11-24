@@ -83,7 +83,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   8-character minimum for new passwords; request rate limit (`429`); Letterboxd import limits (2 MB, 10,000 rows, background);
   Secure / SameSite cookies, trusted proxy headers only, CSP and other browser headers; masked TMDB key in the admin page;
   same-site-only redirects; no secrets in logs; non-root container; patched Tomcat, pgjdbc, Jackson, Logback, Thymeleaf,
-  Hibernate Validator. Details in [design-decisions.md](design-decisions.md#security-hardening-2026-11-23).
+  Hibernate Validator. Details in [decisions/security-and-limits.md](decisions/security-and-limits.md#security-hardening-2026-11-23).
 - [x] **22. Back links on title pages** (requested 2026-11-23): movie and TV pages show "← Discover" / "← Search results" /
   "← Best Disney Movies" / "← Watchlist"... above the title, back to the page you opened it from with its URL and scroll as you
   left them. Title-to-title taps keep the first page as the target (no growing trail), plus one step to the title right before
@@ -106,7 +106,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   from TMDB recommendations of your titles rated 8+ (else your best-rated; up to 5, merged round-robin), never anything you've
   rated or given a status. Classics and Popular TV left Home; Classics is a Discover Movies row (TV's Popular now already is
   Popular TV). API: `GET /api/v1/recommendations` ([docs/api.md](api.md#recommended-for-you)). No migration. Details in
-  [design-decisions.md](design-decisions.md#home-vs-discover-recommended-for-you-2026-11-23).
+  [decisions/home-and-discover.md](decisions/home-and-discover.md#home-vs-discover-recommended-for-you-2026-11-23).
 - [x] **30. Ratings load as you scroll** (requested 2026-11-23, "can we just have it load more as u scroll?"): the Movies and TV
   rankings show 30, then the next 30 as you near the end (ranks continue, filters apply to every page, "That's all 45" at the
   end), with a "Show more" link as the fallback (works without JS). No history entry per page; a reload or Back shows what you
@@ -115,7 +115,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   (`provider=8|15|1899`, OR'ed; old single-id links keep working) and opens on Netflix, Prime Video, Disney+, HBO Max, Hulu,
   Apple TV+, Peacock and Paramount+ with logos, then "Show all services" with a search box; the chip reads "Netflix + 2".
   The Year menu gets "This year" / "Last year" and stays open on a decade's years after picking the decade. No migration;
-  API: `providers` in `filters`. See design-decisions "Discover: several streaming services".
+  API: `providers` in `filters`. See [decisions/home-and-discover.md](decisions/home-and-discover.md#discover-several-streaming-services-the-year-menu-stays-open-on-a-decade-2026-11-24).
 - [x] **31. Stats: your year in movies** (picked 2026-11-23 from the later-features list: "go with the stats"): `/stats`
   (profile, phone menu sheet, desktop header icon) for your own ratings, with a year switcher (this year, earlier years with
   data, All time; it switches in place and replaces the URL). Movies, TV shows (and seasons rated), ratings, average score,
@@ -124,7 +124,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   with your average (plus most generous / harshest genre), release decades, your 10 highest rated as posters, and an empty
   state. API: `GET /api/v1/stats?year=YYYY|all` ([docs/api.md](api.md#stats)). No migration. Follow-ups: other people's
   stats, TV hours (episode counts), tags, streaks. Details in
-  [design-decisions.md](design-decisions.md#stats-your-year-in-movies-2026-11-23).
+  [decisions/stats.md](decisions/stats.md#stats-your-year-in-movies-2026-11-23).
 - [x] **32. Rewatch: seen titles on the watchlist** (requested 2026-11-24: "on movies I've already seen I should still be able
   to add it to the general watchlist"): the watchlist is its own table (`watchlist_entries`, migration `V1141`; Want to watch
   rows moved over), independent of the status, so a Watched or rated movie or show can be on it and stays seen everywhere.
@@ -132,7 +132,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   (only Remove, which keeps them seen); Home "Up next" includes them. Seeing an unseen watchlist title still takes it off;
   rating a rewatch doesn't. API: `onWatchlist` on statuses, list items, Home, Discover and recommendations, plus
   `PUT/DELETE /api/v1/watchlist/{type}/{tmdbId}` ([docs/api.md](api.md#watchlist)); `/api/v1/statuses` stays compatible.
-  Details in [design-decisions.md](design-decisions.md#rewatch-the-watchlist-is-independent-of-seen-2026-11-24).
+  Details in [decisions/watchlist-and-seen.md](decisions/watchlist-and-seen.md#rewatch-the-watchlist-is-independent-of-seen-2026-11-24).
 - [x] **33. Saved lists** (requested 2026-11-24: "being able to favorite an official list and that pins it to front of official
   lists and then when I go to add that movie to list that one shows up but I can't check or uncheck bc its official"; the
   user will say whether they like it): a Save / Saved toggle on official list pages and cards (in place). Saved lists come first
@@ -142,20 +142,20 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   read-only "Also in your saved lists" line. Hidden or un-marked lists keep the save but are shown nowhere. API:
   `PUT` / `DELETE /api/v1/lists/{id}/saved`, `GET /api/v1/lists/saved`, `officialLists` on title details
   ([docs/api.md](api.md#saved-lists)). Migration `V1142`. Details in
-  [design-decisions.md](design-decisions.md#saved-lists-save-an-official-list-and-it-comes-first-2026-11-24).
+  [decisions/official-and-saved-lists.md](decisions/official-and-saved-lists.md#saved-lists-save-an-official-list-and-it-comes-first-2026-11-24).
 - [x] **35. Credits on title pages** (asked 2026-11-24, "is there more data we can get, director? Cast?"): director / writers,
   the top 10 cast with photos and characters, the US age rating and the tagline, from the same TMDB extras request (cached in
   `title_extras.credits_json`, migration `V1143`). Laptop: Details and Cast cards under the action panel (user's idea); tablet
   and phone: a "Directed by · Written by" line, a sideways cast row and a collapsed "More details". Names link to person pages
   only behind `ratelog.features.people` (off until those pages exist). API: `credits` on `GET /api/v1/titles/{type}/{tmdbId}`.
-  Details in [design-decisions.md](design-decisions.md#credits-on-title-pages-director-writers-cast-age-rating-tagline-2026-11-24).
+  Details in [decisions/people-and-credits.md](decisions/people-and-credits.md#credits-on-title-pages-director-writers-cast-age-rating-tagline-2026-11-24).
 - [x] **36. People: person pages and People in search** (asked 2026-11-24: "am I able to click on a name like tom hanks and
   see his movies by search"): `/person/{id}` with photo, known for, dates, a short bio (More), and the filmography as poster
   tiles with quick actions: department tabs (Acting, Directing, ...), All / Movies / TV, Newest / Most popular, applied in
   place. Search shows a People row above the titles (Any type), and a Year box next to Any / Movies / TV. One cached TMDB
   request per person. API: `GET /api/v1/people/{id}`, `people=true` on `GET /api/v1/search`
   ([docs/api.md](api.md#people)). No migration. Title-page credits link here when `ratelog.features.people` is on. Details in
-  [design-decisions.md](design-decisions.md#people-person-pages-and-people-in-search-2026-11-24).
+  [decisions/people-and-credits.md](decisions/people-and-credits.md#people-person-pages-and-people-in-search-2026-11-24).
 
 ## Fixes and housekeeping done
 
@@ -168,7 +168,7 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   a show (TV), no row when none. No migration, no API change.
 
 - [x] **MDBList key on Admin → Configuration** (requested 2026-11-23): paste the scores key like the TMDB key (masked, works at
-  once, wins over `MDBLIST_API_KEY`). See [design-decisions](design-decisions.md).
+  once, wins over `MDBLIST_API_KEY`). See [decisions/api-and-external-data.md](decisions/api-and-external-data.md).
 - [x] **24. "All seen" in list tick-off mode** (requested 2026-11-23): one tap (after a confirmation) marks every unseen,
   released title in the list as seen, with the same rules as the poster eye. No migration.
 - [x] **25. Poster actions that don't cover the poster** (requested 2026-11-23, "these buttons cover a lot of the tiles"): at
@@ -187,13 +187,13 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   card, or a poster's ★ / "⋯"); once any season is rated the show's score is their average and the whole-show score is kept
   unused (it comes back if every season rating is deleted). Rated means seen (a whole-show score marks it Watched). Everywhere
   a show's score shows follows the rule. API: `PUT` / `DELETE /api/v1/ratings/tv/{tmdbId}`, `scoreSource` and `showScore` on
-  `TvRating`. Migration `V1140`. Details in [design-decisions.md](design-decisions.md#tv-rate-a-show-as-a-whole-or-by-season-seasons-save-in-place-2026-11-23).
+  `TvRating`. Migration `V1140`. Details in [decisions/ratings.md](decisions/ratings.md#tv-rate-a-show-as-a-whole-or-by-season-seasons-save-in-place-2026-11-23).
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.
 - 2026-11-23 batch: one Ratings tab (Movies | TV Shows switch), Browse renamed Discover, title page redesign (desktop three columns,
   phone action bar), small actions save in place (no reload), Classics home row, tags hidden behind a feature flag, compact
-  Discover bar on phones, no white overscroll. Details in [design-decisions.md](design-decisions.md).
+  Discover bar on phones, no white overscroll. Details in [design-decisions.md](design-decisions.md) (index of `docs/decisions/`).
 - 2026-11-23 small fixes: Ratings filters apply on change with an ✕ per filter (in place, URL + Back), no full-screen loader
   (a thin top bar after 400 ms), a Rotten Tomatoes search link next to IMDb's on title pages, hidden (private) official lists.
   No migration.
@@ -208,7 +208,7 @@ Gap research against Letterboxd, the TV trackers and the discovery apps (ranked)
 - [ ] Release calendar (upcoming episodes and releases for followed titles, plus an iCal feed)
 - [ ] **Spring Boot 4 migration** (Spring Framework 7, Spring Security 7, Jackson 3): Boot 3.5's free support ended 2026-06-30,
   and newer Spring fixes ship only in Boot 4. Target 4.1.x or 4.2.x (4.0's free support ends 2026-12-31). Then drop the
-  version overrides in `pom.xml` (design-decisions.md, "Pinned dependency versions").
+  version overrides in `pom.xml` ([decisions/security-and-limits.md](decisions/security-and-limits.md), "Pinned dependency versions").
 - [ ] **Strict CSP:** move the inline `<script>` blocks and `on*=` handlers into the static `.js` files, then drop
   `'unsafe-inline'` from `script-src` (`security/SecurityHeaders.kt`).
 - [ ] Dependabot or Renovate for Maven and the Docker images, so patch releases arrive as pull requests.

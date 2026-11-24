@@ -23,7 +23,7 @@ In the Railway project:
 | `MDBLIST_API_KEY` | optional: [MDBList](https://mdblist.com/preferences/) API key for IMDb / Rotten Tomatoes / Metacritic / Letterboxd scores on title pages (free tier: 1,000 requests/day; scores are cached). Without it the scores are hidden. Easier: paste the key on **Admin → Configuration** ("MDBList API key", like the TMDB key); a saved key wins over this variable and works without a redeploy. |
 | `JAVA_TOOL_OPTIONS` | optional: `-XX:MaxRAMPercentage=75` |
 
-Optional security settings (the defaults are right for Railway; see "Security hardening" in [design-decisions.md](design-decisions.md)):
+Optional security settings (the defaults are right for Railway; see "Security hardening" in [decisions/security-and-limits.md](decisions/security-and-limits.md#security-hardening-2026-11-23)):
 
 | Variable | Default | What it does |
 |---|---|---|

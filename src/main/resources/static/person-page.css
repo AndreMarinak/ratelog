@@ -1,4 +1,4 @@
-/* Fork: person pages (templates/person.html, docs/design-decisions.md "People: person pages and People in search").
+/* Fork: person pages (templates/person.html, docs/decisions/people-and-credits.md "People: person pages and People in search").
    The filmography's poster tiles are the search grid's (home.css + search-results.css); this file lays out the header
    (photo, name, known for, dates, bio) and the filters. */
 

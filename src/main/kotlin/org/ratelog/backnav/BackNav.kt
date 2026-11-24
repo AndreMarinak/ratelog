@@ -6,7 +6,7 @@ import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 
 /*
- * Fork: back links on title pages (docs/design-decisions.md, "Back links on title pages").
+ * Fork: back links on title pages (docs/decisions/title-pages.md, "Back links on title pages").
  * A title page links back to the page you opened it from: its "origin", the last page in this tab that is not a title.
  * static/back-nav.js tracks the origin per tab; this file is the server's part: what each page is called
  * ("Discover", "Search results", a list's name...) and the link a title page renders before any JS runs,

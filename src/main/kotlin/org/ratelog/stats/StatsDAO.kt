@@ -54,7 +54,7 @@ data class StatsTitleDbRow(
 class StatsMarker
 
 /*
- * Fork: the Stats page (docs/design-decisions.md "Stats: your year in movies"). Three queries read everything one user
+ * Fork: the Stats page (docs/decisions/stats.md "Stats: your year in movies"). Three queries read everything one user
  * has rated or marked seen (one row per movie, per show and per rated season); the period is chosen and counted in
  * StatsCalculator, so a year boundary follows the app's time zone and the TV rule is applied in one place.
  * Runtimes come from the title_extras cache (filled in the background by StatsRuntimeFiller), never from TMDB here.

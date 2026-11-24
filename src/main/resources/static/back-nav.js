@@ -1,4 +1,4 @@
-// Fork: back links on title pages (fragments/back-nav.html, back-nav.css; docs/design-decisions.md "Back links on title pages").
+// Fork: back links on title pages (fragments/back-nav.html, back-nav.css; docs/decisions/title-pages.md "Back links on title pages").
 // Runs on every page (included from fragments/nav.html) and remembers, per browser tab (sessionStorage), the page you
 // are on, so a title page can link back to where you came from:
 // - A named page (data-label on this script: Discover, Home, Search results, a list, a profile...) is an "origin".

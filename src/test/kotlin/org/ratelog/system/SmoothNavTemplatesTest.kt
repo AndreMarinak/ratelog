@@ -17,7 +17,7 @@ import java.util.Locale
 
 /**
  * "Filters replace, navigation pushes" (user feedback 2026-11-23: "the back button thing is REAL annoying on the phone,
- * as well as refreshes for filtered list when it shouldn't need a refresh"; docs/design-decisions.md
+ * as well as refreshes for filtered list when it shouldn't need a refresh"; docs/decisions/navigation-and-reloads.md
  * "One Back leaves the page"). The browser check covers the behaviour; these keep the hooks from being dropped.
  */
 class SmoothNavTemplatesTest {
