@@ -581,9 +581,11 @@ the movie already" / "also the green eye is a bit bright/stands out little too m
   the app needs JS too, and showing the four buttons until the script runs would flash them on every page load.
 - This replaces the visibility rule of "Rate and add to list from any poster" above ("off controls ... always visible on touch
   and at 900px and below", the bright green eye).
-- **Smaller "⋯" on the narrow row posters** (user, 2026-11-23: "on the lists it looks perfect but homepage and discover not so
-  much"): on Home and Discover rows (posters ~98px wide) the chip is 26px and sits 4px from the corner (the marks follow), so it
-  reads as in the corner; the 44px tap area stays. Lists, the Discover grid and the watchlist keep 30px / 6px.
+- **Smaller chips on narrow posters, phones only** (user, 2026-11-23: "on the lists it looks perfect but homepage and discover
+  not so much", then "the 3 dots and even the eye and rating look off"): Home / Discover rows (~98px posters) and the Discover /
+  search grid (~105px) get a 24px "⋯" and 22px marks tucked 4px into the corners (tap areas stay 44px), and a rated title shows
+  only "★ 7.0": rated already means seen, so the eye said the same thing twice and, with the score, covered three quarters of
+  the poster's bottom. Lists, the watchlist and the rankings keep the larger chips; mouse devices are unchanged.
 
 ## When the page reloads (audit 2026-11-23)
 
