@@ -469,6 +469,13 @@ item 20. Code: `org.ratelog.customlist.suggest`, `fragments/list-suggest.html`, 
   `recommended`) and `recommendedBy`, so Claude can use it when extending a list. Owner only: `404` for other people's lists,
   `403` for an official list you don't own.
 
+- **"All seen" in tick-off mode** (user, 2026-11-23: "if I've seen them all there should be a button to select them all on this
+  little popup"): the tick-off bar gets an "All seen" button beside Done. It asks first (with the count), then runs the same Seen
+  toggle as each poster's eye for every title you haven't seen (`MarkAllSeenHandler`), so the rules are identical: titles that
+  aren't out yet are skipped and counted in the message, rated and Watched titles are left alone, Want to watch / Watching /
+  Dropped become Watched. In place (`data-inplace="#listRegion"`), one request however long the list. No "Rate it?" prompts for
+  the bulk action; rate later from the posters or the To rate tab. On phones (≤420px) the hint text hides so both buttons fit.
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -505,6 +512,7 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | "Rate it?" score after Seen | — | **reload**: an explicit save that changes the rating card, Rate button and Seen |
 | Watchlist page Remove / Seen / Watching / Drop | — | in place (`watchlist.js`): the tile leaves the tab, counts move, toast with Undo |
 | List tick-off, poster Seen on list pages | — | in place: the check, "You've seen 9 of 25", the bar and the tab counts update (`list-tick.js`) |
+| List tick-off "All seen" (after confirm) | — | in place: the whole list region refreshes, toast with the count |
 | Rate / edit / delete rating (modals) | reload | **reload kept**: the rating card, panel and scores all change; an explicit Save. Since 2026-11-23 "Delete rating" is also inside the editor (edit mode), opening the same confirmation |
 | Poster ★: rate, change or delete a quick rating (every poster) | — (title page only) | in place (`tile-rate.js`, `POST /movie/rate/tile`, JSON): every copy's chip and eye update, list progress counts, toast |
 | Poster ★ on a detailed rating, "Detailed rating…" | — | **page load**: the title page opens its rate modal (`?rate=edit` / `?rate=detailed`); five categories need the full form |

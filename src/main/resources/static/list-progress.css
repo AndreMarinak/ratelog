@@ -235,6 +235,32 @@
   font-size: 1.05rem;
 }
 
+/* "All seen" beside Done (fork, 2026-11-23). */
+.list-tick-all {
+  flex-shrink: 0;
+  margin: 0;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    white-space: nowrap;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+@media (max-width: 420px) {
+  /* Phones: the bar is narrow, so the hint goes and the buttons stay. */
+  .list-tick-bar:has(.list-tick-all) .list-tick-hint {
+    display: none;
+  }
+}
+
 /* Room under the grid so the bar never covers the last row. */
 .page:has(.list-tick-bar) {
   padding-bottom: 96px;

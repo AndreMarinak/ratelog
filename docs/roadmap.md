@@ -95,6 +95,8 @@ accounts and roles `V1130–1139`.
 
 ## Fixes and housekeeping done
 
+- [x] **24. "All seen" in list tick-off mode** (requested 2026-11-23): one tap (after a confirmation) marks every unseen,
+  released title in the list as seen, with the same rules as the poster eye. No migration.
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.
