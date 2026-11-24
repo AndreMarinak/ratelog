@@ -15,6 +15,7 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Reserved migration ranges per feature** (see roadmap) so parallel work never collides.
 - **Prefer new files over editing upstream files.** Model data for upstream pages is added with `@ControllerAdvice(assignableTypes = ...)` or interceptors instead of editing upstream controllers; templates get one `th:replace` include line per feature. Keeps upstream merges small.
 - **Parallel development in git worktrees** (`../ratelog-worktrees/<feature>`), one agent per feature, append-only `messages.properties` sections per feature, merged and tested on `master` one at a time.
+- **Browser tests live in the repo (`tools/uitest/`) and seed their own data** (user request 2026-11-23: "make sure this doesn't happen again with testing"). The walkthroughs used to live in a temp scratchpad (a reboot could wipe them) and leaned on leftover data (`/list/17`, titles that had to be rated or unrated, a token file), so they failed on a second run or another database. Now the runner makes its own API token (memory only), snapshots the account's ratings and statuses, seeds lists named `uitest <stamp> ...`, looks everything up by what it created, and at the end deletes those lists, puts every changed rating / status back and revokes the token. Trade-off: restored ratings get a new `createdAt`, so "Recently rated" order can shift after a run on a long-lived database. How to run it: [testing.md](testing.md).
 
 ## API (`/api/v1`)
 

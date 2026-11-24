@@ -1,0 +1,12 @@
+{
+  "name": "ratelog-uitest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-seeding browser walkthroughs for Ratelog (see docs/testing.md)",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "23.11.1"
+  }
+}
