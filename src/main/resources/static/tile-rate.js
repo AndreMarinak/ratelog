@@ -33,11 +33,11 @@
     const plainClick = (event) => !(event.defaultPrevented || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey);
 
     /**
-     * Where the focus goes back to: the ★ / list button, or the poster's "⋯" when those are hidden (touch screens,
-     * where the chooser opened the picker or the sheet; tile-actions.js).
+     * Where the focus goes back to: the ★ / list button, or on touch screens the poster's "⋯", which opened the picker
+     * or the sheet through its chooser (tile-actions.js; the ★ and list button are hidden there, the score chip a mark).
      */
     function returnTarget(el) {
-        if (!el || !el.isConnected || el.getClientRects().length) return el;
+        if (!el || !el.isConnected) return el;
         const stack = el.closest('[data-tile-actions]');
         const menu = stack && stack.querySelector('[data-tile-menu]');
         return menu && menu.getClientRects().length ? menu : el;
@@ -446,6 +446,7 @@
         }
 
         if (!pop || pop.hidden) return;
+        if (target === backdrop) { event.preventDefault(); close(false); return; }
         if (target.closest('[data-pop-close]') || target.closest('[data-pop-skip]')) { close(); return; }
         const remove = target.closest('[data-pop-delete]');
         if (remove) {
@@ -463,9 +464,10 @@
         }
     });
 
-    // Outside the picker closes it (the backdrop on phones is outside too).
+    // Outside the picker closes it. The phone backdrop closes it on its own click (above): hiding it on pointerdown let
+    // the tap's click land on the poster under it, which opened that title.
     document.addEventListener('pointerdown', (event) => {
-        if (!pop || pop.hidden || pop.contains(event.target)) return;
+        if (!pop || pop.hidden || pop.contains(event.target) || event.target === backdrop) return;
         if (current && current.star.contains(event.target)) return;
         close(false);
     }, true);

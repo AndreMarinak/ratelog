@@ -81,10 +81,15 @@ Problems found while building and running the fork: what happened, the cause, an
   browsers keep `:hover` on the last element tapped, so a tapped bookmark / eye / ★ stayed enlarged and recoloured, and the
   new "⋯" turned orange-on-orange (dots invisible) while its chooser was open. Hover styles on poster buttons now only apply
   under `@media (hover: hover)`.
+- **Tapping the dimmed page around the phone rating picker opened the poster under it** (tile rating, found in the poster
+  chooser's browser check at 360px, 2026-11-23): `tile-rate.js` closed the picker on `pointerdown`, which hid the backdrop
+  before the tap's `click`, so the click landed on whatever poster was underneath and opened that title. The backdrop now
+  closes the picker on its own click (the chooser's backdrop works the same way).
 - **The rating picker and the tile list sheet gave the focus back to a hidden button** (2026-11-23): on touch screens the ★ and
   list buttons are now hidden (the chooser opens them), and `focus()` on a hidden element does nothing, so the focus was lost.
-  `tile-rate.js` now returns it to the poster's "⋯" when the ★ / list button isn't shown, and points the picker at "⋯". A score
-  tapped on a phone doesn't always take the focus either, so a focus left on nothing is also given back.
+  On touch screens `tile-rate.js` now returns it to the poster's "⋯" (the button the chooser was opened from), and points
+  the picker at "⋯" while the ★ is hidden. A score tapped on a phone doesn't always take the focus either, so a focus left on
+  nothing is also given back.
 
 - **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
   visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").
