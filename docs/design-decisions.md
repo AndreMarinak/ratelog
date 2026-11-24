@@ -72,10 +72,12 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **The add-to-list sheet shows a title's rank only on numbered lists** (2026-11-23, after list order merged): on a plain list
   the row has the tick but no "#3", the remove question uses the no-rank wording, and the API's `inLists[].rank` is `null`.
 - **Order: most recently active first** (created, or a title added), the rule every other list section uses. Empty official lists
-  are shown, unlike empty public lists, because an admin picked them.
+  are shown, unlike empty public lists, because an admin picked them. *(Except on Discover since 2026-11-23: an empty list has
+  neither a movie nor a show, so it is in neither mode's row; see "Discover's Official lists follow Movies / TV".)*
 - **Discover: the Official lists row comes right after "Popular now"**, not at the end. At 1440x900 it is fully above the fold;
   after the 13 genre rows (most of them loaded on scroll) hardly anyone would reach it. "Popular now" stays first as the "what's new"
-  row. The same row shows on the Movies and TV landings (lists mix both) and never on the filtered grid. It needs no TMDB, so it
+  row. The same row shows on the Movies and TV landings (lists mix both) and never on the filtered grid. *(Superseded 2026-11-23:
+  each mode only shows the lists with that type of title, see "Discover's Official lists follow Movies / TV".)* It needs no TMDB, so it
   still shows when every TMDB row failed. The model value is a Thymeleaf `LazyContextVariable`, loaded only when the landing renders
   the row, so the grid, "Load more" fragments and the many `/discover/row` fetches run no extra queries.
 - **One include per template**: `lists.html` (the row), `list-detail.html` (badge + admin switch under the title; since the
@@ -91,7 +93,7 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **The follow bell only where it does something** (user, 2026-11-23: it "wouldn't do anything for most" titles). Following only adds release dates to the Premieres box on the Ratings page (no notifications), so the bell shows for movies whose release date is after today or unknown, and for shows that are Returning Series / In Production / Planned. A title already followed always keeps it (on) so a follow can't be stranded. Labelled "Notify me · Adds release dates to Premieres"; small and secondary, not a heart (a heart may later mean "like").
 - **"Rate it?" after Seen, never forced** (user decision 2026-11-23). After tapping Seen on a movie page with no rating, a small inline prompt offers 1-10 (one tap saves a quick rating through the Rate modal's own `POST /movie/rate`) or Skip. Not on tiles, the watchlist page or tick-off (bulk marking stays fast), not for shows (rated per season), and not without JS (Seen just saves). Saving reloads the page, like the Rate modal, because the rating card, the Rate button and Seen all change. *(Tiles and tick-off got their own optional prompt on 2026-11-23, see "Rate it? after Seen on tiles" below.)*
 - **Poster quick actions:** a stack in the poster's top-right corner: the watchlist bookmark (or a Watching / Dropped badge where the bookmark can't toggle), then the Seen eye. The Watched badge became the eye. The bookmark is rendered hidden rather than left out when it can't toggle, so un-seeing can bring it back in place. With a mouse, controls that are off appear on hover / focus; on touch screens and at 900px and below they're always visible; anything on is always visible. Status icons changed so the eye means Seen everywhere: Watched = `eye`, Watching = `circle-play`. *(Since 2026-11-23 there is a second group bottom right: Add to list and ★, see "Rate and add to list from any poster" below.)*
-- **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). *(Layout and the Dropped order changed 2026-11-23, see "Watchlist buttons line up on every tile" below.)* Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter).
+- **Watchlist page:** tabs read **To watch · Watching · Seen · Dropped** (named after the toggles), with a one-line hint under them. Every tile has visible buttons: To watch: Seen, Watching (shows), Remove; Watching: Seen, Drop (shows), Remove; Dropped: Watching (shows), Seen, Remove; Seen: Remove, except a rated title (it would still count as seen through its rating). *(Layout and the Dropped order changed 2026-11-23, see "Watchlist buttons line up on every tile" below.)* Upcoming titles get no Seen. **Remove is one tap with Undo**, not a confirm: the toast (or, without JS, the notice after the redirect) says "Removed "Dune" from your watchlist." with an Undo that restores the previous status. Plain POST forms to `/watchlist/item` with an explicit `back` (same tab and type filter). *(Since 2026-11-23 the page opens on Movies and the filter is Movies | TV, no All: see "Watchlist opens on Movies".)*
 - **List tick-off mode** ("Mark what you've seen", `?mark=1`): tapping a poster toggles Seen instead of opening the title; seen posters get a green check and outline, unseen an empty ring; a bar fixed above the phone tab bar shows the live count and Done (the same view without `mark`). The mode lives in the URL and every tab link keeps it, so master's in-place tab switch (`list-filter.js`) re-renders the grid in the same mode; all handlers are delegated from `document`. Without JS the posters stay links and each poster's eye is the per-poster form. Rated movies stay checked (a tap explains), upcoming titles have no toggle.
 - **Explicit `back` on form posts.** The new endpoints (`/seen/toggle`, `/watchlist/item`) take a `back` field and fall back to the Referer, then `/watchlist`; only a local path (+ query, + #fragment for `back`) is ever used, so a crafted value can't redirect off-site (`BackPath`). Since 2026-11-23 the older Referer redirects (follow buttons, deleting a rating, `/status`) use it too.
 - **Manager role** (user request, 2026-11-23: "there's two types of accounts, admins and users, I want a third called managers, whose only diff between a normal user is that they can add accounts"). `Role.MANAGER` (stored as text in `users.role`, no migration needed) has the USER and MANAGER authorities, never ADMIN. Managers get an "Add account" entry (header icon and the phone menu sheet) leading to `/accounts/new`, a plain form (username, email, password) that always creates a USER account: `CreateUserHandler` refuses any other role from a manager, whatever the request says. Nothing else changes for them: no user list, no editing or deleting other accounts, no configuration, no official lists (those checks use `isAdminLike`). Admins and superadmins give or take the role in the existing admin create and edit forms (labelled "Manager"); an ADMIN may switch accounts only between USER and MANAGER, and may edit or delete managers like users. Role changes apply to open sessions at once (session revalidation). `GET /api/v1/me` reports `MANAGER`.
@@ -659,6 +661,27 @@ Actions sat left, centre and right with no grouping.
 - Code: `fragments/list-header.html` (new), `list-header.css`, `list-header.js`; the Sort menu became its own fragment
   (`list-order :: sort`), the official badge and switch two (`official-lists :: listHeader` / `toggle`), and the progress line
   `list-progress :: line` (`list-tick.js` finds the bar by `data-list-progress-bar`).
+
+### Watchlist opens on Movies; Discover's Official lists follow Movies / TV (2026-11-23)
+
+- **The watchlist opens on Movies** (user, 2026-11-23: *"watchlist tab should default to movies like everything else"*).
+  `/watchlist` without a `type` shows Movies, like Ratings (`/ratings` opens `/movies`) and Discover (`type` defaults to movie);
+  the header and bottom-bar links land there. The type switch is now **Movies | TV**, a two-way switch like the other pages'
+  (the "All" option is gone; an unknown `type`, e.g. `all`, also shows Movies). Every status tab link carries the type, so To
+  watch · Watching · Seen · Dropped keep it, and both switches still apply in place (`view-swap.js`).
+- **Watching stays a TV thing.** A bare `/watchlist?status=watching` (Home's "Continue watching → See all") opens on **TV**,
+  since only shows can be Watching; landing on an empty Movies tab would look broken. The Watching tab stays on Movies too (the
+  tabs don't jump when switching type): empty, it says "Only TV shows can be Watching. Switch to TV for the shows you're in the
+  middle of."; a movie that still has Watching from before (or set through the API) is listed with Seen and Remove, under a hint
+  that says so. `WatchlistController.defaultType`.
+- **Discover's Official lists row follows Movies / TV** (user chose "Only lists with TV" for TV mode, 2026-11-23). Movies mode
+  shows official lists with at least one movie, TV mode those with at least one show; a mixed list shows in both, an empty one
+  in neither, and with none to show there is no row (TV mode on the live site: just "Best TV Shows of All Time"). The filter is
+  an `EXISTS (... media_type = :mediaType)` in the same lists query (`ListSummaryDAO.findOfficialContaining`), so the row is
+  still three queries, and still lazy (the grid and `/discover/row` fetches run none). Its "See all N" opens
+  `/lists/official?type=movie|tv`, the same subset, so the count matches; `/lists/official` alone, the Lists tab's row and
+  `GET /api/v1/lists/official` still list every official list. `type` is parsed like Discover's (`OfficialListsType`, aliases
+  such as `shows`).
 
 ## When the page reloads (audit 2026-11-23)
 

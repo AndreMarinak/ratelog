@@ -100,6 +100,11 @@ accounts and roles `V1130–1139`.
 
 ## Fixes and housekeeping done
 
+- [x] **Watchlist opens on Movies; Discover's Official lists follow Movies / TV** (requested 2026-11-23, "watchlist tab should
+  default to movies like everything else"; TV mode shows "only lists with TV"): `/watchlist` lands on Movies with a Movies | TV
+  switch (no All; a bare Watching link opens on TV), and Discover's Official lists row only shows lists with a movie (Movies) or
+  a show (TV), no row when none. No migration, no API change.
+
 - [x] **MDBList key on Admin → Configuration** (requested 2026-11-23): paste the scores key like the TMDB key (masked, works at
   once, wins over `MDBLIST_API_KEY`). See [design-decisions](design-decisions.md).
 - [x] **24. "All seen" in list tick-off mode** (requested 2026-11-23): one tap (after a confirmation) marks every unseen,

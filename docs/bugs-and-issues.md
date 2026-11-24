@@ -74,6 +74,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **Discover's TV mode showed movie lists in its Official lists row** (user, 2026-11-23): `DiscoverOfficialListsAdvice` loaded
+  every official list whatever the mode, so `/discover?type=tv` showed "AFI 100" and the other film lists. It now passes Discover's
+  `type` to the lists query, which keeps only lists with at least one title of that type (`findOfficialContaining`); none = no
+  row. See design-decisions ("Watchlist opens on Movies; Discover's Official lists follow Movies / TV").
+
 - **User search was case-sensitive, and `_` was a wildcard** (upstream, found 2026-11-23 building Community's People list):
   `UserDAO` searched `username LIKE CONCAT('%', :username, '%')`, so "Mari" missed "marisol", and since usernames may contain
   `_`, "a_b" also matched "axb". Now `LOWER(username) LIKE LOWER(:pattern) ESCAPE '!'` with `_`, `%` and `!` escaped in the

@@ -174,7 +174,7 @@ class OfficialListsSectionsTest {
         f.list(f.admin, "Not official", isPublic = true)
         val model = ExtendedModelMap()
 
-        val view = OfficialListsPageController(f.getOfficial).officialLists(f.andre, model)
+        val view = OfficialListsPageController(f.getOfficial).officialLists(f.andre, null, model)
 
         assertEquals("lists-official", view)
         val all = cards(model, "officialCards")
