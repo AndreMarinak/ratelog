@@ -19,34 +19,36 @@
 </div>
 </th:block>
 
-<!--/* Under the progress tabs: the viewer's Sort menu (plain links, ?sort=) and, for the owner, "Edit order". */-->
+<!--/* The viewer's Sort menu (plain links, ?sort=). Fork 2026-11-23 (compact header): it sits in the progress toolbar
+       beside the tabs (fragments/list-progress :: summary), and "Edit order" moved into the "⋯" List actions menu
+       (fragments/list-header.html). */-->
+<th:block th:fragment="sort(order)">
+<details th:if="${order != null and !order.reordering and order.total > 1}" class="list-sort" data-list-sort>
+    <summary class="list-sort-trigger" th:classappend="${order.sorted} ? 'is-sorted' : ''" th:title="#{list.sort.aria}">
+        <i data-lucide="arrow-down-up" aria-hidden="true"></i>
+        <span class="list-sort-label" th:text="#{list.sort}">Sort</span>
+        <span class="list-sort-value" th:text="#{${order.sort.labelKey}}">List order</span>
+        <i data-lucide="chevron-down" class="list-sort-chevron" aria-hidden="true"></i>
+    </summary>
+    <div class="list-sort-panel">
+        <ul class="list-sort-options" th:aria-label="#{list.sort.aria}">
+            <li th:each="link : ${order.sortLinks}">
+                <a class="list-sort-option" th:href="${link.href}" th:classappend="${link.active} ? 'active' : ''"
+                   th:aria-current="${link.active} ? 'true' : null">
+                    <i data-lucide="check" class="list-sort-check" aria-hidden="true"></i>
+                    <span th:text="#{${link.labelKey}}">List order</span>
+                </a>
+            </li>
+        </ul>
+        <p class="list-sort-note" th:text="#{list.sort.note}">Only changes how you see the list.</p>
+    </div>
+</details>
+</th:block>
+
+<!--/* The Sort menu on its own row, for a list page without the progress toolbar. */-->
 <th:block th:fragment="toolbar(order)">
 <div th:if="${order != null and !order.reordering and order.total > 1}" class="list-order-toolbar">
-    <details class="list-sort" data-list-sort>
-        <summary class="list-sort-trigger" th:classappend="${order.sorted} ? 'is-sorted' : ''">
-            <i data-lucide="arrow-down-up" aria-hidden="true"></i>
-            <span class="list-sort-label" th:text="#{list.sort}">Sort</span>
-            <span class="list-sort-value" th:text="#{${order.sort.labelKey}}">List order</span>
-            <i data-lucide="chevron-down" class="list-sort-chevron" aria-hidden="true"></i>
-        </summary>
-        <div class="list-sort-panel">
-            <ul class="list-sort-options" th:aria-label="#{list.sort.aria}">
-                <li th:each="link : ${order.sortLinks}">
-                    <a class="list-sort-option" th:href="${link.href}" th:classappend="${link.active} ? 'active' : ''"
-                       th:aria-current="${link.active} ? 'true' : null">
-                        <i data-lucide="check" class="list-sort-check" aria-hidden="true"></i>
-                        <span th:text="#{${link.labelKey}}">List order</span>
-                    </a>
-                </li>
-            </ul>
-            <p class="list-sort-note" th:text="#{list.sort.note}">Only changes how you see the list.</p>
-        </div>
-    </details>
-
-    <a th:if="${order.canReorder}" class="btn secondary list-order-start" th:href="${order.reorderHref}">
-        <i data-lucide="arrow-up-down" aria-hidden="true"></i>
-        <span th:text="#{list.order.edit}">Edit order</span>
-    </a>
+    <th:block th:replace="~{fragments/list-order :: sort(${order})}"></th:block>
 </div>
 </th:block>
 

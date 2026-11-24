@@ -173,7 +173,8 @@ class ListTickOffTest {
         assertTrue(ticking.contains("list-tick-bar"))
         assertTrue(ticking.contains("Tap the posters you"))
         assertTrue(ticking.contains("""class="btn primary list-tick-done" href="/list/${list.id!!.value}""""))
-        assertEquals(2, Regex("data-progress-text").findAll(ticking).count(), "the line and the bar both update")
+        // The progress line sits on the header's meta line now (fragments/list-progress :: line); the tick bar's count is here.
+        assertEquals(1, Regex("data-progress-text").findAll(ticking).count(), "the tick bar's count updates")
         assertFalse(ticking.contains("??"))
     }
 

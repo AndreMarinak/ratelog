@@ -21,22 +21,28 @@
     </a>
 </th:block>
 
-<!--/* Under the title: "You've seen 9 of 25", the bar, the All / Not seen / Seen tabs and the bulk watchlist button.
-       Fork: "Mark what you've seen" (tick-off mode, ?mark=1) and the data list-tick.js needs to update the counts in place. */-->
-<th:block th:fragment="summary(progress, listName)">
+<!--/* On the meta line under the title (fragments/list-header.html): "You've seen 9 of 25" and a slim bar.
+       list-tick.js updates both in place ([data-progress-text], [data-list-progress-bar]). */-->
+<th:block th:fragment="line(progress)">
+<span th:if="${progress != null and progress.total > 0}" class="list-progress-line">
+    <span class="list-progress-text" data-progress-text th:text="#{list.progress.seen(${progress.seen}, ${progress.total})}">You've seen 9 of 25</span>
+    <span class="list-progress-bar" data-list-progress-bar role="progressbar" aria-valuemin="0"
+          th:aria-valuemax="${progress.total}" th:aria-valuenow="${progress.seen}"
+          th:aria-label="#{list.progress.seen(${progress.seen}, ${progress.total})}">
+        <span th:style="|width: ${progress.percent}%|"></span>
+    </span>
+</span>
+</th:block>
+
+<!--/* Under the header: one toolbar row with the All / Not seen / Seen tabs, the Sort menu (fragments/list-order :: sort,
+       `order` = the page's ListOrderView or null) and "Mark what you've seen" (tick-off mode, ?mark=1).
+       Fork 2026-11-23 (compact header): the progress line moved up to the meta line, and the bulk watchlist button
+       ("Add N unseen to watchlist") into the "⋯" List actions menu. The section keeps the data list-tick.js needs. */-->
+<th:block th:fragment="summary(progress, listName, order)">
 <section th:if="${progress != null and progress.total > 0}" class="list-progress" th:aria-label="#{list.progress.aria}"
          data-list-progress
          th:data-seen="${progress.seen}" th:data-total="${progress.total}"
          th:data-text="#{list.progress.seen('{seen}', '{total}')}">
-    <div class="list-progress-line">
-        <span class="list-progress-text" data-progress-text th:text="#{list.progress.seen(${progress.seen}, ${progress.total})}">You've seen 9 of 25</span>
-        <div class="list-progress-bar" role="progressbar" aria-valuemin="0"
-             th:aria-valuemax="${progress.total}" th:aria-valuenow="${progress.seen}"
-             th:aria-label="#{list.progress.seen(${progress.seen}, ${progress.total})}">
-            <span th:style="|width: ${progress.percent}%|"></span>
-        </div>
-    </div>
-
     <div class="list-progress-toolbar">
         <nav class="status-segmented list-filter-tabs" th:aria-label="#{list.progress.filter.label}">
             <a th:each="tab : ${progress.tabs}" th:href="${tab.href}" class="status-segment"
@@ -47,21 +53,16 @@
             </a>
         </nav>
 
-        <a th:unless="${progress.tick}" class="btn secondary list-tick-start" th:href="${progress.tickHref}">
-            <i data-lucide="list-checks" aria-hidden="true"></i>
-            <span th:text="#{list.tick.start}">Mark what you've seen</span>
-        </a>
+        <div class="list-progress-tools">
+            <th:block th:replace="~{fragments/list-order :: sort(${order})}"></th:block>
 
-        <form th:if="${progress.addableCount > 0}" class="list-progress-add" method="post"
-              th:action="${progress.addHref}"
-              th:data-confirm="#{list.progress.add.confirm(${progress.addableCount}, ${listName})}">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-            <input th:if="${progress.filterParam != null}" type="hidden" name="show" th:value="${progress.filterParam}" />
-            <button type="submit" class="primary">
-                <i data-lucide="bookmark-plus" aria-hidden="true"></i>
-                <span th:text="#{list.progress.add(${progress.addableCount})}">Add the 12 unseen to my watchlist</span>
-            </button>
-        </form>
+            <a th:unless="${progress.tick}" class="btn secondary list-tick-start" th:href="${progress.tickHref}"
+               th:title="#{list.tick.start}">
+                <i data-lucide="list-checks" aria-hidden="true"></i>
+                <span class="list-tick-start-long" th:text="#{list.tick.start}">Mark what you've seen</span>
+                <span class="list-tick-start-short" aria-hidden="true" th:text="#{list.tick.start.short}">Mark seen</span>
+            </a>
+        </div>
     </div>
 
     <div th:if="${progress.emptyKey != null}" class="empty-state" th:text="#{${progress.emptyKey}}">Nothing here.</div>

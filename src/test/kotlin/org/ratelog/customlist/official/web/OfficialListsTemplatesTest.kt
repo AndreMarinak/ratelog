@@ -118,6 +118,10 @@ class OfficialListsTemplatesTest {
     private fun header(view: ListOfficialView?) =
         render("fragments/official-lists", "listHeader", mapOf("official" to view, "listName" to "AFI's 100 Years", "_csrf" to csrf))
 
+    // Since the compact header (2026-11-23) the admin's toggle is an item of the list page's "⋯" menu.
+    private fun toggle(view: ListOfficialView?) =
+        render("fragments/official-lists", "toggle", mapOf("official" to view, "listName" to "AFI's 100 Years", "buttonClass" to "list-actions-item", "_csrf" to csrf))
+
     @Test
     fun `everyone sees the badge on an official list, only admins get the toggle`() {
         val forUser = header(ListOfficialView(official = true, canToggle = false, toggleHref = "/list/7/official"))
@@ -126,7 +130,13 @@ class OfficialListsTemplatesTest {
         assertFalse(forUser.contains("<form"), "no toggle for a regular user")
         assertFalse(forUser.contains("/list/7/official"))
 
-        val forAdmin = header(ListOfficialView(official = true, canToggle = true, toggleHref = "/list/7/official"))
+        assertFalse(toggle(ListOfficialView(official = true, canToggle = false, toggleHref = "/list/7/official")).contains("<form"))
+
+        val adminView = ListOfficialView(official = true, canToggle = true, toggleHref = "/list/7/official")
+        assertTrue(header(adminView).contains("list-official-badge"))
+        assertFalse(header(adminView).contains("<form"), "the badge line has no toggle: it is in the menu")
+        val forAdmin = toggle(adminView)
+        assertTrue(forAdmin.contains("""class="list-actions-item""""))
         assertTrue(forAdmin.contains("""action="/list/7/official""""))
         assertTrue(forAdmin.contains("""method="post""""))
         assertTrue(forAdmin.contains("""name="_csrf" value="tok123""""))
@@ -139,8 +149,8 @@ class OfficialListsTemplatesTest {
 
     @Test
     fun `admins can mark an ordinary list, everyone else sees nothing`() {
-        val forAdmin = header(ListOfficialView(official = false, canToggle = true, toggleHref = "/list/7/official"))
-        assertFalse(forAdmin.contains("list-official-badge"))
+        assertFalse(header(ListOfficialView(official = false, canToggle = true, toggleHref = "/list/7/official")).contains("list-official-badge"))
+        val forAdmin = toggle(ListOfficialView(official = false, canToggle = true, toggleHref = "/list/7/official"))
         assertTrue(forAdmin.contains("""name="official" value="true""""))
         assertTrue(forAdmin.contains(">Make official<"))
         assertTrue(forAdmin.contains("Every account will see it on their Lists tab and on Discover."), "a public list: everyone will see it")
@@ -149,6 +159,8 @@ class OfficialListsTemplatesTest {
         val forUser = header(ListOfficialView(official = false, canToggle = false, toggleHref = "/list/7/official"))
         assertFalse(forUser.contains("list-official-bar"))
         assertFalse(header(null).contains("list-official-bar"))
+        assertFalse(toggle(ListOfficialView(official = false, canToggle = false, toggleHref = "/list/7/official")).contains("<form"))
+        assertFalse(toggle(null).contains("<form"))
     }
 
     // --- Discover ---
@@ -216,10 +228,13 @@ class OfficialListsTemplatesTest {
         val officialAt = lists.indexOf("fragments/official-lists :: listsSection")
         assertTrue(officialAt in 0 until lists.indexOf("""aria-labelledby="my-lists-title""""), "official lists come first")
 
-        val detail = source("list-detail.html")
-        val title = detail.indexOf("th:text=\"\${list.name}\">List Name</h1>")
-        val badge = detail.indexOf("fragments/official-lists :: listHeader")
-        assertTrue(title in 0 until badge && badge < detail.indexOf("data-open-modal=\"editModal\""), "right under the title")
+        // Compact header (2026-11-23): the badge is on the meta line right under the title, the toggle in the "⋯" menu.
+        val header = source("fragments/list-header.html")
+        val title = header.indexOf("th:text=\"\${list.name}\">List Name</h1>")
+        val menu = header.indexOf("fragments/official-lists :: toggle(")
+        val badge = header.indexOf("fragments/official-lists :: listHeader")
+        assertTrue(title in 0 until menu && menu < badge, "title=$title menu=$menu badge=$badge")
+        assertTrue(source("list-detail.html").contains("fragments/list-header :: head("))
     }
 
     // --- Hidden (private) official lists, 2026-11-23 ---
@@ -257,7 +272,7 @@ class OfficialListsTemplatesTest {
 
     @Test
     fun `the admin toggle's confirmation says what happens to who can see it`() {
-        fun confirmOf(view: ListOfficialView) = Regex("""data-confirm="([^"]*)"""").find(header(view))!!.groupValues[1]
+        fun confirmOf(view: ListOfficialView) = Regex("""data-confirm="([^"]*)"""").find(toggle(view))!!.groupValues[1]
         fun view(official: Boolean, listPublic: Boolean) =
             ListOfficialView(official = official, canToggle = true, toggleHref = "/list/7/official", listPublic = listPublic)
 

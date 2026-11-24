@@ -13,7 +13,8 @@
         progress.dataset.seen = String(seen);
         const text = (progress.dataset.text || '').replace('{seen}', seen).replace('{total}', total);
         document.querySelectorAll('[data-progress-text]').forEach((el) => { el.textContent = text; });
-        const bar = progress.querySelector('.list-progress-bar');
+        // The bar sits on the header's meta line (fragments/list-header.html), outside the progress section.
+        const bar = document.querySelector('[data-list-progress-bar]');
         if (bar) {
             bar.setAttribute('aria-valuenow', String(seen));
             bar.setAttribute('aria-label', text);

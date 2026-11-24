@@ -4,6 +4,10 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **The "Add N unseen to watchlist" count in a list's "⋯" menu can lag behind a poster tap** (compact header, 2026-11-23):
+  ticking a poster Seen or Watchlist in place updates the progress line and the tab counts (`list-tick.js`) but not N, until
+  the next tab / Sort switch or reload. Pre-existing (the old orange button had the same count); harmless because the server
+  recounts when the form is posted, and the confirmation shows the stale N only.
 - **On touch screens the poster's "⋯" needs JS** (poster chooser, 2026-11-23): without JS it is a plain button that does
   nothing, and the four controls it stands for stay hidden; the title page still has every action. Showing the four until the
   script runs would flash them on every page load. A Watching / Dropped status and "on your watchlist" are no longer visible on

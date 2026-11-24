@@ -1,5 +1,6 @@
-/* List progress on /list/{id} (fork, roadmap item 12): back link, "You've seen 9 of 25", filter tabs,
-   bulk watchlist button and poster badges. Linked from templates/list-detail.html; markup in
+/* List progress on /list/{id} (fork, roadmap item 12): back link, "You've seen 9 of 25", filter tabs and poster
+   badges. Since the compact header (2026-11-23) the progress line sits on the header's meta line (list-header.css)
+   and the bulk watchlist button is an item of the "⋯" List actions menu. Linked from templates/list-detail.html; markup in
    templates/fragments/list-progress.html. Tabs reuse watchlist.css, badges reuse home.css. */
 
 .list-back {
@@ -35,28 +36,30 @@
 
 .list-progress {
   display: grid;
-  gap: 14px;
-  margin: 10px 0 18px;
+  gap: 12px;
+  margin: 0 0 18px;
 }
 
+/* Small, on the header's meta line. */
 .list-progress-line {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
 .list-progress-text {
   flex-shrink: 0;
-  font-size: 1.1rem;
+  color: var(--text);
+  font-size: 0.95rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .list-progress-bar {
-  flex: 1;
-  max-width: 280px;
-  height: 6px;
+  flex: none;
+  width: 120px;
+  height: 5px;
   border-radius: 999px;
   background: var(--surface-muted);
   overflow: hidden;
@@ -70,28 +73,23 @@
   }
 }
 
+/* One row: tabs and Sort on the left, "Mark what you've seen" on the right. Phones: the tabs, then Sort + Mark seen. */
 .list-progress-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
 }
 
-.list-progress-add {
-  margin: 0;
+.list-progress-tools {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 
-  button {
-    gap: 8px;
-    padding: 9px 14px;
-    font-size: 1rem;
-    text-align: left;
-
-    svg {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-    }
+  .list-tick-start {
+    margin-left: auto;
   }
 }
 
@@ -138,12 +136,8 @@
 }
 
 @media (max-width: 600px) {
-  .list-progress-line {
-    gap: 10px;
-  }
-
   .list-progress-bar {
-    max-width: none;
+    width: 88px;
   }
 
   /* Three tabs in one row (watchlist.css makes .status-segmented a 2-column grid here). */
@@ -152,17 +146,13 @@
   }
 
   .list-filter-tabs .status-segment {
+    min-height: 40px;
     padding: 6px 8px;
     gap: 4px;
   }
 
-  .list-progress-add,
-  .list-progress-add button {
-    width: 100%;
-  }
-
-  .list-progress-add button {
-    justify-content: center;
+  .list-progress-tools {
+    flex-basis: 100%;
   }
 
   .list-rank,
@@ -174,10 +164,14 @@
 
 /* Tick-off mode (fork): "Mark what you've seen" opens ?mark=1, where tapping a poster toggles Seen (list-tick.js).
    The bar stays fixed at the bottom (above the phone tab bar) with the live count and Done. */
-.list-tick-start {
+a.btn.list-tick-start {
+  flex-shrink: 0;
   gap: 8px;
-  padding: 9px 14px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
   font-size: 1rem;
+  white-space: nowrap;
 
   svg {
     width: 18px;
@@ -277,9 +271,17 @@
   }
 }
 
+/* Short label on phones ("Mark seen"); the title keeps the full one. */
+.list-tick-start-short {
+  display: none;
+}
+
 @media (max-width: 600px) {
-  .list-tick-start {
-    width: 100%;
-    justify-content: center;
+  .list-tick-start-long {
+    display: none;
+  }
+
+  .list-tick-start-short {
+    display: inline;
   }
 }
