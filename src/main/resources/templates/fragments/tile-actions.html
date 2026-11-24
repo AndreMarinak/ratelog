@@ -11,16 +11,27 @@
   Upcoming badge (inside the poster):
     <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
 
-  Fork (tile rating): the stack is an overlay the size of the poster. Top right: bookmark (or badge), then the eye.
-  Bottom right, where your score badge always sat: Add to list, then ★ ("★ 8.5" once rated). Upcoming titles get no ★
-  and their list button sits in the eye's empty slot, clear of the Upcoming badge. ★ and the list button are links to
-  the title page without JS; static/tile-rate.js opens the rating picker / the add-to-list sheet in place. `tileMarks`
-  (org.ratelog.tile.TileMarks, on every page) says which titles are in your lists and which ratings are detailed.
+  Fork (tile rating): the stack is an overlay the size of the poster. Top right: bookmark (or badge).
+  Bottom right, where your score badge always sat: Add to list, the Seen eye, then ★ ("★ 8.5" once rated). Upcoming
+  titles get no eye and no ★, and their list button sits under the bookmark, clear of the Upcoming badge. ★ and the
+  list button are links to the title page without JS; static/tile-rate.js opens the rating picker / the add-to-list
+  sheet in place. `tileMarks` (org.ratelog.tile.TileMarks, on every page) says which titles are in your lists and
+  which ratings are detailed.
+  Fork (tile menu, 2026-11-23): at rest a poster only shows quiet marks: the eye when seen, "★ 8.5" when rated. With a
+  mouse the four buttons appear on hover / keyboard focus; on touch screens they stay hidden and one "⋯" button (top
+  right) opens a chooser with the same four actions (tile-actions.js, template in fragments/tile-rate.html).
 */-->
 <div th:fragment="actions(a, title)" th:if="${a != null}" class="tile-actions" data-tile-actions
      th:classappend="${a.upcoming} ? 'is-upcoming' : ''"
      th:with="inList=${tileMarks != null and tileMarks.inList(a)}, detailed=${a.ratingDetailed or (tileMarks != null and tileMarks.detailed(a))}"
      th:attr="data-label-seen-off=#{tile.seen.mark},data-label-seen-on=#{tile.seen.on},data-label-seen-locked=#{tile.seen.locked},data-label-add=#{watchlist.quick.add},data-label-remove=#{watchlist.quick.remove},data-title=${title},data-key=${a.type + ':' + a.tmdbId}">
+    <!--/* Fork (tile menu): touch screens get this one button instead of the four (tile-actions.css hides it with a
+           mouse). It opens the chooser (Watchlist / Seen / Rate / Add to list, tile-actions.js), whose rows use the
+           controls below, so every action saves exactly as it does from them. */-->
+    <button type="button" class="tile-menu-btn" data-tile-menu aria-haspopup="dialog" aria-expanded="false"
+            th:title="#{tile.menu.open}" th:aria-label="#{tile.menu.open.aria(${title})}">
+        <i data-lucide="ellipsis" aria-hidden="true"></i>
+    </button>
     <!--/* Watchlist: rendered even when it can't toggle (Watching / Watched / Dropped), hidden, so un-seeing can bring it back. */-->
     <form class="tile-act tile-watchlist" th:classappend="${a.onWatchlist} ? 'is-on' : ''" th:hidden="${!a.canToggleWatchlist}"
           action="/watchlist/toggle" method="post" data-tile-act="watchlist">
@@ -37,26 +48,29 @@
           th:title="#{${a.badgeKey}}" th:aria-label="#{${a.badgeKey}}">
         <i th:data-lucide="${a.badgeIcon}" aria-hidden="true"></i>
     </span>
-    <!--/* Seen: not offered on upcoming titles. A rated title is locked on: tapping it only explains why. */-->
-    <form th:if="${a.canToggleSeen}" class="tile-act tile-seen"
-          th:classappend="(${a.seen} ? 'is-on' : '') + (${a.seenLocked} ? ' is-locked' : '')"
-          action="/seen/toggle" method="post" data-tile-act="seen">
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-        <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
-        <input type="hidden" name="type" th:value="${a.type}" />
-        <button type="submit"
-                th:with="label=${a.seenLocked} ? #{tile.seen.locked} : (${a.seen} ? #{tile.seen.on} : #{tile.seen.mark})"
-                th:title="${label}" th:aria-label="${label} + ': ' + ${title}" th:aria-pressed="${a.seen}">
-            <i data-lucide="eye" aria-hidden="true"></i>
-            <!--/* Shown instead of the eye in list tick-off mode (tile-actions.css). */-->
-            <i data-lucide="check" aria-hidden="true"></i>
-        </button>
-    </form>
-    <!--/* Upcoming: no eye, so the list button takes its slot (the Upcoming badge is bottom left). */-->
+    <!--/* Upcoming: no eye and no ★, so the list button sits under the bookmark (the Upcoming badge is bottom left). */-->
     <th:block th:if="${a.upcoming}"><a th:replace="~{fragments/tile-actions :: listButton(${a}, ${title}, ${inList})}"></a></th:block>
 
+    <!--/* Bottom right, where your score badge always sat: Add to list, the Seen eye, then ★ ("★ 8.5" once rated).
+           Seen and your score stay on the poster as quiet marks; everything else waits for hover (mouse) or the
+           chooser (touch). */-->
     <div th:unless="${a.upcoming}" class="tile-acts-bottom">
         <a th:replace="~{fragments/tile-actions :: listButton(${a}, ${title}, ${inList})}"></a>
+        <!--/* Seen: not offered on upcoming titles. A rated title is locked on: tapping it only explains why. */-->
+        <form th:if="${a.canToggleSeen}" class="tile-act tile-seen"
+              th:classappend="(${a.seen} ? 'is-on' : '') + (${a.seenLocked} ? ' is-locked' : '')"
+              action="/seen/toggle" method="post" data-tile-act="seen">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+            <input type="hidden" name="type" th:value="${a.type}" />
+            <button type="submit"
+                    th:with="label=${a.seenLocked} ? #{tile.seen.locked} : (${a.seen} ? #{tile.seen.on} : #{tile.seen.mark})"
+                    th:title="${label}" th:aria-label="${label} + ': ' + ${title}" th:aria-pressed="${a.seen}">
+                <i data-lucide="eye" aria-hidden="true"></i>
+                <!--/* Shown instead of the eye in list tick-off mode (tile-actions.css). */-->
+                <i data-lucide="check" aria-hidden="true"></i>
+            </button>
+        </form>
         <!--/* Rate: a movie opens the quick-rating picker (tile-rate.js; data-tile-rate), a show its seasons (rated per
                season). Rated: "★ 8.5", always visible; a detailed rating is marked so the picker won't flatten it. */-->
         <a class="tile-act tile-rate" th:classappend="(${a.score != null} ? 'is-on' : '') + (${detailed} ? ' is-detailed' : '')"

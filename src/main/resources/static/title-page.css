@@ -7,8 +7,8 @@
    follow bell (only where following does something). */
 
 .title-layout {
-  --seen: hsl(138 40% 60%);
-  --seen-soft: hsl(138 40% 60% / 0.14);
+  --seen: hsl(140 16% 70%);
+  --seen-soft: hsl(140 16% 70% / 0.14);
   --upcoming: hsl(40 85% 76%);
 }
 
@@ -294,7 +294,7 @@ button.title-overview-toggle {
 
   &:hover {
     color: var(--seen);
-    background: hsl(138 40% 60% / 0.2);
+    background: hsl(140 16% 70% / 0.2);
   }
 
   &:hover svg {
@@ -333,7 +333,7 @@ button.title-overview-toggle {
 
 .title-nudge {
   padding: 12px 14px 14px;
-  background: hsl(138 40% 60% / 0.06);
+  background: hsl(140 16% 70% / 0.06);
 
   &[hidden] {
     display: none;

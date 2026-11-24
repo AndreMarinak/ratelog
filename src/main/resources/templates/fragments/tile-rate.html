@@ -87,6 +87,32 @@
         </label>
     </div>
 </template>
+<!--/* Fork (tile menu): the chooser behind a poster's one "⋯" button on touch screens (tile-actions.js). A bottom sheet
+       on phones, a popover by the button on wider touch screens. Each row hands over to the poster's own control
+       (the bookmark and eye forms, the ★ picker, the add-to-list sheet), so saving works exactly as from those. */-->
+<template id="tileMenu"
+          th:attr="data-label-aria=#{tile.menu.aria},data-label-watch-add=#{tile.menu.watchlist.add},data-label-watch-on=#{tile.menu.watchlist.on},data-label-watch-on-hint=#{tile.menu.watchlist.on.hint},data-label-seen-mark=#{tile.menu.seen.mark},data-label-seen-on=#{tile.menu.seen.on},data-label-seen-on-hint=#{tile.menu.seen.on.hint},data-label-seen-locked-hint=#{tile.menu.seen.locked.hint},data-label-rate=#{tile.menu.rate},data-label-rate-hint=#{tile.menu.rate.hint},data-label-rate-yours=#{tile.menu.rate.yours},data-label-rate-yours-hint=#{tile.menu.rate.yours.hint},data-label-rate-detailed=#{tile.menu.rate.detailed},data-label-rate-detailed-hint=#{tile.menu.rate.detailed.hint},data-label-rate-seasons=#{tile.menu.rate.seasons},data-label-rate-seasons-hint=#{tile.menu.rate.seasons.hint},data-label-lists-add=#{tile.menu.lists.add},data-label-lists-in=#{tile.menu.lists.in},data-label-lists-in-hint=#{tile.menu.lists.in.hint}">
+    <div class="tile-menu" role="dialog" data-menu-pop hidden>
+        <div class="tile-menu-head">
+            <strong class="tile-menu-title" data-menu-title>Title</strong>
+            <span class="tile-menu-status" data-menu-status hidden></span>
+            <button type="button" class="tile-menu-close" data-menu-close th:aria-label="#{tile.menu.close}" th:title="#{tile.menu.close}">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="tile-menu-items">
+            <button th:each="act : ${ {'watchlist', 'seen', 'rate', 'lists'} }" type="button" class="tile-menu-item"
+                    th:attr="data-menu-act=${act}">
+                <span class="tile-menu-icon" data-menu-icon><i data-lucide="circle" aria-hidden="true"></i></span>
+                <span class="tile-menu-text">
+                    <span class="tile-menu-label" data-menu-label>Action</span>
+                    <span class="tile-menu-hint" data-menu-hint></span>
+                </span>
+                <span class="tile-menu-end" data-menu-end aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+</template>
 </th:block>
 
 <!--/* GET /tile/lists: the title page's add-to-list sheet for one tile's title (TileListSheetController). */-->

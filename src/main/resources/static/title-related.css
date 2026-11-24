@@ -67,10 +67,21 @@
   }
 }
 
-/* Its Seen state, read-only (the page's Seen button changes it). Same green as a tile's Seen eye. */
+/* Its Seen state, read-only (the page's Seen button changes it). The same quiet mark as a tile's Seen eye, in the
+   same corner (bottom right), and always shown: tile-actions.css hides other badges until hover / on touch. */
+.related-here-state {
+  justify-content: flex-end;
+}
+
 .related-seen-mark.tile-badge {
-  background: var(--seen-strong);
-  color: #fff;
+  display: grid !important;
+  opacity: 1 !important;
+  box-shadow: none;
+  color: var(--seen-mark, hsl(140 20% 74%));
+
+  &[hidden] {
+    display: none !important;
+  }
 }
 
 /* Skeleton heading (the row bodies use Discover's .discover-skeleton). */

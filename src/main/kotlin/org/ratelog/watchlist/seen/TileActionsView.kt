@@ -8,10 +8,12 @@ import java.util.Locale
 /**
  * The quick actions on a poster tile (home rows, Discover rows and grid, search results, list pages), rendered by
  * `templates/fragments/tile-actions.html :: actions` and kept in sync in place by `static/tile-actions.js`.
- * Top-right of the poster, stacked: the watchlist bookmark (or a Watching / Dropped badge), then the Seen eye.
+ * Top-right of the poster: the watchlist bookmark (or a Watching / Dropped badge).
  * Upcoming titles get no Seen toggle (you can't have seen them) and an "Upcoming · Dec 18" badge instead.
- * Bottom-right (fork, tile rating): Add to list, then Rate (★, or "★ 8.5" once rated). Upcoming titles get no ★
- * and their list button moves up into the empty Seen slot, clear of the Upcoming badge.
+ * Bottom-right (fork, tile rating): Add to list, the Seen eye, then Rate (★, or "★ 8.5" once rated). Upcoming titles
+ * get no ★ and their list button moves up under the bookmark, clear of the Upcoming badge.
+ * Fork (tile menu): at rest only the Seen eye and "★ 8.5" show; a mouse gets the rest on hover, a touch screen one
+ * "⋯" button that opens a chooser with the same four actions (static/tile-actions.css / .js).
  */
 data class TileActionsView(
     val tmdbId: Int,

@@ -168,6 +168,54 @@ class TileRateTemplatesTest {
     }
 
     @Test
+    fun `every poster gets one chooser button for touch screens, a real button labelled with the title`() {
+        listOf(tile(), tile(score = 8.5, status = WatchStatus.WATCHED), tile(date = LocalDate.parse("2026-12-18"))).forEach { a ->
+            val html = actions(a)
+            val button = tag(html, "tile-menu-btn")
+            assertTrue(button.startsWith("<button type=\"button\""), button)
+            assertTrue(button.contains("data-tile-menu"))
+            assertTrue(button.contains("aria-haspopup=\"dialog\""))
+            assertTrue(button.contains("aria-expanded=\"false\""))
+            assertTrue(button.contains("aria-label=\"Watchlist, seen, rate or add to a list: The Matrix\""), button)
+            assertTrue(html.contains("data-lucide=\"ellipsis\""))
+            assertEquals(1, Regex("""data-tile-menu""").findAll(html).count())
+        }
+    }
+
+    @Test
+    fun `the Seen eye sits in the bottom corner with the score, between Add to list and the star`() {
+        val html = actions(tile(score = 8.5, status = WatchStatus.WATCHED))
+        val bottom = html.substringAfter("class=\"tile-acts-bottom\"")
+        val list = bottom.indexOf("tile-act tile-list")
+        val eye = bottom.indexOf("tile-act tile-seen is-on is-locked")
+        val star = bottom.indexOf("tile-act tile-rate is-on")
+        assertTrue(list in 0 until eye && eye < star, bottom)
+        assertTrue(html.indexOf("tile-menu-btn") < html.indexOf("tile-act tile-watchlist"), "the chooser button comes first, top right")
+    }
+
+    @Test
+    fun `the chooser template - four rows and every label the page script fills in`() {
+        val html = render("fragments/tile-rate", setOf("assets"), emptyMap())
+
+        assertTrue(html.contains("<template id=\"tileMenu\""), html)
+        listOf("watchlist", "seen", "rate", "lists").forEach { act ->
+            assertEquals(1, Regex("""data-menu-act="$act"""").findAll(html).count(), act)
+        }
+        assertEquals(4, Regex("""<button type="button" class="tile-menu-item"""").findAll(html).count())
+        assertTrue(html.contains("role=\"dialog\" data-menu-pop hidden"))
+        assertTrue(html.contains("data-label-aria=\"Actions for {0}\""), "filled in by tile-actions.js")
+        assertTrue(html.contains("data-label-watch-add=\"Add to watchlist\""))
+        assertTrue(html.contains("data-label-watch-on=\"On your watchlist\""))
+        assertTrue(html.contains("data-label-seen-mark=\"Mark as seen\""))
+        assertTrue(html.contains("data-label-seen-locked-hint=\"You rated it, so it stays seen\""))
+        assertTrue(html.contains("data-label-rate-yours=\"Your rating\""))
+        assertTrue(html.contains("data-label-rate-seasons=\"Rate seasons\""))
+        assertTrue(html.contains("data-label-lists-in=\"In your lists\""))
+        assertTrue(html.contains("aria-label=\"Close\""))
+        assertFalse(html.contains("??"))
+    }
+
+    @Test
     fun `the picker template - ten scores, both forms with CSRF, labels for the page script`() {
         val html = render("fragments/tile-rate", setOf("assets"), emptyMap())
 

@@ -4,6 +4,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **On touch screens the poster's "⋯" needs JS** (poster chooser, 2026-11-23): without JS it is a plain button that does
+  nothing, and the four controls it stands for stay hidden; the title page still has every action. Showing the four until the
+  script runs would flash them on every page load. A Watching / Dropped status and "on your watchlist" are no longer visible on
+  posters at rest (by design: only Seen and your score are), only on hover or in the chooser's header and rows.
+
 - **Going back to Discover's grid or search results only shows the first page again** (found building the back links,
   2026-11-23): every page is sent with `Cache-Control: no-store` (Spring Security's default), so Chrome keeps no page in its
   back/forward cache and Back (or the title page's back link) reloads the page. Pages added by "Load more" / infinite scroll are
@@ -71,6 +76,15 @@ Problems found while building and running the fork: what happened, the cause, an
   answers with the saved order (then it catches up) or the page reloads.
 
 ## Fixed
+
+- **Poster buttons kept their hover look after a tap on phones** (found building the poster chooser, 2026-11-23): touch
+  browsers keep `:hover` on the last element tapped, so a tapped bookmark / eye / ★ stayed enlarged and recoloured, and the
+  new "⋯" turned orange-on-orange (dots invisible) while its chooser was open. Hover styles on poster buttons now only apply
+  under `@media (hover: hover)`.
+- **The rating picker and the tile list sheet gave the focus back to a hidden button** (2026-11-23): on touch screens the ★ and
+  list buttons are now hidden (the chooser opens them), and `focus()` on a hidden element does nothing, so the focus was lost.
+  `tile-rate.js` now returns it to the poster's "⋯" when the ★ / list button isn't shown, and points the picker at "⋯". A score
+  tapped on a phone doesn't always take the focus either, so a focus left on nothing is also given back.
 
 - **The login page loaded no fonts** (upstream, found 2026-11-23 in a browser check): `/fonts/**` wasn't public, so a signed-out
   visitor's font requests were redirected to the login page and the browser got HTML ("OTS parsing error: invalid sfntVersion").

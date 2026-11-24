@@ -194,12 +194,12 @@
   }
 
   &.is-seen {
-    border-color: hsl(138 40% 60% / 0.5);
-    color: hsl(138 40% 66%);
+    border-color: hsl(140 16% 70% / 0.5);
+    color: hsl(140 20% 74%);
   }
 
   &.is-seen:hover {
-    background: hsl(138 40% 60% / 0.14);
+    background: hsl(140 16% 70% / 0.14);
   }
 
   &.is-remove {

@@ -92,6 +92,10 @@ accounts and roles `V1130–1139`.
   "Added", the list grows with the new rank, toast), "More suggestions" gives a new batch, "Not interested" hides one for the
   session. Not on other people's lists, empty lists, Edit order or tick-off. API: `GET /api/v1/lists/{id}/suggestions`
   ([docs/api.md](api.md#list-suggestions)). No migration.
+- [x] **24. Poster actions that don't cover the poster** (requested 2026-11-23, "these buttons cover a lot of the tiles"): at
+  rest a poster only shows the Seen eye (when seen) and "★ 8.5" (when rated), small, bottom right. Phones and tablets get one
+  "⋯" button per poster that opens a chooser (Watchlist, Seen, Rate, Add to list; a bottom sheet on phones); with a mouse the
+  four quick buttons appear on hover / keyboard focus. The Seen green is a quiet sage everywhere. No server change.
 
 ## Fixes and housekeeping done
 

@@ -1,18 +1,27 @@
 /* Fork: quick actions and the Upcoming badge on poster tiles (templates/fragments/tile-actions.html, behaviour in
-   tile-actions.js). Used by the home rows (.home-tile-wrap), Discover rows and grid (.browse-tile), search results
-   and list pages (.list-item). The stack sits top right of the poster: watchlist bookmark (or a Watching / Dropped
-   badge), then the Seen eye. With a mouse, controls that are off appear on hover or focus; on touch screens and
-   narrow windows they are always shown. Anything that is on (in the watchlist, seen) is always shown.
-   Fork (tile rating): .tile-actions is an overlay the size of the poster, so the bottom-right group (Add to list,
-   then ★ / "★ 8.5") sits where your score badge used to be; that badge is hidden wherever the ★ is shown. */
+   tile-actions.js). Used by the home rows (.home-tile-wrap), Discover rows and grid (.browse-tile), search results,
+   list pages (.list-item), the watchlist (.watchlist-item) and the Ratings tab (.rank-item).
+   Fork (tile rating): .tile-actions is an overlay the size of the poster. Top right: the watchlist bookmark (or a
+   Watching / Dropped badge). Bottom right, where your score badge used to be: Add to list, the Seen eye, then ★ /
+   "★ 8.5"; that badge is hidden wherever the ★ is shown.
+   Fork (tile menu, 2026-11-23, "these buttons cover a lot of the tiles"): at rest a poster shows only two quiet
+   marks, the eye when you've seen it and "★ 8.5" when you've rated it.
+   - Mouse (hover: hover): the four buttons appear while the tile is hovered or has keyboard focus.
+   - Touch (hover: none): the four buttons never show; one "⋯" button top right opens the chooser (styles at the end
+     of this file). Tapping a mark opens the chooser too. */
 
 :root {
-  --seen: hsl(138 40% 60%);
-  --seen-strong: hsl(138 42% 44%);
+  /* Seen: a quiet sage on the dark chip (it was a filled bright green, "a bit bright / stands out too much"). */
+  --seen: hsl(140 16% 70%);
+  --seen-strong: hsl(140 18% 33%);
+  --seen-mark: hsl(140 20% 74%);
   --upcoming: hsl(40 85% 76%);
   /* Your score: the light clay of the score badges, with a warmer star. */
   --rate-text: hsl(20 83% 84%);
   --rate-star: hsl(32 92% 62%);
+  /* The dark chip behind every mark and button on a poster. */
+  --tile-chip: rgba(18, 16, 14, 0.8);
+  --tile-act-size: 28px;
 }
 
 .tile-actions {
@@ -26,12 +35,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 5px;
   padding: 6px;
   pointer-events: none;
 }
 
-/* Add to list + Rate, bottom right of the poster. */
+/* Add to list, Seen and Rate, bottom right of the poster. */
 .tile-acts-bottom {
   display: flex;
   align-items: center;
@@ -52,33 +61,30 @@
 
 .tile-act button,
 .tile-badge,
-a.tile-act {
+a.tile-act,
+.tile-menu-btn {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: var(--tile-act-size);
+  height: var(--tile-act-size);
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(20, 18, 16, 0.82);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  background: var(--tile-chip);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
   color: var(--text);
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 }
 
 .tile-act button,
-a.tile-act {
+a.tile-act,
+.tile-menu-btn {
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
-
-  &:hover {
-    color: var(--accent);
-    transform: scale(1.08);
-  }
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
 
   &:focus-visible {
     outline: 2px solid var(--accent);
@@ -88,6 +94,19 @@ a.tile-act {
   &[aria-busy="true"] {
     opacity: 0.6;
     cursor: progress;
+  }
+}
+
+/* Hover looks only with a mouse: a touch screen keeps :hover on the last thing tapped. */
+@media (hover: hover) {
+  .tile-act button:hover,
+  a.tile-act:hover {
+    color: var(--accent);
+    transform: scale(1.08);
+  }
+
+  .tile-seen button:hover {
+    color: var(--seen-mark);
   }
 }
 
@@ -101,21 +120,22 @@ a.tile-act {
   }
 }
 
-.tile-seen button:hover {
-  color: var(--seen);
-}
-
 /* The check is only for list tick-off mode. */
 .tile-seen .lucide-check {
   display: none;
 }
 
+/* Seen: the sage eye on the dark chip, no fill. */
 .tile-seen.is-on button {
-  background: var(--seen-strong);
-  color: #fff;
+  color: var(--seen-mark);
 
-  &:hover {
-    background: hsl(138 42% 38%);
+  svg {
+    stroke-width: 2.25;
+  }
+}
+
+@media (hover: hover) {
+  .tile-seen.is-on button:hover {
     color: #fff;
   }
 }
@@ -129,38 +149,16 @@ a.tile-act {
   }
 }
 
-/* Off controls wait for hover / focus with a mouse. */
-.tile-watchlist:not(.is-on),
-.tile-seen:not(.is-on),
-.tile-list:not(.is-on),
-.tile-rate:not(.is-on) {
-  opacity: 0;
-}
-
-.home-tile-wrap:hover .tile-act,
-.browse-tile:hover .tile-act,
-.list-item:hover .tile-act,
-.tile-actions:focus-within .tile-act {
-  opacity: 1;
-}
-
-@media (hover: none), (max-width: 900px) {
-  .tile-watchlist:not(.is-on),
-  .tile-seen:not(.is-on),
-  .tile-list:not(.is-on),
-  .tile-rate:not(.is-on) {
-    opacity: 1;
-  }
-}
-
 /* ----- Add to list and Rate (fork, tile rating) ----- */
 
 a.tile-act {
   text-decoration: none;
 }
 
-a.tile-rate:hover {
-  color: var(--rate-star);
+@media (hover: hover) {
+  a.tile-rate:hover {
+    color: var(--rate-star);
+  }
 }
 
 /* Rated: a "★ 8.5" chip, always visible (it replaces the old score badge in the same corner). */
@@ -169,25 +167,37 @@ a.tile-rate.is-on {
   align-items: center;
   gap: 3px;
   width: auto;
-  min-width: 30px;
+  min-width: var(--tile-act-size);
   padding: 0 8px 0 6px;
   color: var(--rate-text);
   font-family: var(--font);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 
   svg {
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
     fill: var(--rate-star);
     stroke: var(--rate-star);
   }
 
+  @media (hover: hover) {
+    &:hover {
+      color: #fff;
+      transform: scale(1.05);
+    }
+  }
+}
+
+/* "In your lists": a quiet accent icon on the dark chip, not a filled accent circle. */
+.tile-list.is-on {
+  color: var(--accent);
+
   &:hover {
-    color: #fff;
-    transform: scale(1.05);
+    background: rgba(20, 18, 16, 0.92);
+    color: var(--accent-strong);
   }
 }
 
@@ -196,6 +206,89 @@ a.tile-rate.is-on {
 .browse-tile:has(.tile-rate) .browse-user-score,
 .list-grid:not(.is-ticking) .list-item:has(.tile-rate) .home-score {
   display: none;
+}
+
+/* ----- What shows when (fork, tile menu) ----- */
+
+/* The marks: Seen and your score, on every poster that has them, at rest too. They are status, not buttons: no
+   shadow, a little smaller; with a mouse they turn into the buttons on hover, on touch a tap opens the chooser. */
+.tile-seen.is-on button,
+a.tile-rate.is-on {
+  box-shadow: none;
+}
+
+/* "⋯": touch screens only (shown below). The visible chip is small; the tap target reaches 44px. */
+.tile-menu-btn {
+  display: none;
+  position: relative;
+  pointer-events: auto;
+  flex-shrink: 0;
+  color: hsl(30 12% 92%);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 999px;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &[aria-expanded="true"] {
+    background: var(--accent);
+    color: #fff;
+  }
+}
+
+/* Touch: one button, plus the marks. The other controls stay in the page (the chooser uses them), just not shown. */
+@media (hover: none) {
+  .tile-actions {
+    --tile-act-size: 26px;
+  }
+
+  .tile-menu-btn {
+    display: grid;
+    width: 30px;
+    height: 30px;
+  }
+
+  .tile-watchlist,
+  .tile-badge,
+  .tile-list,
+  .tile-seen:not(.is-on),
+  .tile-rate:not(.is-on) {
+    display: none !important;
+  }
+
+  a.tile-rate.is-on {
+    padding: 0 7px 0 5px;
+    font-size: 0.82rem;
+  }
+}
+
+/* Mouse: no "⋯"; the buttons wait for hover or keyboard focus, the marks stay. */
+@media (hover: hover) {
+  .tile-watchlist,
+  .tile-badge,
+  .tile-list,
+  .tile-seen:not(.is-on),
+  .tile-rate:not(.is-on) {
+    opacity: 0;
+  }
+
+  :is(.home-tile-wrap, .browse-tile, .list-item, .watchlist-item, .rank-item):is(:hover, :focus-within) .tile-act,
+  .tile-actions:focus-within .tile-act {
+    opacity: 1;
+  }
+
+  /* Hovered: the marks become buttons too. */
+  :is(.home-tile-wrap, .browse-tile, .list-item, .watchlist-item, .rank-item):is(:hover, :focus-within) :is(.tile-seen.is-on button, a.tile-rate.is-on) {
+    background: rgba(20, 18, 16, 0.92);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* Discover grid: a little more room, the same corner as its old bookmark. */
@@ -275,19 +368,6 @@ a.tile-rate.is-on {
 }
 
 @media (max-width: 600px) {
-  .tile-act button,
-  .tile-badge,
-  a.tile-act {
-    width: 30px;
-    height: 30px;
-  }
-
-  a.tile-rate.is-on {
-    width: auto;
-    padding: 0 6px 0 5px;
-    font-size: 0.85rem;
-  }
-
   .tile-upcoming {
     left: 5px;
     bottom: 5px;
@@ -304,16 +384,21 @@ a.tile-rate.is-on {
     cursor: pointer;
   }
 
-  /* The Seen eye becomes the check: bigger, always visible, alone in the corner. Rating and lists wait for Done
-     (the score badge is shown instead of the ★ chip). */
+  /* The Seen eye becomes the check: bigger, always visible, alone top right (on touch too: tapping the poster or
+     the check ticks it, no chooser). Rating and lists wait for Done (the score badge is shown instead of ★). */
+  .tile-menu-btn,
   .tile-watchlist,
   .tile-badge,
   .tile-list,
-  .tile-acts-bottom {
+  .tile-rate {
     display: none !important;
   }
 
   .tile-seen {
+    display: block !important;
+    position: absolute;
+    top: 8px;
+    right: 8px;
     opacity: 1;
   }
 
@@ -342,6 +427,7 @@ a.tile-rate.is-on {
   .tile-seen.is-on button {
     border-color: #fff;
     background: var(--seen-strong);
+    color: #fff;
   }
 
   .list-item.is-seen .list-card {
@@ -416,10 +502,6 @@ body:has(.list-tick-bar) .tile-toast {
     display: none !important;
   }
 
-  &:hover .tile-act {
-    opacity: 1;
-  }
-
   /* The ★ chip shows your score on the poster. */
   &:has(.tile-rate) .list-content .rating {
     display: none;
@@ -449,21 +531,6 @@ body:has(.list-tick-bar) .tile-toast {
   .tile-acts-bottom {
     margin-top: 0;
   }
-
-  &:hover .tile-act {
-    opacity: 1;
-  }
-}
-
-/* "In your lists": always shown, so keep it quiet (accent icon on the dark chip, not a filled accent circle). */
-.tile-list.is-on {
-  background: rgba(20, 18, 16, 0.82);
-  color: var(--accent);
-
-  &:hover {
-    background: rgba(20, 18, 16, 0.92);
-    color: var(--accent-strong);
-  }
 }
 
 /* Phones: the ranking card's text column reaches the right edge, so the actions get their own strip at the bottom. */
@@ -478,4 +545,242 @@ body:has(.list-tick-bar) .tile-toast {
       bottom: 10px;
     }
   }
+}
+
+/* ----- The chooser behind "⋯" (fork, tile menu; fragments/tile-rate.html #tileMenu, tile-actions.js) -----
+   Phones (600px and below, like the rating picker): a bottom sheet over a dimmed page, rows big enough for a thumb.
+   Wider touch screens: a popover by the button. */
+
+.tile-menu {
+  position: absolute;
+  z-index: 1100;
+  width: 272px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  padding: 10px 8px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-family: var(--font);
+
+  &[hidden] {
+    display: none;
+  }
+
+  &.is-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: auto;
+    max-width: none;
+    padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-width: 1px 0 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    animation: tile-menu-up 0.18s ease-out;
+  }
+}
+
+@keyframes tile-menu-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-menu.is-sheet {
+    animation: none;
+  }
+}
+
+.tile-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+  background: rgba(0, 0, 0, 0.55);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.tile-menu-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  padding: 0 4px 0 8px;
+  margin-bottom: 4px;
+}
+
+.tile-menu-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tile-menu-status {
+  order: 3;
+  flex-basis: 100%;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+button.tile-menu-close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: -4px -2px -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-soft);
+
+  &:hover {
+    background: var(--surface-muted);
+    color: var(--text);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.tile-menu-items {
+  display: grid;
+  gap: 2px;
+}
+
+button.tile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: calc(var(--radius) - 4px);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}
+
+.tile-menu-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.tile-menu-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.tile-menu-label {
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.tile-menu-hint {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.25;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.tile-menu-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  color: var(--text-soft);
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* On: the row's icon takes the state's colour, and a check at the end. */
+.tile-menu-item.is-on .tile-menu-end {
+  color: var(--text);
+}
+
+.tile-menu-item[data-menu-act="watchlist"].is-on .tile-menu-icon {
+  background: hsl(var(--_brand-clay, 15 60% 55%) / 0.2);
+  color: var(--accent);
+}
+
+.tile-menu-item[data-menu-act="seen"].is-on .tile-menu-icon {
+  background: hsl(140 16% 70% / 0.14);
+  color: var(--seen-mark);
+}
+
+.tile-menu-item[data-menu-act="lists"].is-on .tile-menu-icon {
+  color: var(--accent);
+}
+
+/* Your score at the end of the Rate row. */
+.tile-menu-score {
+  color: var(--rate-text);
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-menu-end .lucide-star {
+  width: 14px;
+  height: 14px;
+  fill: var(--rate-star);
+  stroke: var(--rate-star);
+}
+
+.tile-menu-item[data-menu-act="rate"].is-on .tile-menu-icon {
+  color: var(--rate-star);
 }

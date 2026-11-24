@@ -32,6 +32,17 @@
     const setAskAfterSeen = (on) => { try { window.localStorage.setItem(ASK_KEY, on ? 'on' : 'off'); } catch (e) { /* not remembered */ } };
     const plainClick = (event) => !(event.defaultPrevented || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey);
 
+    /**
+     * Where the focus goes back to: the ★ / list button, or the poster's "⋯" when those are hidden (touch screens,
+     * where the chooser opened the picker or the sheet; tile-actions.js).
+     */
+    function returnTarget(el) {
+        if (!el || !el.isConnected || el.getClientRects().length) return el;
+        const stack = el.closest('[data-tile-actions]');
+        const menu = stack && stack.querySelector('[data-tile-menu]');
+        return menu && menu.getClientRects().length ? menu : el;
+    }
+
     function setIcon(el, name) {
         const old = el.querySelector('svg, i');
         const icon = document.createElement('i');
@@ -122,18 +133,22 @@
     function close(restoreFocus = true) {
         if (!pop || pop.hidden) return;
         const star = current && current.star;
-        const hadFocus = pop.contains(document.activeElement);
+        // A tap doesn't always focus the score button (touch), so a focus left on nothing comes back too.
+        const hadFocus = pop.contains(document.activeElement) || document.activeElement === document.body;
         pop.hidden = true;
         backdrop.hidden = true;
         if (star) star.setAttribute('aria-expanded', 'false');
         current = null;
-        if (restoreFocus && hadFocus && star && star.isConnected) star.focus({ preventScroll: true });
+        const back = returnTarget(star);
+        if (restoreFocus && hadFocus && back && back.isConnected) back.focus({ preventScroll: true });
     }
 
-    /** What the popover points at: the ★, or (tick-off mode hides it) the eye, or the tile. */
+    /** What the popover points at: the ★, or (touch screens hide it) the "⋯", or (tick-off mode) the eye, or the tile. */
     function anchorOf(star) {
         if (star.offsetParent) return star;
         const stack = star.closest('[data-tile-actions]');
+        const menu = stack && stack.querySelector('[data-tile-menu]');
+        if (menu && menu.offsetParent) return menu;
         const eye = stack && stack.querySelector('.tile-seen button');
         return eye && eye.offsetParent ? eye : (stack || star);
     }
@@ -331,11 +346,12 @@
             document.body.appendChild(sheet);
             refreshIcons();
             const modal = sheet.querySelector('#addToListModal');
+            const back = returnTarget(button);
             modal.addEventListener('modal:close', () => {
                 setTimeout(() => { if (!modal.classList.contains('visible')) removeTileSheet(); }, 250);
-                if (button.isConnected) button.focus({ preventScroll: true });
+                if (back && back.isConnected) back.focus({ preventScroll: true });
             }, { once: true });
-            window.Modals.open('addToListModal', button);
+            window.Modals.open('addToListModal', back);
         } catch (error) {
             window.location.href = button.href;
         } finally {
