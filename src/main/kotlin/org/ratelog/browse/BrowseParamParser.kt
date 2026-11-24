@@ -43,9 +43,28 @@ object BrowseParamParser {
     /** More services than anyone ticks; keeps URLs and TMDB requests bounded. */
     const val MAX_PROVIDERS = 30
     private val PROVIDER_SEPARATORS = Regex("[|,\\s]+")
-    private const val FIRST_FILM_YEAR = 1874
+    const val FIRST_FILM_YEAR = 1874
     private val LANGUAGE = Regex("^[a-z]{2}$")
     private val DECADE = Regex("^(\\d{3}0)s?$")
+    private val EARLIER = setOf("earlier", "pre1960", "pre-1960", "older", "1950s-and-earlier")
+
+    /** The latest year (and decade) a filter may name: ten years ahead, for announced titles. */
+    fun latestYear(today: LocalDate): Int = today.year + 10
+
+    /**
+     * `2010s`, `2010` or `earlier` as a decade (1870s up to [latestYear]'s decade); null when it isn't one.
+     * Fork (2026-11-24): shared with the search page's Year menu (`search/SearchYearFilter.kt`).
+     */
+    fun decadeOrNull(raw: String, today: LocalDate): BrowseDecade? {
+        val key = raw.trim().lowercase()
+        if (key in EARLIER) return BrowseDecade.Earlier
+        val start = DECADE.find(key)?.groupValues?.get(1)?.toInt() ?: return null
+        return if (start < 1870 || start > latestYear(today)) null else BrowseDecade.Of(start)
+    }
+
+    /** A year from [FIRST_FILM_YEAR] up to [latestYear]; null otherwise. Fork (2026-11-24): shared with search. */
+    fun yearOrNull(raw: String, today: LocalDate): Int? =
+        raw.trim().toIntOrNull()?.takeIf { it in FIRST_FILM_YEAR..latestYear(today) }
 
     /**
      * @param hideSeenByDefault what a missing `hideSeen` means: true on the Discover page (seen titles are
@@ -58,7 +77,7 @@ object BrowseParamParser {
             invalid += InvalidBrowseParam(name, value, reason)
             return null
         }
-        val latestYear = today.year + 10
+        val latestYear = latestYear(today)
 
         val type = params.type.clean()?.let { raw ->
             when (raw.lowercase()) {
@@ -69,20 +88,15 @@ object BrowseParamParser {
         } ?: MediaType.movie
 
         var decade: BrowseDecade? = params.decade.clean()?.let { raw ->
-            val key = raw.lowercase()
-            if (key in setOf("earlier", "pre1960", "pre-1960", "older", "1950s-and-earlier")) return@let BrowseDecade.Earlier
-            val start = DECADE.find(key)?.groupValues?.get(1)?.toInt()
-            if (start == null || start < 1870 || start > latestYear) bad("decade", raw, "decade must look like 2010s (1870s-${latestYear / 10 * 10}s) or \"earlier\"")
-            else BrowseDecade.Of(start)
+            decadeOrNull(raw, today) ?: bad("decade", raw, "decade must look like 2010s (1870s-${latestYear / 10 * 10}s) or \"earlier\"")
         }
 
         val year: BrowseYear? = params.year.clean()?.let { raw ->
             if (raw.equals("upcoming", ignoreCase = true)) {
                 if (type == MediaType.movie) BrowseYear.Upcoming else bad("year", raw, "\"upcoming\" is only available for movies")
             } else {
-                val y = raw.toIntOrNull()
-                if (y == null || y < FIRST_FILM_YEAR || y > latestYear) bad("year", raw, "year must be between $FIRST_FILM_YEAR and $latestYear, or \"upcoming\"")
-                else BrowseYear.Of(y)
+                yearOrNull(raw, today)?.let { BrowseYear.Of(it) }
+                    ?: bad("year", raw, "year must be between $FIRST_FILM_YEAR and $latestYear, or \"upcoming\"")
             }
         }
 

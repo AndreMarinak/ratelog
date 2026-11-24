@@ -123,7 +123,8 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | To rate view All / Movies / TV tabs | page load (pushed) | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
 | Create / edit / delete list, settings, tokens, admin, language, logout | page load | **page load kept**: navigation or whole-page changes. Deleting a list lands on the Lists tab with "List deleted." (2026-11-24; it went to your profile); a list name that isn't allowed goes back to the page you were on |
 | Person page department / All, Movies, TV / Newest, Most popular / Show all | — | in place, **URL replaced** (`view-swap.js`, 2026-11-24) |
-| Search Year box | — | **page load** like the Any / Movies / TV select (a new result set) |
+| Search Year box | — | **page load** like the Any / Movies / TV select (a new result set). Replaced by the next row (2026-11-24) |
+| Search Year menu (options, Type a year) and Any / Movies / TV select | page load | in place, **URL replaced** (`view-swap.js` swaps `#searchView`, 2026-11-24, user asked for Discover's Year menu on search): a decade keeps the menu open on its years, like Discover; the select and "Type a year" are GET forms that `view-swap.js` now applies too |
 | Title page back link ("← Discover", "› Toy Story 3") | — | **navigation**: `history.back()` when that page is the previous entry, else a page load of its URL with the scroll put back (`back-nav.js`) |
 
 ### Where actions land (audit 2026-11-24)

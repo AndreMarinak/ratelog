@@ -4,6 +4,11 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Open
 
+- **Search results skip most of each TMDB page** (upstream, found 2026-11-24 building the search Year menu): results page N
+  shows the first 9 titles of TMDB page N (Any: of movies and shows interleaved) and page N+1 starts at TMDB page N+1, so
+  titles 10-20 of every TMDB page (and most shows for Any) never appear, however far you scroll. `SearchHandler`'s
+  `take(PAGE_SIZE)`. A decade (fork) shows every match of the pages it reads, so it is not affected. Fix: show the whole TMDB
+  page (20, or 40 for Any), or keep an offset within the page.
 - **An admin can "Save" their own official list, and it doesn't stick on screen** (found 2026-11-24): the toggle is offered
   on every official card, the save is stored and the toast says "first in Official lists now", but pages leave out your own
   saved lists (`GetSavedListsHandler(includeOwn = false)`), so after a reload the card reads "Save" again and keeps its usual

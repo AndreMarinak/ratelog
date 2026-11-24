@@ -28,7 +28,7 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
 | GET | `/api/v1/me` | | `{id, username, role}`; `role` is `USER`, `MANAGER`, `ADMIN` or `SUPERADMIN` |
-| GET | `/api/v1/search` | `q`, optional `type`, `year`, `people` | `{results: [Candidate]}` (raw TMDB search); with `people=true` also `people: [Person]` (see [People](#people)) |
+| GET | `/api/v1/search` | `q`, optional `type`, `year`, `decade`, `people` | `{results: [Candidate]}` (raw TMDB search, first page; `year` keeps titles within a year of it and those without one); `decade=1980s` (or `earlier`, like Discover) keeps only titles of that decade from TMDB's first 5 pages (up to 20; `year` wins when both are sent; an invalid decade is `400 invalid_parameter`); with `people=true` also `people: [Person]` (see [People](#people)) |
 | GET | `/api/v1/people/{tmdbPersonId}` | optional `department`, `type`, `sort` | a person and their filmography (see [People](#people)) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
 | GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url, numbered}]` |

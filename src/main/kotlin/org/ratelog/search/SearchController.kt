@@ -35,6 +35,7 @@ class SearchController(
     private val handler: SearchHandler,
     private val homeDashboardHandler: GetHomeDashboardHandler,
     private val isTmdbConfiguredHandler: IsTmdbConfiguredHandler,
+    private val yearMenu: SearchYearMenu,
 ) {
 
     @GetMapping("/")
@@ -44,6 +45,7 @@ class SearchController(
         @RequestParam("mediaType", required = false) mediaType: String?,
         @RequestParam("page", required = false, defaultValue = "1") page: Int,
         @RequestParam("year", required = false) year: String?,
+        @RequestParam("decade", required = false) decade: String?,
         model: Model,
         redirectAttributes: RedirectAttributes
     ): String {
@@ -54,6 +56,8 @@ class SearchController(
         if (!query.isNullOrBlank()) {
             val type = mediaType?.takeIf { it.isNotBlank() }
                 ?.let(MediaType::valueOf)
+            // Fork (2026-11-24): the Year menu, `year=2023` or `decade=2020s` (a year wins).
+            val yearFilter = SearchYearFilter.parse(year, decade, yearMenu.today())
 
             SearchQuery(
                 query = query,
@@ -61,7 +65,8 @@ class SearchController(
                 lang = user.metadataLang,
                 mediaType = type,
                 page = page,
-                year = searchYear(year),
+                year = (yearFilter as? SearchYearFilter.Exact)?.year,
+                decade = (yearFilter as? SearchYearFilter.Decade)?.decade,
             ).let(handler::handle)
             .fold(
                 {
@@ -72,8 +77,11 @@ class SearchController(
                     model.addAttribute("results", it.items)
                     model.addAttribute("hasMore", it.hasMore)
                     model.addAttribute("mediaType", mediaType)
-                    model.addAttribute("currentPage", page)
-                    model.addAttribute("searchYear", searchYear(year))
+                    // A decade reads several TMDB pages: the next page starts after the last one read.
+                    model.addAttribute("currentPage", it.lastPage ?: page)
+                    model.addAttribute("searchYear", (yearFilter as? SearchYearFilter.Exact)?.year)
+                    model.addAttribute("searchDecade", (yearFilter as? SearchYearFilter.Decade)?.decade?.param)
+                    model.addAttribute("yearMenu", yearMenu.build(query, mediaType?.takeIf { m -> m.isNotBlank() }, yearFilter, year))
                 }
             )
         } else {
@@ -111,9 +119,6 @@ class SearchController(
                 )
             }
     }
-
-    /** Fork (2026-11-24): the Year box; anything that isn't a plausible year is ignored (any year). */
-    private fun searchYear(raw: String?): Int? = raw?.trim()?.toIntOrNull()?.takeIf { it in 1870..2100 }
 
     private fun toResponse(item: SearchResultItem) = SearchResultResponse(
         tmdbId = item.tmdbId,

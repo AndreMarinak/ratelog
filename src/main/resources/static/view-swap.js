@@ -21,6 +21,10 @@
 //   the fresh menu (its links carry the new state, so ticking two services quickly keeps both).
 // - <a data-view-replace>: a page switch that still loads its page but replaces this history entry
 //   (location.replace) instead of adding one (Ratings' Movies / TV / To rate switch).
+// - Fork (2026-11-24): a GET <form> inside a [data-view-links] group of a region, to the same path (the search page's type
+//   select and "Type a year"), applies the same way: its non-empty fields make the URL. A submit another script
+//   cancelled (preventDefault, e.g. a year that isn't one) is left alone. Focus goes back to the form's menu trigger,
+//   else the group's select or first link.
 // Without JS, on a modified click (new tab), or if anything fails, the link loads its page as before.
 (() => {
     if (window.__ratelogViewSwap) return;
@@ -60,7 +64,7 @@
         if (!group) return null;
         if (group.matches('a[href]')) return group;
         const active = [...group.querySelectorAll('a.active, a[aria-current="page"], a[aria-current="true"]')].find(visible);
-        return active || [...group.querySelectorAll('a[href], summary')].find(visible) || null;
+        return active || [...group.querySelectorAll('a[href], summary, select')].find(visible) || null;
     }
 
     // Re-open a keep-open menu on the fresh region; true when focus has been placed.
@@ -200,6 +204,29 @@
         const menu = link.closest('details[data-menu]') || link.closest('details');
         if (menu && !key.reopen) menu.open = false;
         // The view already shown (a menu's active entry): nothing to load.
+        if (url.pathname + url.search === window.location.pathname + window.location.search) return;
+        queued = [];
+        show(region, url.pathname + url.search, key);
+    });
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
+        if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
+        const region = form.closest('[data-view][id]');
+        const group = form.closest('[data-view-links]');
+        if (!region || !group) return;
+        const url = new URL(form.getAttribute('action') || window.location.href, window.location.href);
+        if (url.origin !== window.location.origin || url.pathname !== window.location.pathname) return;
+        const params = new URLSearchParams();
+        new FormData(form).forEach((value, name) => {
+            if (typeof value === 'string' && value.trim() !== '') params.append(name, value.trim());
+        });
+        url.search = params.toString();
+        event.preventDefault();
+        const menu = form.closest('details[data-menu]');
+        const key = menu ? { menu: menu.dataset.menu } : { group: group.dataset.viewLinks || '' };
+        if (menu) menu.open = false;
         if (url.pathname + url.search === window.location.pathname + window.location.search) return;
         queued = [];
         show(region, url.pathname + url.search, key);

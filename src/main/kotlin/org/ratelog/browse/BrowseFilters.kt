@@ -134,12 +134,7 @@ data class BrowseFilters(
     val isUnfiltered: Boolean get() = this == BrowseFilters(type = type, hideSeen = hideSeen)
 
     /** The decade the year menu should highlight: the explicit one, or the chosen year's. */
-    val effectiveDecade: BrowseDecade?
-        get() = when (val y = year) {
-            is BrowseYear.Of -> decade ?: decadeOf(y.year)
-            BrowseYear.Upcoming -> null
-            null -> decade
-        }
+    val effectiveDecade: BrowseDecade? get() = effectiveDecade(decade, year)
 
     /** Switch between movies and TV, keeping what still applies (genres map to the other type's nearest genre). */
     fun withType(newType: MediaType): BrowseFilters {
@@ -207,6 +202,13 @@ data class BrowseFilters(
         }
 
         fun decadeOf(year: Int): BrowseDecade.Of = BrowseDecade.Of(Math.floorDiv(year, 10) * 10)
+
+        /** The explicit decade, or the chosen year's; none for "upcoming". Fork: also the search Year menu's highlight. */
+        fun effectiveDecade(decade: BrowseDecade?, year: BrowseYear?): BrowseDecade? = when (year) {
+            is BrowseYear.Of -> decade ?: decadeOf(year.year)
+            BrowseYear.Upcoming -> null
+            null -> decade
+        }
 
         /** "7" for whole numbers, "7.5" otherwise. */
         fun formatRating(value: Double): String =
