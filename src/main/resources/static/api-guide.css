@@ -26,6 +26,15 @@
   resize: vertical;
 }
 
+/* Phones: long lines wrap inside the box (sideways scrolling a text box with a thumb is fiddly). */
+@media (max-width: 600px) {
+  .api-guide-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.8rem;
+  }
+}
+
 .api-guide-actions {
   flex-wrap: wrap;
   margin-top: 12px;
@@ -41,11 +50,6 @@
     font-weight: 700;
     text-decoration: none;
   }
-}
-
-.api-guide-status {
-  color: var(--success-text);
-  font-size: 0.9rem;
 }
 
 .api-guide-warning {

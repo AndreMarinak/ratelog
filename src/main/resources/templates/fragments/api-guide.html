@@ -11,7 +11,7 @@
                 th:text="#{api.token.copy}">Copy</button>
         <a class="btn api-guide-download" href="/settings/api/guide.md" download="ratelog-api-guide.md"
            th:href="@{/settings/api/guide.md}" th:text="#{api.guide.download}">Download (.md)</a>
-        <span class="api-guide-status" id="apiGuideStatus" role="status" aria-live="polite" hidden></span>
+        <span class="visually-hidden" id="apiGuideStatus" role="status" aria-live="polite"></span>
     </div>
     <p class="warning-text api-guide-warning">
         <i data-lucide="alert-triangle"></i>

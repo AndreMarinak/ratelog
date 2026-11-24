@@ -9,11 +9,11 @@
 
     const confirm = () => {
         button.textContent = button.dataset.copied || 'Copied';
-        if (status) { status.textContent = button.dataset.copied || 'Copied'; status.hidden = false; }
+        if (status) status.textContent = button.dataset.copied || 'Copied'; // read out; the button shows it
         clearTimeout(timer);
         timer = setTimeout(() => {
             button.textContent = label;
-            if (status) status.hidden = true;
+            if (status) status.textContent = '';
         }, 2000);
     };
 
