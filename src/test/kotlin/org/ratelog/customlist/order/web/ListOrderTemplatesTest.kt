@@ -89,10 +89,10 @@ class ListOrderTemplatesTest {
     private fun editor(view: ListOrderView?, extra: Map<String, Any?> = emptyMap()) =
         render("fragments/list-order", "editor", mapOf("order" to view, "items" to items, "_csrf" to csrf) + extra)
 
-    // --- Toolbar: Sort menu + Edit order ---
+    // --- Toolbar: Sort menu (Edit order is an item of the header's "⋯" menu since 2026-11-23, see ListHeaderTemplatesTest) ---
 
     @Test
-    fun `the toolbar has every sort option as a plain link, and Edit order for the owner`() {
+    fun `the toolbar has every sort option as a plain link`() {
         val html = toolbar(view(show = "unseen", sort = ListSort.NEWEST))
 
         listOf(
@@ -105,13 +105,13 @@ class ListOrderTemplatesTest {
         assertEquals(1, Regex("""aria-current="true"""").findAll(html).count())
         assertTrue(Regex("""<span class="list-sort-value">Newest release</span>""").containsMatchIn(html), "the button shows the current sort")
         assertTrue(html.contains("is-sorted"))
-        assertTrue(html.contains("""href="/list/7?reorder=1""""))
-        assertTrue(html.contains(">Edit order<"))
+        assertFalse(html.contains("reorder=1"), "Edit order moved to the header menu")
         assertFalse(html.contains("??"), "every message key resolves")
+        assertTrue(render("fragments/list-order", "sort", mapOf("order" to view())).contains("data-list-sort"), "the Sort menu alone")
     }
 
     @Test
-    fun `no Edit order for anyone else, no toolbar while reordering or for one title`() {
+    fun `no toolbar while reordering or for one title`() {
         val visitor = toolbar(view(isOwner = false))
         assertTrue(visitor.contains("list-sort"))
         assertFalse(visitor.contains("reorder=1"))

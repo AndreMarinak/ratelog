@@ -86,7 +86,7 @@ List detail responses (`GET`, `PATCH` and the `list` in `POST /api/v1/lists`) sa
   (before list order it was the stored sort key, which could have gaps after removals).
 - To put the unseen ones on your watchlist from the API, pick the items with `status == null && !seen` and send them to
   `POST /api/v1/statuses` with `"status": "want_to_watch"`. Filter first: that endpoint **replaces** an existing status.
-  The list page's "Add the N unseen to my watchlist" button applies the same filter and never changes an existing status.
+  The list page's "Add N unseen to watchlist" (in its "⋯" menu) applies the same filter and never changes an existing status.
 
 ### Official lists
 

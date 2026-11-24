@@ -43,7 +43,7 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
 - **Confirmation before destructive one-click actions** (remove from list, remove tag, revoke token) uses a `data-confirm` attribute + native `confirm()` (`static/confirm.js`): works inside modals and without extra UI code.
 - **List progress is always the viewer's own**, on their lists and on other people's public lists. "Seen" = rated (a show: at least one rated season, the same rule as Browse's hide-rated filter) or status Watched; Watching, Want to watch and Dropped are not seen. Marks are read with one query per media type in the list (`ListProgressDAO`), and the `/lists` cards' "9/25 seen" with one query for the whole page. Added to the upstream list page with a `@ControllerAdvice` (`ListProgressModelAdvice`) and template include lines; the upstream list controller and handler are untouched.
 - **List filters are plain links** (`/list/{id}?show=unseen` / `?show=seen`, unknown values = All) so they work without JS and can be shared (with JS they switch in place and replace the URL, see "One Back leaves the page"). Ranks are places in the whole list (by position, then id), computed before filtering, so a filtered view never renumbers and removed titles leave no gaps.
-- **"Add the N unseen to my watchlist" never touches an existing status.** N counts unseen titles with **no status** (so the button disappears once there's nothing left to add, and Watching/Dropped titles aren't "added"). The write is a single `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, so even a status set a moment earlier wins; rated titles without a status are skipped. Earlier ranks get later timestamps, so the watchlist (newest first) lists them in the list's order. Asks first (`data-confirm`), flashes the count, and returns to the same tab.
+- **"Add the N unseen to my watchlist" never touches an existing status.** N counts unseen titles with **no status** (so the button disappears once there's nothing left to add, and Watching/Dropped titles aren't "added"). The write is a single `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, so even a status set a moment earlier wins; rated titles without a status are skipped. Earlier ranks get later timestamps, so the watchlist (newest first) lists them in the list's order. Asks first (`data-confirm`), flashes the count, and returns to the same tab. Since the compact header (2026-11-23) it is "Add N unseen to watchlist" in the list's "⋯" menu and saves in place (toast with the count); without JS it still posts and comes back to the tab.
 
 - **Official lists live in their own table** (`official_lists(list_id PK -> custom_lists ON DELETE CASCADE, created_at_epoch_ms)`, `V1120`)
   instead of a column on upstream's `custom_lists`, so upstream's entity, DAO and migrations stay untouched. Deleting a list deletes its mark.
@@ -78,7 +78,8 @@ Why this fork is built the way it is. Newest decisions go at the bottom of each 
   row. The same row shows on the Movies and TV landings (lists mix both) and never on the filtered grid. It needs no TMDB, so it
   still shows when every TMDB row failed. The model value is a Thymeleaf `LazyContextVariable`, loaded only when the landing renders
   the row, so the grid, "Load more" fragments and the many `/discover/row` fetches run no extra queries.
-- **One include per template**: `lists.html` (the row), `list-detail.html` (badge + admin switch under the title) and
+- **One include per template**: `lists.html` (the row), `list-detail.html` (badge + admin switch under the title; since the
+  compact header of 2026-11-23 the badge sits on the meta line and the switch is a "⋯" menu item, both from `fragments/list-header.html`) and
   `fragments/discover-rows.html` (after the first row). The switch posts a CSRF form, asks first (`data-confirm`: since 2026-11-23
   it says whether every account will see the list or it stays hidden) and redirects back with a flash message.
 - **Seen / Watchlist instead of four statuses** (user, 2026-11-23: "what's the point of want to watch / watching / watched / dropped when I have lists and ratings?"). The UI is Letterboxd-simple; the data model and `/api/v1/statuses` are unchanged (one status per title, plus the rating). **Seen** = status Watched, or rated; **Watchlist** = Want to watch. Watching / Dropped only show for TV (a small control), plus a "Marked Dropped · Clear" chip on a movie that still has one from before.
@@ -163,7 +164,7 @@ series maybe those as well but also other ones?" Code: `org.ratelog.recommendati
   ordered w numbers, should be optional"). The create-list modal's "Numbered list" box starts unticked, and a list made from the
   add-to-list sheet's "New list" is saved plain. The API keeps `numbered: true` as its default, since Claude's imports are rankings
   and watch orders. Existing lists keep their setting (no row = numbered); the owner switches any list in Edit list.
-- **Reorder mode is a mode of the list page** (`/list/{id}?reorder=1`, the "Edit order" button, owner only, lists of 2+ titles),
+- **Reorder mode is a mode of the list page** (`/list/{id}?reorder=1`, "Edit order" in the "⋯" menu since 2026-11-23, owner only, lists of 2+ titles),
   like tick-off mode's `?mark=1`: it gets its own URL and a fixed bottom bar with "Done". It swaps the poster grid for the **whole
   list in list order as thin rows**, per the user's follow-up the same day (*"make sure is able to be edited to drag thin titles up
   or down with their icons as well, something easy to reorder"*): grip, the rank (an editable number field: "move to #"), a
@@ -625,6 +626,40 @@ button bc its not very clear, and the unfollow button or button to show alr foll
   came from (`back` field, same-site paths only via `BackPath`); errors are flashed and shown on Community too.
 - **User search is case-insensitive** and a typed `_` matches only `_` (it was a LIKE wildcard): see bugs-and-issues.md.
 
+### Compact list header (2026-11-23)
+
+User, 2026-11-23, with a desktop screenshot of a list page: *"Also when viewing lists, there's a lot here and it takes up a lot
+of space and looks messy/unorganized w all the buttons"*. The top of `/list/{id}` had grown to five stacked rows: back link;
+title with Public, pencil and trash far right; "Make official" (admins); "You've seen 3 of 13" + bar; the tabs, "Mark what you've
+seen" in the middle and a big orange "Add the 10 unseen to my watchlist" on the right; then Sort left and "Edit order" right.
+Actions sat left, centre and right with no grouping.
+
+- **Three parts, in reading order.** (1) Title row: the name and one **"⋯" List actions** button (40px, outlined like Sort).
+  (2) A small **meta line**: Official badge, Public pill, "You've seen 3 of 14" and a 120px bar (88px on phones). (3) **One
+  toolbar row**: All / Not seen / Seen, Sort, and "Mark what you've seen" pushed right. Everything else is in the menu.
+- **What goes in the menu, in this order:** Add N unseen to watchlist, Edit order, Edit list, Make / Remove official (admins),
+  then Delete list, set apart by a rule and in the danger colour. These are occasional, list-level actions; browsing (tabs,
+  Sort) and the one frequent action (tick-off, which the user asked for the same day) stay one tap away. The menu only shows when
+  it has something in it: other people see it only while there are titles to add; signed-out visitors can't open lists at all.
+- **"Add N unseen to watchlist", not a big orange button.** Shorter label, a menu item, and it now **saves in place** like
+  "All seen" (`data-inplace="#listRegion"`, toast "Added 11 titles to your watchlist."), so the menu's count and every badge
+  refresh. The confirmation and the server rules are unchanged.
+- **Phones (≤600px):** title row, meta line, then two control rows: the three tabs (40px tall, full width) and Sort + "Mark seen"
+  (short label; the title keeps the long one). At ≤420px Sort drops the word "Sort" and keeps the arrows icon and the current
+  order. No horizontal overflow at 360px; the menu panel is right-aligned under "⋯" and fits.
+- **Measured** (top of "← Lists" to the first poster, 14-title list, admin owner): 1440px **301 → 169px** (4 → 2 rows of
+  controls); 390px and 360px **483 → 227px** (6 → 3 bands, counting the "⋯" on the title row). Someone else's official list:
+  1440px 288 → 169px, phones 430 → 250px (the meta line wraps once at 360px).
+- **Modes keep working the same way.** Tick-off: the toolbar keeps the tabs and Sort, "Mark seen" gives way to the bottom bar
+  (All seen / Done). Reorder: the toolbar and the progress text hide; the menu keeps Edit list, the official switch and Delete.
+  An empty list still has its menu (Edit / Delete). `list-filter.js` swaps all of `#listRegion`, so the header and its menu
+  re-render with every tab or Sort change (the add form keeps `show=`).
+- **No-JS:** the menu is a `<details>`, its items plain forms and links; Edit / Delete open modals, which need JS as before.
+  `list-header.js` only closes the menu on an outside click, Escape (focus back on "⋯") or once an item is chosen.
+- Code: `fragments/list-header.html` (new), `list-header.css`, `list-header.js`; the Sort menu became its own fragment
+  (`list-order :: sort`), the official badge and switch two (`official-lists :: listHeader` / `toggle`), and the progress line
+  `list-progress :: line` (`list-tick.js` finds the bar by `data-list-progress-bar`).
+
 ## When the page reloads (audit 2026-11-23)
 
 Rule: **small actions that change one thing on the page save in place** (no reload, no scroll jump, a toast confirms);
@@ -674,7 +709,8 @@ Plain form posts still redirect back with a flash message, so both paths share o
 | Poster "⋯" chooser on touch screens: Watchlist, Seen, Rate, Add to list | — | in place: opening it is local (no request); each row saves exactly like the poster button it stands for (toast, every copy updates); Rate and Add to list open the same picker / sheet; a show's Rate seasons is a **page load** (its seasons) |
 | To rate view: rate a title | — | in place: the tile leaves, counts drop |
 | Watchlist poster ★ | — | in place: the tile leaves To watch (rating marks it seen), tab counts move |
-| Bulk "add unseen to watchlist" on a list | reload | **reload kept**: every badge changes; keeps the current tab |
+| Bulk "add unseen to watchlist" on a list | reload | in place since the compact header (2026-11-23, `data-inplace="#listRegion"`): the whole list region refreshes like "All seen", toast with the count; was "reload kept" |
+| List "⋯" menu: Edit list / Delete list / Make or Remove official | — | Edit / Delete open their modals (Save and Delete load a page, as before); the official switch saves in place (it already did) |
 | Discover bar filters, chips ✕, Clear all, hide-seen switch, sort, Movies / TV | page load | in place, **URL replaced** (`view-swap.js`, 2026-11-23; was a page load): the whole view is swapped from the new URL |
 | Watchlist tabs and Movies / TV filter | page load | in place, **URL replaced** (`view-swap.js`, 2026-11-23) |
 | Ratings Movies / TV / To rate switch | page load | **page load kept** (a different page), but it **replaces the entry** (`data-view-replace`, 2026-11-23) |

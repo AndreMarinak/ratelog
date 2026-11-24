@@ -79,40 +79,27 @@ class ListProgressTemplatesTest {
     )
 
     @Test
-    fun `summary shows the progress line, bar, tabs and the bulk form`() {
-        val html = summary(progress.toView(ListFilter.UNSEEN))
+    fun `the line shows the progress and the bar, the summary the tabs (the bulk form is in the header menu)`() {
+        val view = progress.toView(ListFilter.UNSEEN)
+        val line = render("fragments/list-progress", "line", mapOf("progress" to view))
 
-        assertTrue(html.contains("You&#39;ve seen 1 of 5") || html.contains("You've seen 1 of 5"), html)
-        assertTrue(html.contains("""aria-valuenow="1""""))
-        assertTrue(html.contains("""aria-valuemax="5""""))
-        assertTrue(html.contains("width: 20%"))
+        assertTrue(line.contains("You&#39;ve seen 1 of 5") || line.contains("You've seen 1 of 5"), line)
+        assertTrue(line.contains("""aria-valuenow="1""""))
+        assertTrue(line.contains("""aria-valuemax="5""""))
+        assertTrue(line.contains("width: 20%"))
+        assertTrue(line.contains("data-list-progress-bar"), "list-tick.js finds the bar outside the section")
+
+        val html = summary(view)
         assertTrue(html.contains("""href="/list/7""""))
         assertTrue(html.contains("""href="/list/7?show=unseen""""))
         assertTrue(html.contains("""href="/list/7?show=seen""""))
         assertEquals(1, Regex("""aria-current="page"""").findAll(html).count())
         assertTrue(Regex("""<a href="/list/7\?show=unseen" class="status-segment active"""").containsMatchIn(html), "Not seen is active")
         listOf(">All<", ">Not seen<", ">Seen<").forEach { assertTrue(html.contains(it), it) }
-
-        assertTrue(html.contains("""action="/list/7/watchlist-unseen""""))
-        assertTrue(html.contains("""method="post""""))
-        assertTrue(html.contains("""name="_csrf" value="tok123""""))
-        assertTrue(html.contains("""name="show" value="unseen""""), "the redirect keeps the tab")
-        assertTrue(html.contains("Add the 2 unseen to my watchlist"), "2 unseen without a status (Watching and Dropped are left alone)")
-        val confirm = Regex("""data-confirm="([^"]*)"""").find(html)!!.groupValues[1]
-        assertTrue(confirm.startsWith("Add 2 titles from &quot;Best Disney Movies&quot; to your watchlist?"), confirm)
-        assertTrue(confirm.contains("you&#39;re watching") || confirm.contains("you're watching"), confirm)
+        // The bulk "add unseen" form moved to the "⋯" menu (ListHeaderTemplatesTest).
+        assertFalse(html.contains("watchlist-unseen"))
         assertFalse(html.contains("??"), "every message key resolves")
-    }
-
-    @Test
-    fun `one addable title reads naturally and All sends no show field`() {
-        val one = ListProgress(CustomList.Id(7), User.Id(1), listOf(entry(1, null, null, seen = false)))
-
-        val html = summary(one.toView(ListFilter.ALL))
-
-        assertTrue(html.contains("Add the 1 unseen to my watchlist"))
-        assertTrue(html.contains("Add 1 title from"))
-        assertFalse(html.contains("""name="show""""))
+        assertFalse(render("fragments/list-progress", "line", mapOf("progress" to null)).contains("list-progress-line"))
     }
 
     @Test

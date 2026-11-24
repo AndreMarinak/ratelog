@@ -11,7 +11,8 @@
   display: none;
 }
 
-/* --- Toolbar: Sort menu (left) and "Edit order" (right) --- */
+/* --- Sort menu: in the progress toolbar beside the tabs, or on its own row (.list-order-toolbar) when there are no
+   tabs. "Edit order" is an item of the "⋯" List actions menu since the compact header (list-header.css). --- */
 .list-order-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -31,7 +32,7 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  height: 38px;
+  height: 40px;
   padding: 0 12px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
@@ -73,6 +74,7 @@
 }
 
 .list-sort-value {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text);
@@ -158,15 +160,14 @@
   font-size: 0.9rem;
 }
 
-.list-order-start {
-  gap: 8px;
-  padding: 9px 14px;
-  font-size: 1rem;
+/* Narrow phones: the arrows icon says "Sort", so the word goes and the current order stays. */
+@media (max-width: 420px) {
+  .list-sort-label {
+    display: none;
+  }
 
-  svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
+  .list-sort-value::before {
+    display: none;
   }
 }
 

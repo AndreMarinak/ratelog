@@ -1,0 +1,199 @@
+/* Compact list header on /list/{id} (fork, 2026-11-23): the title with one "⋯" List actions menu, and a meta line
+   (Official, Public, "You've seen 3 of 14" + slim bar). Markup in templates/fragments/list-header.html, menu
+   behaviour in list-header.js. The toolbar row under it (tabs, Sort, Mark seen) is styled in list-progress.css. */
+
+.list-head {
+  margin: 0 0 14px;
+}
+
+.list-head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* texts.css makes h1 an inline-flex with 16px margins; here it is a plain block that wraps long names. */
+h1.list-head-title {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 2.3rem;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+/* --- "⋯" List actions menu (a <details>, so it opens without JS) --- */
+.list-actions {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-soft);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: "";
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.list-actions[open] > .list-actions-trigger {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.list-actions-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  min-width: 230px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.list-actions-panel form {
+  margin: 0;
+}
+
+button.list-actions-item,
+a.list-actions-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px 8px 10px;
+  border-radius: 8px;
+  color: var(--text-soft);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-muted);
+    color: var(--text);
+    outline: none;
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  /* Delete: last, set apart, in the danger colour. */
+  &.is-danger {
+    position: relative;
+    margin-top: 5px;
+    color: var(--danger);
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: -4px;
+      left: 6px;
+      right: 6px;
+      height: 1px;
+      background: var(--border-strong);
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: #e39090;
+    }
+  }
+}
+
+/* --- Meta line: Official, Public, progress --- */
+.list-head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+
+  /* The official badge's wrapper only groups the badge and the "Only you can see it" hint. */
+  .list-official-bar {
+    display: contents;
+  }
+
+  .list-official-badge {
+    padding: 2px 10px 2px 8px;
+    font-size: 0.9rem;
+  }
+}
+
+.list-head-tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--tag-bg);
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Reorder mode is about the order only (list-order.css hides the toolbar the same way). */
+.is-reordering .list-head-meta .list-progress-line {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .list-head {
+    margin-bottom: 12px;
+  }
+
+  h1.list-head-title {
+    font-size: 1.9rem;
+  }
+}

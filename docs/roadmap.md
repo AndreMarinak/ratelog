@@ -108,6 +108,11 @@ accounts and roles `V1130–1139`.
   rest a poster only shows the Seen eye (when seen) and "★ 8.5" (when rated), small, bottom right. Phones and tablets get one
   "⋯" button per poster that opens a chooser (Watchlist, Seen, Rate, Add to list; a bottom sheet on phones); with a mouse the
   four quick buttons appear on hover / keyboard focus. The Seen green is a quiet sage everywhere. No server change.
+- [x] **27. Compact list header** (requested 2026-11-23, "there's a lot here and it takes up a lot of space and looks
+  messy/unorganized w all the buttons"): the list page's title gets one "⋯" List actions menu (Add N unseen to watchlist, Edit
+  order, Edit list, Make / Remove official, Delete list), a small meta line (Official, Public, "You've seen 3 of 14" + slim bar),
+  and one toolbar row (All / Not seen / Seen, Sort, Mark what you've seen). Header 301 → 169px at 1440, 483 → 227px on phones.
+  The bulk watchlist add now saves in place with a toast. No migration, no server change.
 - Railway deploy (`railway.toml`, `docs/deploy-railway.md`), `ADMIN_PASSWORD` bootstrap, `TMDB_API_KEY` env var always wins, readable TMDB error page, https redirects behind the proxy.
 - Removed upstream's Buy Me a Coffee button/script; AGPL source link points to this fork; brighter home posters.
 - Sharper images everywhere (size-matched TMDB images + 2x `srcset`); Home is the leftmost tab on the phone's bottom bar.

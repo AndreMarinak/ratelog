@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="/list-progress.css">
 <link rel="stylesheet" href="/tile-actions.css">
 <link rel="stylesheet" href="/list-order.css">
+<link rel="stylesheet" href="/list-header.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='lists')}"></header>
@@ -16,24 +17,12 @@
     <th:block th:replace="~{fragments/list-progress :: top(${listBack})}"></th:block>
 
     <div th:if="${list != null}" id="listRegion" th:classappend="${listOrder?.regionClass}">
-        <div class="flex separate gap-lg centered">
-            <div class="flex-1" style="min-width: 0;">
-                <h1 style="word-wrap: break-word; overflow-wrap: break-word;" th:text="${list.name}">List Name</h1>
-                <th:block th:replace="~{fragments/official-lists :: listHeader(${listOfficial}, ${list.name})}"></th:block>
-            </div>
-            <span th:if="${list.isPublic}" class="tag" th:text="#{list.public}">Public</span>
-            <div th:if="${isOwner}" class="flex gap">
-                <button type="button" data-open-modal="editModal" th:aria-label="#{list.edit}">
-                    <i data-lucide="pencil"></i>
-                </button>
-                <button type="button" data-open-modal="deleteListModal" th:aria-label="#{list.delete}">
-                    <i data-lucide="trash"></i>
-                </button>
-            </div>
-        </div>
-
-        <th:block th:replace="~{fragments/list-progress :: summary(${listProgress}, ${list.name})}"></th:block>
-        <th:block th:replace="~{fragments/list-order :: toolbar(${listOrder})}"></th:block>
+        <!--/* Fork: compact header (title, "⋯" List actions menu, meta line) and one toolbar row (tabs, Sort, Mark what you've seen). */-->
+        <th:block th:replace="~{fragments/list-header :: head(${list}, ${isOwner}, ${listProgress}, ${listOrder}, ${listOfficial})}"></th:block>
+        <th:block th:replace="~{fragments/list-progress :: summary(${listProgress}, ${list.name}, ${listOrder})}"></th:block>
+        <th:block th:if="${listProgress == null or listProgress.total == 0}">
+            <th:block th:replace="~{fragments/list-order :: toolbar(${listOrder})}"></th:block>
+        </th:block>
 
         <div th:text="#{list.empty}" th:if="${#lists.isEmpty(list.items)}" class="empty-state"></div>
 
@@ -83,5 +72,6 @@
     <th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
     <script src="/list-tick.js" defer></script>
     <script src="/list-order.js" defer></script>
+    <script src="/list-header.js" defer></script>
 </body>
 </html>

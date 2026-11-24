@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: the compact header of /list/{id} (user report 2026-11-23: "there's a lot here and it takes up a lot of space and
+  looks messy/unorganized w all the buttons"). Styles in list-header.css, menu behaviour in list-header.js.
+
+    Title row:  the list name, and one "⋯" List actions menu (only when it has something in it).
+    Meta line:  Official badge, Public, and "You've seen 3 of 14" with a slim bar (fragments/list-progress :: line).
+
+  The All / Not seen / Seen tabs, Sort and "Mark what you've seen" share one toolbar row under it
+  (fragments/list-progress :: summary). Everything sits inside #listRegion, so the in-place tab / sort switch
+  (list-filter.js) and in-place saves (inplace.js, data-inplace="#listRegion") re-render the menu with the right counts.
+
+  Menu items, in order: Add the unseen to the watchlist (anyone with titles to add), Edit order (owner, 2+ titles),
+  Edit list (owner), Make / Remove official (admins), Delete list (owner). Reorder mode keeps only Edit, official and
+  Delete. The menu is a <details>, so it opens without JS; every item is a plain form or link (Edit / Delete open
+  their modals, as before).
+
+    <th:block th:replace="~{fragments/list-header :: head(${list}, ${isOwner}, ${listProgress}, ${listOrder}, ${listOfficial})}"></th:block>
+*/-->
+<th:block th:fragment="head(list, isOwner, progress, order, official)">
+<header class="list-head"
+        th:with="reordering=${order != null and order.reordering},
+                 canAdd=${progress != null and progress.addableCount > 0 and !reordering},
+                 canReorder=${isOwner == true and order != null and order.canReorder and !reordering},
+                 canToggle=${official != null and official.canToggle},
+                 hasProgress=${progress != null and progress.total > 0}">
+    <div class="list-head-row">
+        <h1 class="list-head-title" th:text="${list.name}">List Name</h1>
+
+        <details th:if="${canAdd or canReorder or canToggle or isOwner == true}" class="list-actions" data-list-actions>
+            <summary class="list-actions-trigger" th:title="#{list.actions}" th:aria-label="#{list.actions}">
+                <i data-lucide="ellipsis" aria-hidden="true">&#8943;</i>
+            </summary>
+            <div class="list-actions-panel">
+                <form th:if="${canAdd}" class="list-actions-form" method="post"
+                      th:action="${progress.addHref}" data-inplace="#listRegion"
+                      th:data-confirm="#{list.progress.add.confirm(${progress.addableCount}, ${list.name})}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input th:if="${progress.filterParam != null}" type="hidden" name="show" th:value="${progress.filterParam}" />
+                    <button type="submit" class="list-actions-item">
+                        <i data-lucide="bookmark-plus" aria-hidden="true"></i>
+                        <span th:text="#{list.header.add(${progress.addableCount})}">Add 11 unseen to watchlist</span>
+                    </button>
+                </form>
+                <a th:if="${canReorder}" class="list-actions-item list-order-start" th:href="${order.reorderHref}">
+                    <i data-lucide="arrow-up-down" aria-hidden="true"></i>
+                    <span th:text="#{list.order.edit}">Edit order</span>
+                </a>
+                <button th:if="${isOwner == true}" type="button" class="list-actions-item" data-open-modal="editModal">
+                    <i data-lucide="pencil" aria-hidden="true"></i>
+                    <span th:text="#{list.header.edit}">Edit list</span>
+                </button>
+                <th:block th:if="${canToggle}">
+                    <form th:replace="~{fragments/official-lists :: toggle(${official}, ${list.name}, 'list-actions-item')}"></form>
+                </th:block>
+                <button th:if="${isOwner == true}" type="button" class="list-actions-item is-danger" data-open-modal="deleteListModal">
+                    <i data-lucide="trash-2" aria-hidden="true"></i>
+                    <span th:text="#{list.header.delete}">Delete list</span>
+                </button>
+            </div>
+        </details>
+    </div>
+
+    <div th:if="${list.isPublic or hasProgress or (official != null and official.official)}" class="list-head-meta">
+        <th:block th:replace="~{fragments/official-lists :: listHeader(${official}, ${list.name})}"></th:block>
+        <span th:if="${list.isPublic}" class="list-head-tag" th:text="#{list.public}">Public</span>
+        <th:block th:if="${hasProgress}">
+            <th:block th:replace="~{fragments/list-progress :: line(${progress})}"></th:block>
+        </th:block>
+    </div>
+</header>
+</th:block>
+</body>
+</html>
