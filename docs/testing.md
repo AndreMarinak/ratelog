@@ -87,8 +87,11 @@ does not create yet.
 Updated for master `7addbcf` (2026-11-23): poster actions go through `t.tileAct()` (the "⋯" chooser on touch, hover + click
 with a mouse), the official toggle is used from the list's "⋯" List actions menu (with its confirm), list tabs replace the URL
 (one Back leaves the list), the watchlist is opened per type (`?type=movie` / `?type=tv`; it opens on Movies), a show rated by
-season links its ★ to the seasons, and TV season deletes save in place. Results of the last verification runs are in the
-commit message that made this change.
+season links its ★ to the seasons, and TV season deletes save in place.
+
+Last verification (2026-11-23, master `7addbcf`, fresh `ratelog_uitests` database on port 8125, desktop / 390 / 360): two
+full runs in a row, both **247/247** (home 58, seen 50, tilerate 54, title 21, recs 25, backnav 39), no retries, nothing
+skipped; each run's cleanup left the account with no ratings, statuses or `uitest` lists (the next run's snapshot read 0).
 
 ## Add a step
 
