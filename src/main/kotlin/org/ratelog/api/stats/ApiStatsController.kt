@@ -38,6 +38,21 @@ data class StatsResponse(
     val generousGenre: StatsGenreDto?,
     val harshestGenre: StatsGenreDto?,
     val top: List<StatsTopDto>,
+    /** Fork (2026-11-24, rewatch log): All time only (empty for a year), most rewatches first, at most 5. */
+    val mostRewatched: List<StatsRewatchedDto> = emptyList(),
+)
+
+/** Fork (2026-11-24): a title by its rewatches; `watchCount` is 1 + `rewatches`. */
+data class StatsRewatchedDto(
+    val tmdbId: Int,
+    val type: String,
+    val title: String,
+    val year: Int?,
+    val posterUrl: String?,
+    val url: String,
+    val rewatches: Int,
+    val watchCount: Int,
+    val lastWatchedAt: String,
 )
 
 data class StatsTotalsDto(
@@ -48,6 +63,10 @@ data class StatsTotalsDto(
     val seasonsRated: Int,
     val ratings: Int,
     val averageScore: Double?,
+    /** Fork (2026-11-24): titles watched in the period (first watches plus titles rewatched in it, each once). */
+    val titles: Int = 0,
+    /** Fork (2026-11-24): rewatches in the period. */
+    val rewatches: Int = 0,
 )
 
 data class StatsHoursDto(
@@ -111,7 +130,7 @@ class ApiStatsController(
             year = s.period.param,
             years = s.years,
             timeZone = result.zone.id,
-            totals = StatsTotalsDto(t.moviesSeen, t.moviesRated, t.showsSeen, t.showsRated, t.seasonsRated, t.ratings, t.averageScore?.round()),
+            totals = StatsTotalsDto(t.moviesSeen, t.moviesRated, t.showsSeen, t.showsRated, t.seasonsRated, t.ratings, t.averageScore?.round(), t.titles, t.rewatches),
             hours = StatsHoursDto(
                 hours = (t.runtimeMinutes / 60.0).round(1),
                 minutes = t.runtimeMinutes,
@@ -128,6 +147,19 @@ class ApiStatsController(
             generousGenre = s.generousGenre?.toDto(),
             harshestGenre = s.harshestGenre?.toDto(),
             top = result.top.map { it.toDto() },
+            mostRewatched = result.mostRewatched.map { r ->
+                StatsRewatchedDto(
+                    tmdbId = r.title.tmdbId,
+                    type = r.title.type.apiName(),
+                    title = r.title.title,
+                    year = r.title.year,
+                    posterUrl = r.title.posterPath?.let(::posterUrl),
+                    url = if (r.title.type == MediaType.movie) "/movie/${r.title.tmdbId}" else "/tv/${r.title.tmdbId}",
+                    rewatches = r.rewatched.rewatches,
+                    watchCount = r.rewatched.watchCount,
+                    lastWatchedAt = Instant.ofEpochMilli(r.rewatched.lastAtMs).toString(),
+                )
+            },
         )
     }
 

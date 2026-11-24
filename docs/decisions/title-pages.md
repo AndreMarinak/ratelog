@@ -183,3 +183,18 @@ recommendations but". Code: `org.ratelog.backnav`, `fragments/back-nav.html`, `s
 - **Phones:** the link is 44px tall to tap, one line, and tucked into the gap under the header (negative margins, layered above the
   title it overlaps by a few pixels), so the title moves down 16px. The action row stays above the fold at 390x844 and 360x740
   (checked on Toy Story 3, Breaking Bad and titles opened from rows).
+
+## Seen's menu and the watch count in the action panel (2026-11-24)
+
+From the rewatch log ([watchlist-and-seen.md](watchlist-and-seen.md#rewatch-log-watched-again-2026-11-24)); the user: *"maybe
+be able to click the same button instead of another one?"* (a first build had a separate "Watched again" chip under the
+toggles).
+
+- **No fifth control.** The four equal toggles stay (Seen · Watchlist · Rate · Add to list; 2x2 on desktop, one row on tablets
+  and phones). On a seen title, Seen opens a menu: a 272px popover under the button on desktop and tablets, a bottom sheet over
+  a dimmed page at 600px and below (the poster chooser's `.tile-menu` styles, `tile-actions.css`; the menu is appended to the
+  body because the panel clips its children). Items: Watched again, then Mark as not seen or the rated note.
+- **The watch count** is one quiet row right under the toggles, "↻ Seen 2× · last Nov 24, 2026" (0.85rem, soft text, the seen
+  green icon), only once there is a rewatch, so most panels look exactly as before. It adds about 36px on desktop and 32px on
+  phones, below the action bar, so the bar stays above the fold at 390x844 and 360x740.
+- **The Seen button's tooltip** says "Seen. Tap to log a rewatch or unmark it." on a seen title.

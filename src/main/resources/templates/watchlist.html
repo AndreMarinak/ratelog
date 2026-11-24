@@ -21,6 +21,7 @@
             <input type="hidden" name="mediaId" th:value="${watchlistNotice.mediaId}" />
             <input type="hidden" name="to" th:value="${watchlistNotice.undoMove}" />
             <input type="hidden" name="undo" value="1" />
+            <input th:if="${watchlistNotice.rewatchId != null}" type="hidden" name="rewatchId" th:value="${watchlistNotice.rewatchId}" />
             <input type="hidden" name="back" th:value="${watchlistSelf}" />
             <button type="submit">
                 <i data-lucide="undo-2" aria-hidden="true"></i>
@@ -84,7 +85,7 @@
                  th:classappend="'slots-' + ${item.slots}" th:style="'--slots: ' + ${item.slots}"
                  th:aria-label="#{watchlist.actions.aria(${item.title})}">
                 <span th:if="${item.noteKey != null}" class="watchlist-note" th:style="'grid-column: span ' + ${item.noteSpan}"
-                      th:classappend="${item.rewatch} ? 'is-rewatch' : ''" th:title="#{${item.noteTitleKey}}">
+                      th:title="#{${item.noteTitleKey}}">
                     <i th:data-lucide="${item.noteIcon}" aria-hidden="true"></i>
                     <span th:text="#{${item.noteKey}(${item.upcomingDate})}">Out Dec 18</span>
                 </span>
@@ -98,7 +99,8 @@
                     <button type="submit" class="watchlist-act" th:classappend="${act.kind}"
                             th:aria-label="#{${act.ariaKey}(${item.title})}" th:title="#{${act.ariaKey}(${item.title})}">
                         <i th:data-lucide="${act.icon}" aria-hidden="true"></i>
-                        <span th:text="#{${act.labelKey}}">Seen</span>
+                        <span class="watchlist-act-label" th:text="#{${act.labelKey}}">Seen</span>
+                        <span th:if="${act.shortLabelKey != null}" class="watchlist-act-short" aria-hidden="true" th:text="#{${act.shortLabelKey}}">Again</span>
                     </button>
                 </form>
             </div>

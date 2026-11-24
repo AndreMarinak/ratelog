@@ -64,7 +64,7 @@ class RewatchTest {
     private val watchlist = SetWatchlistHandler(statuses, movies, shows, reader, clock)
     private val setStatus = WatchlistHandlers.setStatus(statuses, movies, shows, baseRatings, baseTvRatings)
     private val toggleSeen = ToggleSeenHandler(statuses, movies, shows, reader, clock)
-    private val move = MoveWatchlistItemHandler(setStatus, WatchlistHandlers.setWatchlist(statuses, movies, shows, baseRatings, baseTvRatings), statuses)
+    private val move = WatchlistHandlers.move(statuses, movies, shows, baseRatings, baseTvRatings)
     private val getWatchlist = GetWatchlistHandler(
         statuses, movies, InMemoryMovieDescriptionRepository(), baseRatings, shows, InMemoryTvDescriptionRepository(), baseTvRatings,
     )
@@ -285,9 +285,10 @@ class RewatchTest {
         val items = (model["items"] as List<WatchlistItemResponse>).associateBy { it.title }
         val heatCard = items.getValue("Heat")
         assertTrue(heatCard.rewatch)
-        assertEquals(WatchlistController.NOTE_REWATCH, heatCard.noteKey)
-        assertEquals(listOf("unlist"), heatCard.actions.map { it.to }, "already seen: only Remove")
-        assertEquals(2, heatCard.noteSpan)
+        // Fork (2026-11-24, rewatch log): the dead "Rewatch" tag became a Watched again button, then Remove.
+        assertNull(heatCard.noteKey)
+        assertEquals(listOf("rewatched", "unlist"), heatCard.actions.map { it.to }, "already seen: Watched again, Remove")
+        assertEquals(2, heatCard.firstSpan, "Watched again takes Seen's and Watching's slots")
         assertTrue(heatCard.tileActions!!.seen, "the poster keeps its eye")
         assertTrue(heatCard.tileActions!!.onWatchlist)
         assertEquals(listOf("seen", "unlist"), items.getValue("Up").actions.map { it.to })

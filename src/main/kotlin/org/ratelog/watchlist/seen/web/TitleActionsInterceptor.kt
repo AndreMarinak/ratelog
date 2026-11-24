@@ -6,9 +6,12 @@ import org.ratelog.MediaType
 import org.ratelog.movie.Movie
 import org.ratelog.movie.MovieRepository
 import org.ratelog.movie.detail.MovieDetailResponse
+import org.ratelog.rewatch.RewatchRepository
+import org.ratelog.rewatch.RewatchSummary
 import org.ratelog.tvshow.TvShow
 import org.ratelog.tvshow.TvShowRepository
 import org.ratelog.tvshow.detail.TvShowDetailResponse
+import org.ratelog.user.User
 import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.seen.TitleActionsView
 import org.slf4j.LoggerFactory
@@ -21,12 +24,15 @@ import java.time.LocalDate
 /**
  * Adds `titleActions` (a [TitleActionsView]) to the movie and TV detail pages after their controllers ran, so the
  * upstream detail slices stay untouched. It reads the controller's response (id, rating, follow) and `watchStatus`
- * (WatchStatusModelAdvice), plus the stored release date and TMDB status of the title.
+ * (WatchStatusModelAdvice), plus the stored release date and TMDB status of the title. Fork (2026-11-24): and the
+ * signed-in user's rewatch log for it ("Watched again", "Seen 2× · last Nov 24, 2026").
  */
 class TitleActionsInterceptor(
     private val movieRepository: MovieRepository,
     private val tvShowRepository: TvShowRepository,
     private val clock: Clock,
+    private val rewatchRepository: RewatchRepository? = null,
+    private val currentUser: () -> User? = { null },
 ) : HandlerInterceptor {
     private val logger = LoggerFactory.getLogger(TitleActionsInterceptor::class.java)
 
@@ -53,6 +59,8 @@ class TitleActionsInterceptor(
                         today = today,
                         locale = locale,
                         onWatchlist = onWatchlist,
+                        rewatch = rewatches(MediaType.movie, movie.id),
+                        zone = clock.zone,
                     )
                 }
 
@@ -72,6 +80,8 @@ class TitleActionsInterceptor(
                         today = today,
                         locale = locale,
                         onWatchlist = onWatchlist,
+                        rewatch = rewatches(MediaType.tvshow, show.id),
+                        zone = clock.zone,
                     )
                 }
 
@@ -81,5 +91,10 @@ class TitleActionsInterceptor(
         } catch (e: Exception) {
             logger.warn("Title actions unavailable for {}: {}", request.requestURI, e.javaClass.simpleName)
         }
+    }
+
+    private fun rewatches(type: MediaType, mediaId: Long): RewatchSummary {
+        val userId = currentUser()?.id ?: return RewatchSummary.NONE
+        return rewatchRepository?.summary(userId, type, mediaId) ?: RewatchSummary.NONE
     }
 }

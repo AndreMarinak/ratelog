@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.client.HttpClientErrorException
+import org.ratelog.rewatch.RewatchRepository
+import org.ratelog.rewatch.RewatchSummary
+import org.ratelog.watchlist.seen.SeenStateReader
 
 data class TitleDetailDto(
     val tmdbId: Int,
@@ -55,6 +58,12 @@ data class TitleDetailDto(
     val officialLists: List<TitleOfficialListDto> = emptyList(),
     /** Director, writers, cast, age rating, tagline... (fork, 2026-11-24). Null when TMDB extras aren't available yet. */
     val credits: TitleCreditsDto? = null,
+    /** Fork (2026-11-24, rewatch log): seen (rated, or status `watched`; a show by the TV rule). */
+    val seen: Boolean = false,
+    /** Times seen: 1 (the first watch) + rewatches; 0 when not seen. */
+    val watchCount: Int = 0,
+    /** The latest rewatch (ISO instant), null with none. */
+    val lastWatchedAt: String? = null,
 )
 
 /** Same data as the title page's Details and Cast cards. Lists are empty and values null when TMDB doesn't know them. */
@@ -141,6 +150,9 @@ class ApiTitleController(
     private val tvRatingRepository: TvRatingRepository,
     private val listMembershipRepository: ListMembershipRepository,
     private val officialTitleListsRepository: OfficialTitleListsRepository,
+    /** Fork (2026-11-24, rewatch log): `seen`, `watchCount`, `lastWatchedAt`. */
+    private val seenStateReader: SeenStateReader? = null,
+    private val rewatchRepository: RewatchRepository? = null,
 ) {
     /** One title with TMDB extras, external scores (when available) and the caller's own rating. */
     @GetMapping("/{type}/{tmdbId}")
@@ -154,7 +166,14 @@ class ApiTitleController(
             .map { TitleListDto(it.listId.value, it.name, it.rank, "/list/${it.listId.value}") }
         val officialLists = OfficialTitleListsOrder.sort(officialTitleListsRepository.findContaining(user.id, local.type, local.id))
             .map { TitleOfficialListDto(it.listId.value, it.name, it.rank, it.saved, "/list/${it.listId.value}") }
-        return toDto(local, info, userRating(local, user), inLists).copy(officialLists = officialLists)
+        val seen = seenStateReader?.read(user.id, local.type, local.id)?.seen == true
+        val rewatch = if (seen) rewatchRepository?.summary(user.id, local.type, local.id) ?: RewatchSummary.NONE else null
+        return toDto(local, info, userRating(local, user), inLists).copy(
+            officialLists = officialLists,
+            seen = seen,
+            watchCount = rewatch?.watchCount ?: 0,
+            lastWatchedAt = rewatch?.lastAtEpochMs?.let { java.time.Instant.ofEpochMilli(it).toString() },
+        )
     }
 
     private fun toDto(local: LocalMedia, info: TitleInfo?, userRating: UserRatingDto?, inLists: List<TitleListDto>) = TitleDetailDto(

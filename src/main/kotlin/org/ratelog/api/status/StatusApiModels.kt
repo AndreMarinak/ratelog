@@ -5,6 +5,7 @@ import org.ratelog.api.apiName
 import org.ratelog.api.badRequest
 import org.ratelog.api.media.LocalMedia
 import org.ratelog.api.posterUrl
+import org.ratelog.rewatch.RewatchSummary
 import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.getwatchlist.WatchlistItem
 import java.time.Instant
@@ -24,6 +25,10 @@ data class StatusItemDto(
     val onWatchlist: Boolean = false,
     /** Rated, or status `watched` (the poster eye's rule). */
     val seen: Boolean = false,
+    /** Fork (2026-11-24, rewatch log): times seen, 1 (the first watch) + rewatches; 0 when not seen. */
+    val watchCount: Int = 0,
+    /** Fork (2026-11-24): the latest rewatch (ISO instant), null with none (or when not seen). */
+    val lastWatchedAt: String? = null,
 )
 
 data class StatusListResponse(
@@ -88,7 +93,7 @@ fun parseStatus(value: String?): WatchStatus =
         "status must be one of ${WatchStatus.entries.joinToString { "\"${it.apiName}\"" }} (got ${value?.let { "\"$it\"" } ?: "nothing"})",
     )
 
-fun WatchlistItem.toDto() = StatusItemDto(
+fun WatchlistItem.toDto(rewatch: RewatchSummary? = null) = StatusItemDto(
     tmdbId = tmdbId,
     type = mediaType.apiName(),
     title = title,
@@ -99,6 +104,8 @@ fun WatchlistItem.toDto() = StatusItemDto(
     updatedAt = Instant.ofEpochMilli(updatedAtEpochMs).toString(),
     onWatchlist = onWatchlist,
     seen = seen,
+    watchCount = if (seen) (rewatch ?: RewatchSummary.NONE).watchCount else 0,
+    lastWatchedAt = rewatch?.lastAtEpochMs?.takeIf { seen }?.let { Instant.ofEpochMilli(it).toString() },
 )
 
 fun LocalMedia.toStatusChange(status: WatchStatus, previous: WatchStatus?, onWatchlist: Boolean = status == WatchStatus.WANT_TO_WATCH) = StatusChangeDto(

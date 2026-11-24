@@ -76,6 +76,7 @@
                         </button>
                         <button th:replace="~{fragments/add-to-list-modal :: addToListButton(${listMembership})}"></button>
                     </div>
+                    <div th:replace="~{fragments/title-actions :: rewatch(${titleActions})}"></div>
                     <div th:replace="~{fragments/title-actions :: extras(${titleActions})}"></div>
 
                     <div th:replace="~{fragments/tags :: titleTags('tvshow', ${show.id}, ${show.tmdbId})}"></div>

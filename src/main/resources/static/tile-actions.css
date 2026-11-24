@@ -477,6 +477,49 @@ a.tile-rate.is-on {
   }
 }
 
+/* Fork (2026-11-24, rewatch log): a toast with buttons (Watched again's Undo and "Update your rating?"). */
+.tile-toast.has-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  padding: 8px 8px 8px 18px;
+  border-radius: 14px;
+  text-align: left;
+
+  &.visible {
+    pointer-events: auto;
+  }
+
+  .tile-toast-text {
+    min-width: 0;
+    margin-right: auto;
+  }
+}
+
+button.tile-toast-action {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border: 1px solid hsl(var(--_brand-clay) / 0.5);
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  & + & {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+
+  &:hover {
+    background: var(--accent-soft);
+  }
+}
+
 /* In tick-off mode the toast sits above the tick bar. */
 body:has(.list-tick-bar) .tile-toast {
   bottom: 96px;

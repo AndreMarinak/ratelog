@@ -42,6 +42,20 @@ data class StatsView(
     val generous: StatsRow?,
     val harshest: StatsRow?,
     val top: List<StatsTile>,
+    /** Fork (2026-11-24): All time's "Most rewatched" rows (empty for a year). */
+    val mostRewatched: List<StatsRewatchRow> = emptyList(),
+)
+
+/** Fork (2026-11-24, rewatch log): one "Most rewatched" row. */
+data class StatsRewatchRow(
+    val href: String,
+    val title: String,
+    val year: Int?,
+    val posterUrl: String?,
+    val initial: String,
+    val isMovie: Boolean,
+    /** 1 + rewatches: "Seen 4×". */
+    val watchCount: Int,
 )
 
 data class StatsYearLink(val label: String?, val labelKey: String?, val href: String, val active: Boolean, val period: String)
@@ -60,6 +74,9 @@ data class StatsHeadline(
     /** Some movies have no known runtime: say what the hours are based on. */
     val runtimePartial: Boolean,
     val runtimePending: Boolean,
+    /** Fork (2026-11-24): titles watched in the period (first watches plus titles rewatched in it) and rewatches. */
+    val titles: Int = 0,
+    val rewatches: Int = 0,
 )
 
 data class StatsBar(val label: String, val count: Int, val percent: Int)
@@ -186,6 +203,8 @@ class StatsController(
                 runtimeKnown = t.runtimeKnown,
                 runtimePartial = t.runtimeKnown < t.moviesSeen,
                 runtimePending = t.runtimePending > 0,
+                titles = t.titles,
+                rewatches = t.rewatches,
             )
 
             val maxBucket = stats.distribution.maxOfOrNull { it.count } ?: 0
@@ -235,6 +254,17 @@ class StatsController(
                 generous = if (generous != null && harshest != null) generous else null,
                 harshest = if (generous != null && harshest != null) harshest else null,
                 top = result.top.mapIndexed { i, top -> top.toTile(i + 1, today, locale) },
+                mostRewatched = result.mostRewatched.map { r ->
+                    StatsRewatchRow(
+                        href = if (r.title.type == MediaType.movie) "/movie/${r.title.tmdbId}" else "/tv/${r.title.tmdbId}",
+                        title = r.title.title,
+                        year = r.title.year,
+                        posterUrl = r.title.posterPath?.let { "https://image.tmdb.org/t/p/w92$it" },
+                        initial = r.title.title.trim().take(1).uppercase().ifEmpty { "?" },
+                        isMovie = r.title.type == MediaType.movie,
+                        watchCount = r.rewatched.watchCount,
+                    )
+                },
             )
         }
 

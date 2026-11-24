@@ -9,6 +9,8 @@
   In the panel's four toggles (with Rate and Add to list, which stay in the page templates):
     <th:block th:replace="~{fragments/title-actions :: seen(${titleActions})}"></th:block>
     <th:block th:replace="~{fragments/title-actions :: watchlist(${titleActions})}"></th:block>
+  Right under them (fork, 2026-11-24), the watch count once there is a rewatch (logged from Seen's menu):
+    <div th:replace="~{fragments/title-actions :: rewatch(${titleActions})}"></div>
   Under them (movies only), the "Rate it?" nudge shown after Seen:
     <div th:replace="~{fragments/title-actions :: rateNudge(${titleActions})}"></div>
   Then the small extras (Watching / Dropped for shows, the follow bell):
@@ -17,7 +19,12 @@
     <span th:replace="~{fragments/title-actions :: upcoming(${titleActions})}"></span>
 */-->
 
-<!--/* Seen: one tap marks it Watched, a second clears it. A rated movie stays seen (tapping explains). Upcoming: a date tile instead. */-->
+<!--/* Seen: one tap marks it Watched. A rated movie stays seen. Upcoming: a date tile instead.
+       Fork (2026-11-24, rewatch log; user: "maybe be able to click the same button instead of another one?"): on a seen
+       title, tapping "Seen" opens a small menu (title-actions.js; a popover, a bottom sheet at 600px and below) built from
+       the <template> below: "Watched again" (POST /rewatch, saved in place like the follow bell: inplace.js swaps the panel
+       and its toast offers Undo and "Update your rating?"), then "Mark as not seen" (posts this form), or, on a rated
+       movie, a muted "You rated it, so it stays seen". Without JS the button still toggles. */-->
 <th:block th:fragment="seen(a)">
     <form th:if="${a != null and a.canToggleSeen}" action="/seen/toggle" method="post" class="title-action-form" data-title-act="seen">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -27,13 +34,52 @@
         <button type="submit" class="title-action title-toggle title-toggle-seen" data-title-seen
                 th:classappend="(${a.seen} ? 'is-on' : '') + (${a.seenLocked} ? ' is-locked' : '')"
                 th:aria-pressed="${a.seen}"
-                th:title="${a.seenLocked} ? #{title.seen.title.locked} : (${a.seen} ? #{title.seen.title.on} : #{title.seen.title.off})"
-                th:attr="data-label-on=#{title.seen.on},data-label-off=#{title.seen.off},data-title-on=#{title.seen.title.on},data-title-off=#{title.seen.title.off},data-title-locked=#{title.seen.title.locked}">
+                th:aria-haspopup="${a.seen} ? 'menu' : null"
+                th:aria-expanded="${a.seen} ? 'false' : null"
+                th:title="${a.seen} ? #{title.seen.title.menu} : #{title.seen.title.off}"
+                th:attr="data-label-on=#{title.seen.on},data-label-off=#{title.seen.off},data-title-on=#{title.seen.title.menu},data-title-off=#{title.seen.title.off},data-title-locked=#{title.seen.title.menu}">
             <i data-lucide="eye" aria-hidden="true"></i>
             <span class="title-toggle-label" th:text="${a.seen} ? #{title.seen.on} : #{title.seen.off}">Mark seen</span>
             <span class="title-toggle-note" th:hidden="${!a.seenLocked}" th:text="#{title.seen.hint.rated}">Rated</span>
         </button>
     </form>
+    <template th:if="${a != null and a.canToggleSeen}" data-seen-menu>
+        <div class="tile-menu seen-menu" role="menu" th:aria-label="#{title.seen.menu.aria}">
+            <div class="tile-menu-head">
+                <strong class="tile-menu-title" th:text="#{title.seen.on}">Seen</strong>
+                <span th:if="${a.rewatches > 0}" class="tile-menu-status" th:text="#{title.rewatch.count(${a.watchCount}, ${a.lastRewatch})}">Seen 2× · last Nov 24, 2026</span>
+                <button type="button" class="tile-menu-close" data-seen-menu-close th:aria-label="#{tile.menu.close}" th:title="#{tile.menu.close}">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="tile-menu-items">
+                <form action="/rewatch" method="post" class="seen-menu-form" data-seen-rewatch data-inplace=".title-panel">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="tmdbId" th:value="${a.tmdbId}" />
+                    <input type="hidden" name="type" th:value="${a.tileType}" />
+                    <input type="hidden" name="back" th:value="${a.back}" />
+                    <button type="submit" class="tile-menu-item" role="menuitem" data-seen-menu-item>
+                        <span class="tile-menu-icon is-rewatch"><i data-lucide="rotate-cw" aria-hidden="true"></i></span>
+                        <span class="tile-menu-text">
+                            <span class="tile-menu-label" th:text="#{title.seen.menu.rewatch}">Watched again</span>
+                            <span class="tile-menu-hint" th:text="#{title.seen.menu.rewatch.hint}">Logs another watch. Your rating stays.</span>
+                        </span>
+                    </button>
+                </form>
+                <button th:unless="${a.seenLocked}" type="button" class="tile-menu-item" role="menuitem" data-seen-menu-item data-seen-unmark>
+                    <span class="tile-menu-icon"><i data-lucide="eye-off" aria-hidden="true"></i></span>
+                    <span class="tile-menu-text">
+                        <span class="tile-menu-label" th:text="#{title.seen.menu.unmark}">Mark as not seen</span>
+                        <span th:if="${a.isTv and a.rated}" class="tile-menu-hint" th:text="#{title.seen.menu.unmark.watching}">Moves it back to Watching</span>
+                    </span>
+                </button>
+                <p th:if="${a.seenLocked}" class="seen-menu-note">
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <span th:text="#{tile.menu.seen.locked.hint}">You rated it, so it stays seen</span>
+                </p>
+            </div>
+        </div>
+    </template>
     <div th:if="${a != null and !a.canToggleSeen}" class="title-action title-toggle title-toggle-upcoming" th:title="#{title.upcoming.hint}">
         <i data-lucide="calendar-clock" aria-hidden="true"></i>
         <span class="title-toggle-label"
@@ -57,6 +103,34 @@
         <span class="title-toggle-label" th:text="${a.onWatchlist} ? #{title.watchlist.on} : #{title.watchlist.off}">Watchlist</span>
     </button>
 </form>
+
+<!--/* Fork (2026-11-24, rewatch log): the quiet "Seen 2× · last Nov 24, 2026" right under the toggles, once a seen title
+       has a rewatch (title-actions.js hides it while the title is un-seen: the log is kept, not counted). Rewatches are
+       logged from the Seen button's menu. Also where the notice shows after a plain (no-JS) post. */-->
+<div th:fragment="rewatch(a)" th:if="${a != null and a.canRewatch and (a.rewatches > 0 or rewatchNotice != null)}"
+     class="title-rewatch" data-rewatch th:hidden="${!a.seen}">
+    <span th:if="${a.rewatches > 0}" class="title-rewatch-count">
+        <i data-lucide="rotate-cw" aria-hidden="true"></i>
+        <span th:text="#{title.rewatch.count(${a.watchCount}, ${a.lastRewatch})}">Seen 2× · last Nov 24, 2026</span>
+    </span>
+    <div th:replace="~{fragments/title-actions :: rewatchNotice}"></div>
+</div>
+
+<!--/* After "Watched again" / its Undo (flash `rewatchNotice`, LogRewatchController). inplace.js copies the text
+       ([data-toast-text]) and the [data-toast-action] controls into its toast. */-->
+<div th:fragment="rewatchNotice" th:if="${rewatchNotice != null}" class="feedback success rewatch-notice" role="status">
+    <span data-toast-text th:text="#{${rewatchNotice.messageKey}(${rewatchNotice.title})}">Logged a rewatch of Dune.</span>
+    <form th:if="${rewatchNotice.rewatchId != null}" action="/rewatch/delete" method="post" class="rewatch-notice-undo"
+          data-toast-action data-inplace=".title-panel">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="id" th:value="${rewatchNotice.rewatchId}" />
+        <input type="hidden" name="back" th:value="${titleActions != null} ? ${titleActions.back} : ''" />
+        <button type="submit" th:text="#{rewatch.notice.undo}">Undo</button>
+    </form>
+    <a th:if="${rewatchNotice.rateHref != null}" th:href="${rewatchNotice.rateHref}" class="rewatch-notice-rate" data-toast-action
+       data-toast-click=".title-panel [data-open-modal='rateMovieModal'], .title-panel [data-open-modal='rateShowModal'], .title-panel a[href='#seasons']"
+       th:text="#{${rewatchNotice.rateKey}}">Update your rating?</a>
+</div>
 
 <!--/* "Rate it?": movies with no rating, shown by title-actions.js right after Seen (never without JS, never for shows,
        which are rated per season). One tap on a score saves a quick rating through the Rate modal's own POST /movie/rate. */-->

@@ -9,7 +9,7 @@ smart lists `V1060–1069`, stats `V1070–1079`, external scores `V1080–1089`
 lists (official lists and later list features) `V1120–1129` (`V1120` official lists, `V1121` list options),
 accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.show_score`), watchlist entries `V1141`
 (`watchlist_entries`, the watchlist independent of the status), saved lists `V1142` (`saved_lists`), title credits `V1143`
-(`title_extras.credits_json`).
+(`title_extras.credits_json`), rewatch log `V1144–1145` (`V1144` `rewatches`).
 
 ## Build now (in suggested order)
 
@@ -156,6 +156,19 @@ accounts and roles `V1130–1139`, TV whole-show rating `V1140` (`tv_ratings.sho
   request per person. API: `GET /api/v1/people/{id}`, `people=true` on `GET /api/v1/search`
   ([docs/api.md](api.md#people)). No migration. Title-page credits link here when `ratelog.features.people` is on. Details in
   [decisions/people-and-credits.md](decisions/people-and-credits.md#people-person-pages-and-people-in-search-2026-11-24).
+- [x] **37. Rewatch log: "Watched again"** (requested 2026-11-24: the To watch "Rewatch" tag "isn't clickable, maybe if I've
+  seen it already it should be a watched again button?", "how should it work with stats? maybe some ability to mark a movie
+  as rewatched?", and logging must not take "two clicks to add to watchlist then click watched again"). One row per rewatch
+  (`rewatches`, migration `V1144`); the watch count is 1 + rewatches while the title is seen (un-seeing keeps the rows, not
+  counted). On a seen title the Seen button opens a menu (user: "click the same button instead of another one"): Watched
+  again (in place, toast with Undo and "Update your rating?"), then Mark as not seen (or, rated, why it stays seen); "Seen 2×
+  · last Nov 24, 2026" under the toggles. The poster "⋯" chooser does the same on seen titles. The watchlist's dead tag is a
+  Watched again button that also takes the title off the watchlist (Undo). Stats: a rewatch counts in its period ("112 titles
+  · 9 rewatches", hours per rewatch, watches per month, All time's Most rewatched). API: `POST /api/v1/rewatches/{type}/{tmdbId}`,
+  `DELETE /api/v1/rewatches/{id}`, `watchCount` / `lastWatchedAt` on statuses and title details, stats totals
+  ([docs/api.md](api.md#rewatches)). Details in
+  [decisions/watchlist-and-seen.md](decisions/watchlist-and-seen.md#rewatch-log-watched-again-2026-11-24) and
+  [decisions/stats.md](decisions/stats.md#rewatches-in-stats-2026-11-24).
 
 ## Fixes and housekeeping done
 

@@ -45,7 +45,7 @@ class ApiStatsControllerTest {
         assertEquals("2026", r.year)
         assertEquals(listOf(2026, 2025), r.years)
         assertEquals("America/New_York", r.timeZone)
-        assertEquals(StatsTotalsDto(moviesSeen = 2, moviesRated = 1, showsSeen = 1, showsRated = 1, seasonsRated = 0, ratings = 2, averageScore = 8.0), r.totals)
+        assertEquals(StatsTotalsDto(moviesSeen = 2, moviesRated = 1, showsSeen = 1, showsRated = 1, seasonsRated = 0, ratings = 2, averageScore = 8.0, titles = 3, rewatches = 0), r.totals)
         assertEquals(StatsHoursDto(hours = 2.3, minutes = 136, moviesWithRuntime = 1, pending = 1), r.hours)
         assertFalse(r.hours.includesTv)
         assertEquals(10, r.distribution.size)

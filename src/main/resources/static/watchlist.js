@@ -97,13 +97,16 @@
                 run: async (undoButton) => {
                     undoButton.disabled = true;
                     try {
-                        const back = await post({
+                        const undoFields = {
                             [csrf.name]: csrf.value,
                             mediaType: fields.mediaType,
                             mediaId: fields.mediaId,
                             to: result.undoMove,
                             undo: '1',
-                        });
+                        };
+                        // Fork (2026-11-24): the undo of "Watched again" deletes the rewatch it logged.
+                        if (result.rewatchId != null) undoFields.rewatchId = String(result.rewatchId);
+                        const back = await post(undoFields);
                         if (!back.ok) { toast(back.message); return; }
                         item.hidden = false;
                         count(back.previous, -1);

@@ -6,6 +6,10 @@
 //   swapped in from it, so counts, badges and button states stay right without per-feature JS. An empty
 //   data-inplace swaps nothing. The server's flash message (or data-inplace-done) shows as a toast. A form inside
 //   an open modal closes that modal first. After a swap, `inplace:swapped` fires on document.
+//   Fork (2026-11-24, rewatch log): a flash can carry actions. Its [data-toast-text] is the message and every
+//   [data-toast-action] (an Undo form with its own data-inplace, a link) is copied into the toast, which then stays
+//   longer and takes clicks. A copied link with data-toast-click="<selector>" clicks that control on the page instead
+//   of following its href (e.g. the panel's Rate button); with nothing matching, the href loads.
 //
 // <a data-append="<selector>">  ("Load more")
 //   Fetches the link, appends the children of <selector> from that page to <selector> here, and replaces the
@@ -16,7 +20,7 @@
   let toast = null;
   let toastTimer = null;
 
-  function showToast(text, isError) {
+  function showToast(text, isError, actions) {
     if (!text) return;
     if (!toast) {
       toast = document.createElement('div');
@@ -25,11 +29,24 @@
       toast.setAttribute('aria-live', 'polite');
       document.body.appendChild(toast);
     }
-    toast.textContent = text;
+    const message = document.createElement('span');
+    message.className = 'inplace-toast-text';
+    message.textContent = text;
+    const extra = actions || [];
+    toast.replaceChildren(message, ...extra);
     toast.classList.toggle('is-error', !!isError);
+    toast.classList.toggle('has-actions', extra.length > 0);
     toast.classList.add('visible');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3200);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), extra.length ? 7000 : 3200);
+  }
+
+  /** The flash's message, and copies of its [data-toast-action] controls for the toast. */
+  function readFlash(flash) {
+    if (!flash) return { text: '', actions: [] };
+    const textEl = flash.querySelector('[data-toast-text]') || flash;
+    const actions = [...flash.querySelectorAll('[data-toast-action]')].map((el) => document.importNode(el, true));
+    return { text: textEl.textContent.trim(), actions };
   }
 
   const parse = (html) => new DOMParser().parseFromString(html, 'text/html');
@@ -89,7 +106,8 @@
         // Scripts that draw into a region (breakdown.js's category bars) redraw the swapped-in copies.
         document.dispatchEvent(new CustomEvent('inplace:swapped', { detail: { selectors } }));
       }
-      showToast(flash ? flash.textContent.trim() : (isError ? '' : form.dataset.inplaceDone || ''), isError);
+      const read = readFlash(flash);
+      showToast(flash ? read.text : (isError ? '' : form.dataset.inplaceDone || ''), isError, read.actions);
     } catch (err) {
       // Not saved: post the form the normal way. Saved but the refresh failed: reload, never post twice.
       form.removeAttribute('aria-busy');
@@ -99,6 +117,18 @@
       if (submitter) submitter.disabled = false;
       form.removeAttribute('aria-busy');
     }
+  });
+
+  // A toast's "Update your rating?": click the page's own control (opens the rate modal) rather than load the href.
+  document.addEventListener('click', (event) => {
+    const action = event.target.closest && event.target.closest('.inplace-toast a[data-toast-click]');
+    if (!action || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    const target = document.querySelector(action.dataset.toastClick);
+    if (!target) return;
+    event.preventDefault();
+    clearTimeout(toastTimer);
+    if (toast) toast.classList.remove('visible');
+    target.click();
   });
 
   document.addEventListener('click', async (event) => {

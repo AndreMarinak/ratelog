@@ -36,11 +36,27 @@ data class StatsShow(
 
 data class StatsSeason(val tmdbId: Int, val seasonNumber: Int, val score: Double, val atMs: Long)
 
-/** Everything one user has rated or marked seen. */
+/**
+ * Fork (2026-11-24, rewatch log): one rewatch of a title that is still seen (rows of an un-seen title are kept but never
+ * counted). Movies carry the runtime, so each rewatch adds its hours.
+ */
+data class StatsRewatch(
+    val type: MediaType,
+    val tmdbId: Int,
+    val atMs: Long,
+    val genreIds: List<Int> = emptyList(),
+    val releaseYear: Int? = null,
+    /** Movies only. */
+    val runtimeMinutes: Int? = null,
+    val runtimePending: Boolean = false,
+)
+
+/** Everything one user has rated or marked seen, and (fork, 2026-11-24) their rewatches. */
 data class StatsSource(
     val movies: List<StatsMovie>,
     val shows: List<StatsShow>,
     val seasons: List<StatsSeason>,
+    val rewatches: List<StatsRewatch> = emptyList(),
 )
 
 /** What a "Highest rated" tile needs besides the score. */
@@ -85,6 +101,19 @@ class StatsRepositoryImpl(
             StatsShow(it.tmdbId, parseGenres(it.genres), it.releaseYear, it.showScore, it.showRatedAtMs, it.watchedAtMs)
         },
         seasons = dao.findSeasons(userId.value).map { StatsSeason(it.tmdbId, it.seasonNumber, it.score, it.atMs) },
+        rewatches = dao.findRewatches(userId.value).map {
+            val type = MediaType.valueOf(it.mediaType)
+            StatsRewatch(
+                type = type,
+                tmdbId = it.tmdbId,
+                atMs = it.atMs,
+                genreIds = parseGenres(it.genres),
+                releaseYear = it.releaseYear,
+                runtimeMinutes = it.runtimeMinutes?.takeIf { minutes -> minutes > 0 && type == MediaType.movie },
+                runtimePending = type == MediaType.movie && !it.extrasFetched &&
+                    (it.extrasRetryAtMs == null || it.extrasRetryAtMs <= nowMs),
+            )
+        },
     )
 
     override fun titles(userId: User.Id, type: MediaType, tmdbIds: Collection<Int>, lang: Lang): List<StatsTitle> {

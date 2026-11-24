@@ -387,3 +387,89 @@
     max-width: 960px;
   }
 }
+
+/* ----- Rewatch log (fork, 2026-11-24): "112 titles · 9 rewatches" under the subtitle, All time's "Most rewatched". ----- */
+
+.stats-watched {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-rewatched-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-rewatched-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-muted);
+  }
+}
+
+.stats-rewatched-poster {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 51px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-weight: 700;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.stats-rewatched-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stats-rewatched-name {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stats-rewatched-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.stats-rewatched-count {
+  flex-shrink: 0;
+  color: hsl(140 16% 70%);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

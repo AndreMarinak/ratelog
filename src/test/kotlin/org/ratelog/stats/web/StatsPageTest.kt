@@ -206,7 +206,8 @@ class StatsPageTest {
         assertTrue(html.contains("2 seasons rated"))
         assertTrue(html.contains("Movies only, based on 7 of 8 movies so far: the rest are being looked up"))
         assertTrue(html.contains("Most generous with Animation (★ 8.7), harshest on Horror (★ 6.0)."))
-        assertTrue(html.contains("<caption>Titles per month</caption>"))
+        // Fork (2026-11-24, rewatch log): the timeline counts watches (first watches plus rewatches).
+        assertTrue(html.contains("<caption>Watches per month</caption>"))
         assertTrue(html.contains("<th scope=\"row\">July 2026</th>"))
         assertTrue(html.contains("""aria-hidden="true""""))
         assertTrue(html.contains("Highest rated in 2026"))

@@ -45,10 +45,10 @@ data class StatsEntry(
 }
 
 data class StatsTotals(
-    /** Movies rated or marked seen in the period. */
+    /** Movies rated or marked seen in the period, or (fork, 2026-11-24) rewatched in it: each once. */
     val moviesSeen: Int,
     val moviesRated: Int,
-    /** Shows with a season rated, a whole-show score or a Watched mark in the period. */
+    /** Shows with a season rated, a whole-show score or a Watched mark in the period, or rewatched in it: each once. */
     val showsSeen: Int,
     val showsRated: Int,
     val seasonsRated: Int,
@@ -56,13 +56,32 @@ data class StatsTotals(
     val ratings: Int,
     /** Average over the rated titles (a show counts once, with its season average). Null with nothing rated. */
     val averageScore: Double?,
-    /** Sum of the movies' runtimes that are known. TV is not included (episode counts aren't stored). */
+    /**
+     * Sum of the movies' runtimes that are known, once per watch: the first watch counted in the period plus each rewatch
+     * in it. TV is not included (episode counts aren't stored).
+     */
     val runtimeMinutes: Long,
     /** Movies whose runtime is known; the hours are "based on runtimeKnown of moviesSeen". */
     val runtimeKnown: Int,
     /** Movies whose runtime is being looked up. */
     val runtimePending: Int,
-)
+    /** Fork (2026-11-24): rewatches in the period (each one, a title rewatched twice counts 2). */
+    val rewatches: Int = 0,
+) {
+    /** Titles watched in the period: first watches plus titles rewatched in it, each title once. */
+    val titles: Int get() = moviesSeen + showsSeen
+}
+
+/** Fork (2026-11-24, rewatch log): a title by its rewatches (All time's "Most rewatched"). */
+data class RewatchedTitle(
+    val type: MediaType,
+    val tmdbId: Int,
+    val rewatches: Int,
+    val lastAtMs: Long,
+) {
+    /** The first watch plus the rewatches. */
+    val watchCount: Int get() = 1 + rewatches
+}
 
 /** Titles whose score rounds to [score] (1-10). */
 data class ScoreBucket(val score: Int, val count: Int)
@@ -94,6 +113,8 @@ data class Stats(
     /** Highest / lowest average among genres with at least [StatsCalculator.GENRE_VERDICT_MIN] rated titles. */
     val generousGenre: GenreStat?,
     val harshestGenre: GenreStat?,
+    /** Fork (2026-11-24): All time only, most rewatches first, at most [StatsCalculator.REWATCHED_LIMIT]; empty for a year. */
+    val mostRewatched: List<RewatchedTitle> = emptyList(),
 ) {
     val isEmpty: Boolean get() = totals.moviesSeen == 0 && totals.showsSeen == 0
 }
@@ -102,9 +123,11 @@ data class Stats(
 object StatsCalculator {
     const val TOP_LIMIT = 10
     const val GENRE_VERDICT_MIN = 3
+    const val REWATCHED_LIMIT = 5
 
     fun calculate(source: StatsSource, period: StatsPeriod, zone: ZoneId): Stats {
         val entries = entries(source, period, zone)
+        val rewatches = rewatches(source, period, zone)
         val genres = genres(entries)
         val verdictGenres = genres.filter { it.rated >= GENRE_VERDICT_MIN && it.averageScore != null }
         val generous = verdictGenres.maxWithOrNull(compareBy<GenreStat> { it.averageScore!! }.thenBy { it.rated })
@@ -114,9 +137,9 @@ object StatsCalculator {
         return Stats(
             period = period,
             years = yearsWithData(source, zone),
-            totals = totals(entries),
+            totals = totals(entries, rewatches),
             distribution = distribution(entries),
-            timeline = timeline(entries, period, zone),
+            timeline = timeline(entries, period, zone, rewatches),
             genres = genres,
             decades = decades(entries),
             top = entries.filter { it.rated }
@@ -124,8 +147,21 @@ object StatsCalculator {
                 .take(TOP_LIMIT),
             generousGenre = generous.takeIf { distinct },
             harshestGenre = harshest.takeIf { distinct },
+            mostRewatched = if (period == StatsPeriod.AllTime) mostRewatched(rewatches) else emptyList(),
         )
     }
+
+    /** Fork (2026-11-24): the rewatches that happened in the period (a rewatch counts when it happened). */
+    fun rewatches(source: StatsSource, period: StatsPeriod, zone: ZoneId): List<StatsRewatch> {
+        val range = range(period, zone) ?: return source.rewatches
+        return source.rewatches.filter { it.atMs in range }
+    }
+
+    fun mostRewatched(rewatches: List<StatsRewatch>): List<RewatchedTitle> =
+        rewatches.groupBy { it.type to it.tmdbId }
+            .map { (key, list) -> RewatchedTitle(key.first, key.second, list.size, list.maxOf { it.atMs }) }
+            .sortedWith(compareByDescending<RewatchedTitle> { it.rewatches }.thenByDescending { it.lastAtMs }.thenBy { it.tmdbId })
+            .take(REWATCHED_LIMIT)
 
     /** `[start, end)` in epoch ms, or null for "All time". */
     fun range(period: StatsPeriod, zone: ZoneId): LongRange? = when (period) {
@@ -186,26 +222,39 @@ object StatsCalculator {
         val seasonShows = source.seasons.map { it.tmdbId }.toSet()
         val times = source.movies.map { it.atMs } +
             source.seasons.map { it.atMs } +
-            source.shows.filter { it.tmdbId !in seasonShows }.mapNotNull { if (it.showScore != null) it.showRatedAtMs else it.watchedAtMs }
+            source.shows.filter { it.tmdbId !in seasonShows }.mapNotNull { if (it.showScore != null) it.showRatedAtMs else it.watchedAtMs } +
+            source.rewatches.map { it.atMs }
         return times.map { yearOf(it, zone) }.distinct().sortedDescending()
     }
 
-    fun totals(entries: List<StatsEntry>): StatsTotals {
+    /**
+     * Ratings, scores and seasons come from the entries only (a rewatch is not a rating). Fork (2026-11-24): the title
+     * counts and the hours also take the period's rewatches: a title rewatched in the period counts once (even if it was
+     * first seen years ago), and each rewatch of a movie adds its runtime.
+     */
+    fun totals(entries: List<StatsEntry>, rewatches: List<StatsRewatch> = emptyList()): StatsTotals {
         val movies = entries.filter { it.type == MediaType.movie }
         val shows = entries.filter { it.type == MediaType.tvshow }
         val rated = entries.mapNotNull { it.score }
         val seasons = shows.sumOf { it.seasonsRated }
+        val movieRewatches = rewatches.filter { it.type == MediaType.movie }
+        // Each movie once, with what is known of its runtime (an entry's, else a rewatch's).
+        val movieRuntime = LinkedHashMap<Int, Pair<Int?, Boolean>>()
+        movies.forEach { movieRuntime[it.tmdbId] = it.runtimeMinutes to it.runtimePending }
+        movieRewatches.forEach { movieRuntime.putIfAbsent(it.tmdbId, it.runtimeMinutes to (it.runtimeMinutes == null && it.runtimePending)) }
+        val showIds = shows.map { it.tmdbId }.toSet() + rewatches.filter { it.type == MediaType.tvshow }.map { it.tmdbId }
         return StatsTotals(
-            moviesSeen = movies.size,
+            moviesSeen = movieRuntime.size,
             moviesRated = movies.count { it.rated },
-            showsSeen = shows.size,
+            showsSeen = showIds.size,
             showsRated = shows.count { it.rated },
             seasonsRated = seasons,
             ratings = movies.count { it.rated } + seasons + shows.count { it.wholeShow },
             averageScore = rated.takeIf { it.isNotEmpty() }?.average(),
-            runtimeMinutes = movies.sumOf { (it.runtimeMinutes ?: 0).toLong() },
-            runtimeKnown = movies.count { it.runtimeMinutes != null },
-            runtimePending = movies.count { it.runtimePending },
+            runtimeMinutes = movies.sumOf { (it.runtimeMinutes ?: 0).toLong() } + movieRewatches.sumOf { (it.runtimeMinutes ?: 0).toLong() },
+            runtimeKnown = movieRuntime.values.count { it.first != null },
+            runtimePending = movieRuntime.values.count { it.first == null && it.second },
+            rewatches = rewatches.size,
         )
     }
 
@@ -217,19 +266,24 @@ object StatsCalculator {
         return (1..10).map { ScoreBucket(it, counts[it] ?: 0) }
     }
 
-    fun timeline(entries: List<StatsEntry>, period: StatsPeriod, zone: ZoneId): List<TimelineBucket> {
+    /**
+     * Watches per month (per year for All time): each entry when it counts, plus (fork, 2026-11-24) each rewatch when it
+     * happened, split into movies and TV.
+     */
+    fun timeline(entries: List<StatsEntry>, period: StatsPeriod, zone: ZoneId, rewatches: List<StatsRewatch> = emptyList()): List<TimelineBucket> {
+        val watches = entries.map { it.type to it.atMs } + rewatches.map { it.type to it.atMs }
         fun bucketsOf(keys: IntRange, keyOf: (Long) -> Int): List<TimelineBucket> {
-            val byKey = entries.groupBy { keyOf(it.atMs) }
+            val byKey = watches.groupBy { keyOf(it.second) }
             return keys.map { key ->
                 val list = byKey[key].orEmpty()
-                TimelineBucket(key, list.count { it.type == MediaType.movie }, list.count { it.type == MediaType.tvshow })
+                TimelineBucket(key, list.count { it.first == MediaType.movie }, list.count { it.first == MediaType.tvshow })
             }
         }
         return when (period) {
             is StatsPeriod.Year -> bucketsOf(1..12) { Instant.ofEpochMilli(it).atZone(zone).monthValue }
             StatsPeriod.AllTime -> {
-                if (entries.isEmpty()) return emptyList()
-                val years = entries.map { yearOf(it.atMs, zone) }
+                if (watches.isEmpty()) return emptyList()
+                val years = watches.map { yearOf(it.second, zone) }
                 bucketsOf(years.min()..years.max()) { yearOf(it, zone) }
             }
         }

@@ -17,6 +17,11 @@
         <div class="stats-head">
             <h1 th:text="#{stats.title}">Stats</h1>
             <p class="stats-sub" th:text="${s.year != null} ? #{stats.subtitle.year(${'' + s.year})} : #{stats.subtitle.all}">Your 2026 in movies and TV</p>
+            <!--/* Fork (2026-11-24, rewatch log): titles watched in the period (a title rewatched in it counts once) and the rewatches. */-->
+            <p th:unless="${s.empty}" class="stats-watched" data-stats-watched>
+                <span th:text="#{stats.watched(${h.titles})}">112 titles</span><span th:if="${h.rewatches > 0}" class="stats-watched-rewatches"
+                      th:text="' · ' + #{stats.watched.rewatches(${h.rewatches})}"> · 9 rewatches</span>
+            </p>
         </div>
 
         <nav class="stats-years" data-view-links="year" th:aria-label="#{stats.years.aria}">
@@ -87,7 +92,7 @@
 
                 <section class="card stats-card" aria-labelledby="statsTimelineTitle">
                     <h2 id="statsTimelineTitle" class="stats-card-title" th:text="${s.timelineByYear} ? #{stats.timeline.year} : #{stats.timeline.month}">Month by month</h2>
-                    <p class="stats-card-hint" th:text="#{stats.timeline.hint}">Each title counts once.</p>
+                    <p class="stats-card-hint" th:text="#{stats.timeline.hint.watches}">Each watch counts once.</p>
                     <ul class="stats-legend" aria-hidden="true">
                         <li><span class="stats-swatch stats-swatch-movie"></span><span th:text="#{stats.legend.movies}">Movies</span></li>
                         <li><span class="stats-swatch stats-swatch-tv"></span><span th:text="#{stats.legend.tv}">TV</span></li>
@@ -108,7 +113,7 @@
                         </li>
                     </ol>
                     <table class="visually-hidden">
-                        <caption th:text="${s.timelineByYear} ? #{stats.timeline.caption.year} : #{stats.timeline.caption.month}">Titles per month</caption>
+                        <caption th:text="${s.timelineByYear} ? #{stats.timeline.caption.year.watches} : #{stats.timeline.caption.month.watches}">Watches per month</caption>
                         <thead><tr>
                             <th scope="col" th:text="#{stats.timeline.when}">When</th>
                             <th scope="col" th:text="#{stats.legend.movies}">Movies</th>
@@ -164,6 +169,30 @@
                         </tr></thead>
                         <tbody><tr th:each="d : ${s.decades}"><th scope="row" th:text="${d.label}">1990s</th><td th:text="${d.count}">7</td><td th:text="${d.average != null} ? ${d.average} : '–'">7.1</td></tr></tbody>
                     </table>
+                </section>
+
+                <!--/* Fork (2026-11-24, rewatch log): All time only, the titles you've seen most often (first watch included). */-->
+                <section th:unless="${#lists.isEmpty(s.mostRewatched)}" class="card stats-card stats-rewatched" aria-labelledby="statsRewatchedTitle">
+                    <h2 id="statsRewatchedTitle" class="stats-card-title" th:text="#{stats.rewatched.title}">Most rewatched</h2>
+                    <p class="stats-card-hint" th:text="#{stats.rewatched.hint}">Times seen, counting the first watch.</p>
+                    <ol class="stats-rewatched-list">
+                        <li th:each="r : ${s.mostRewatched}" class="stats-rewatched-row">
+                            <a th:href="${r.href}" class="stats-rewatched-link">
+                                <span class="stats-rewatched-poster">
+                                    <img th:if="${r.posterUrl != null}" th:src="${r.posterUrl}" alt="" loading="lazy" decoding="async">
+                                    <span th:unless="${r.posterUrl != null}" th:text="${r.initial}">?</span>
+                                </span>
+                                <span class="stats-rewatched-text">
+                                    <span class="stats-rewatched-name" th:text="${r.title}">Heat</span>
+                                    <span class="stats-rewatched-meta">
+                                        <i th:data-lucide="${r.isMovie} ? 'film' : 'tv'" aria-hidden="true"></i>
+                                        <span th:text="${r.year != null} ? ${r.year} : #{movies.year.unknown}">1995</span>
+                                    </span>
+                                </span>
+                                <span class="stats-rewatched-count" th:text="#{stats.rewatched.count(${r.watchCount})}">Seen 4×</span>
+                            </a>
+                        </li>
+                    </ol>
                 </section>
             </div>
 

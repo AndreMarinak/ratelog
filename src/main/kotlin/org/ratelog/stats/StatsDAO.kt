@@ -39,6 +39,18 @@ data class StatsSeasonDbRow(
     @Column("at_ms") val atMs: Long,
 )
 
+/** Fork (2026-11-24, rewatch log): one rewatch of a title that is still seen, with what the stats need about it. */
+data class StatsRewatchDbRow(
+    @Column("media_type") val mediaType: String,
+    @Column("tmdb_id") val tmdbId: Int,
+    @Column("at_ms") val atMs: Long,
+    val genres: String?,
+    @Column("release_year") val releaseYear: Int?,
+    @Column("runtime_minutes") val runtimeMinutes: Int?,
+    @Column("extras_fetched") val extrasFetched: Boolean,
+    @Column("extras_retry_at_ms") val extrasRetryAtMs: Long?,
+)
+
 /** Title, poster and status for the "Highest rated" tiles (at most ten per type). */
 data class StatsTitleDbRow(
     @Column("tmdb_id") val tmdbId: Int,
@@ -116,6 +128,41 @@ interface StatsDAO : Repository<StatsMarker, Long> {
         """
     )
     fun findSeasons(userId: Long): List<StatsSeasonDbRow>
+
+    /**
+     * Fork (2026-11-24, rewatch log): the user's rewatches of titles that are seen now, by the SeenState rule (a movie:
+     * rated or Watched; a show: Watched, or rated with no status at all). Rows of an un-seen title are skipped, not deleted.
+     */
+    @Query(
+        """
+        SELECT r.media_type AS media_type, COALESCE(m.tmdb_id, t.tmdb_id) AS tmdb_id, r.watched_at_epoch_ms AS at_ms,
+               COALESCE(m.genres, t.genres) AS genres, COALESCE(m.release_year, t.first_air_year) AS release_year,
+               te.runtime_minutes AS runtime_minutes,
+               (te.tmdb_fetched_at_epoch_ms IS NOT NULL) AS extras_fetched,
+               te.tmdb_next_refresh_at_epoch_ms AS extras_retry_at_ms
+        FROM rewatches r
+        LEFT JOIN movies m ON r.media_type = 'movie' AND m.id = r.media_id
+        LEFT JOIN tv t ON r.media_type = 'tvshow' AND t.id = r.media_id
+        LEFT JOIN title_extras te ON te.media_type = 'movie' AND te.tmdb_id = m.tmdb_id
+        WHERE r.user_id = :userId
+          AND (
+            (m.id IS NOT NULL AND (
+                EXISTS (SELECT 1 FROM movie_ratings mr WHERE mr.user_id = r.user_id AND mr.movie_id = m.id)
+                OR EXISTS (SELECT 1 FROM media_statuses ms WHERE ms.user_id = r.user_id AND ms.media_type = 'movie'
+                           AND ms.media_id = m.id AND ms.status = 'WATCHED')))
+            OR
+            (t.id IS NOT NULL AND (
+                EXISTS (SELECT 1 FROM media_statuses ms WHERE ms.user_id = r.user_id AND ms.media_type = 'tvshow'
+                        AND ms.media_id = t.id AND ms.status = 'WATCHED')
+                OR (NOT EXISTS (SELECT 1 FROM media_statuses ms WHERE ms.user_id = r.user_id AND ms.media_type = 'tvshow'
+                                AND ms.media_id = t.id)
+                    AND (EXISTS (SELECT 1 FROM season_ratings sr WHERE sr.user_id = r.user_id AND sr.tv_show_id = t.id)
+                         OR EXISTS (SELECT 1 FROM tv_ratings tr WHERE tr.user_id = r.user_id AND tr.tv_show_id = t.id
+                                    AND tr.show_score IS NOT NULL)))))
+          )
+        """
+    )
+    fun findRewatches(userId: Long): List<StatsRewatchDbRow>
 
     @Query(
         """

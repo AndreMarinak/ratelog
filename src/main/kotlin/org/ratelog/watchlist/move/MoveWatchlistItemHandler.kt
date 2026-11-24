@@ -3,13 +3,17 @@ package org.ratelog.watchlist.move
 import arrow.core.Either
 import arrow.core.raise.either
 import org.ratelog.MediaType
+import org.ratelog.rewatch.delete.DeleteRewatch
+import org.ratelog.rewatch.delete.DeleteRewatchHandler
+import org.ratelog.rewatch.log.LogRewatch
+import org.ratelog.rewatch.log.LogRewatchError
+import org.ratelog.rewatch.log.LogRewatchHandler
 import org.ratelog.user.User
 import org.ratelog.watchlist.MediaStatusRepository
 import org.ratelog.watchlist.WatchStatus
 import org.ratelog.watchlist.entry.SetWatchlist
 import org.ratelog.watchlist.entry.SetWatchlistHandler
 import org.ratelog.watchlist.setstatus.SetWatchStatus
-import org.ratelog.watchlist.setstatus.SetWatchStatusError
 import org.ratelog.watchlist.setstatus.SetWatchStatusHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -20,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional
  * - `unlist`: off the watchlist, the status stays (the To watch tab's Remove, so a rewatch stays seen);
  * - `relist`: back on the watchlist, the status stays (Undo of `unlist`);
  * - `want_to_watch`: on the watchlist with no status (Undo of Seen / Watching from To watch).
+ * Fork (2026-11-24, rewatch log):
+ * - `rewatched`: a rewatch on To watch was watched: logs a rewatch and takes it off the watchlist (it stays seen);
+ * - `unrewatch`: its Undo: deletes that logged row (`rewatchId`) and puts it back on the watchlist.
  */
 enum class WatchlistMove(val param: String, val status: WatchStatus?) {
     SEEN("seen", WatchStatus.WATCHED),
@@ -28,10 +35,12 @@ enum class WatchlistMove(val param: String, val status: WatchStatus?) {
     TO_WATCH("want_to_watch", WatchStatus.WANT_TO_WATCH),
     REMOVE("remove", null),
     UNLIST("unlist", null),
-    RELIST("relist", null);
+    RELIST("relist", null),
+    REWATCHED("rewatched", null),
+    UNREWATCH("unrewatch", null);
 
     companion object {
-        /** `seen`, `watching`, `dropped`, `want_to_watch`, `remove`, `unlist`, `relist`, or any status name WatchStatus.parse accepts. */
+        /** `seen`, `watching`, `dropped`, `want_to_watch`, `remove`, `unlist`, `relist`, `rewatched`, `unrewatch`, or any status name WatchStatus.parse accepts. */
         fun parse(value: String?): WatchlistMove? {
             val key = value?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
             entries.find { it.param == key }?.let { return it }
@@ -51,7 +60,19 @@ data class MoveWatchlistItem(
     /** Local id (movies.id / tv.id). */
     val mediaId: Long,
     val move: WatchlistMove,
+    /** [WatchlistMove.UNREWATCH]: the logged row to delete. */
+    val rewatchId: Long? = null,
 )
+
+sealed interface MoveWatchlistItemError {
+    data object MediaNotFound : MoveWatchlistItemError
+
+    /** `rewatched` on a title you haven't seen (Seen is the first watch). */
+    data object NotSeen : MoveWatchlistItemError
+
+    /** `rewatched` on a title that isn't out. */
+    data object NotReleased : MoveWatchlistItemError
+}
 
 /** A title's place on the watchlist page: its progress status (a tab) and whether it is on the watchlist (To watch). */
 data class WatchlistPlace(val status: WatchStatus?, val onWatchlist: Boolean) {
@@ -63,6 +84,8 @@ data class MoveWatchlistItemResult(
     val before: WatchlistPlace,
     val after: WatchlistPlace,
     val move: WatchlistMove,
+    /** [WatchlistMove.REWATCHED]: the row it logged (its Undo deletes it). */
+    val rewatchId: Long? = null,
 ) {
     val changed: Boolean get() = before != after
 
@@ -74,6 +97,7 @@ data class MoveWatchlistItemResult(
 
     /** The move that restores [before], or null when nothing changed. */
     val undo: WatchlistMove? get() = when {
+        move == WatchlistMove.REWATCHED && rewatchId != null -> WatchlistMove.UNREWATCH
         !changed -> null
         before.status == after.status && before.onWatchlist -> WatchlistMove.RELIST
         before.status == after.status -> WatchlistMove.UNLIST
@@ -82,25 +106,55 @@ data class MoveWatchlistItemResult(
     }
 }
 
-/** The watchlist page's quick actions: remove, mark seen, Watching / Dropped (shows), and off / back on the watchlist. */
+/**
+ * The watchlist page's quick actions: remove, mark seen, Watching / Dropped (shows), off / back on the watchlist, and
+ * (fork, 2026-11-24) "Watched again" on a rewatch.
+ */
 @Component
 class MoveWatchlistItemHandler(
     private val setWatchStatusHandler: SetWatchStatusHandler,
     private val setWatchlistHandler: SetWatchlistHandler,
     private val mediaStatusRepository: MediaStatusRepository,
+    private val logRewatchHandler: LogRewatchHandler,
+    private val deleteRewatchHandler: DeleteRewatchHandler,
 ) {
     @Transactional
-    fun handle(command: MoveWatchlistItem): Either<SetWatchStatusError, MoveWatchlistItemResult> = either {
+    fun handle(command: MoveWatchlistItem): Either<MoveWatchlistItemError, MoveWatchlistItemResult> = either {
         val before = place(command)
+        var rewatchId: Long? = null
+        val notFound = MoveWatchlistItemError.MediaNotFound
         when (command.move) {
             WatchlistMove.UNLIST, WatchlistMove.RELIST ->
                 setWatchlistHandler.handle(SetWatchlist(command.userId, command.mediaType, command.mediaId, on = command.move == WatchlistMove.RELIST))
-                    .mapLeft { SetWatchStatusError.MediaNotFound }.bind()
+                    .mapLeft { notFound }.bind()
+
+            WatchlistMove.REWATCHED -> {
+                val logged = logRewatchHandler.handle(LogRewatch(command.userId, command.mediaType, command.mediaId)).mapLeft {
+                    when (it) {
+                        LogRewatchError.NotSeen -> MoveWatchlistItemError.NotSeen
+                        LogRewatchError.NotReleased -> MoveWatchlistItemError.NotReleased
+                        LogRewatchError.MediaNotFound, LogRewatchError.InvalidDate -> notFound
+                    }
+                }.bind()
+                rewatchId = logged.rewatch.id
+                setWatchlistHandler.handle(SetWatchlist(command.userId, command.mediaType, command.mediaId, on = false))
+                    .mapLeft { notFound }.bind()
+            }
+
+            WatchlistMove.UNREWATCH -> {
+                // Only a row of this title; one already gone (undone elsewhere) is fine: it still goes back on the watchlist.
+                command.rewatchId
+                    ?.let { id -> deleteRewatchHandler.find(command.userId, id) }
+                    ?.takeIf { it.mediaType == command.mediaType && it.mediaId == command.mediaId }
+                    ?.let { deleteRewatchHandler.handle(DeleteRewatch(command.userId, it.id!!)) }
+                setWatchlistHandler.handle(SetWatchlist(command.userId, command.mediaType, command.mediaId, on = true))
+                    .mapLeft { notFound }.bind()
+            }
 
             WatchlistMove.TO_WATCH -> {
                 // Exactly "To watch": no status, on the watchlist (what Seen / Watching from To watch undoes to).
-                if (before.status != null) setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, null)).bind()
-                setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, WatchStatus.WANT_TO_WATCH)).bind()
+                if (before.status != null) setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, null)).mapLeft { notFound }.bind()
+                setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, WatchStatus.WANT_TO_WATCH)).mapLeft { notFound }.bind()
             }
 
             WatchlistMove.REMOVE -> {
@@ -108,13 +162,13 @@ class MoveWatchlistItemHandler(
                     // Clears the status; a rewatch stays on the watchlist.
                     mediaStatusRepository.delete(command.userId, command.mediaType, command.mediaId)
                 } else {
-                    setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, null)).bind()
+                    setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, null)).mapLeft { notFound }.bind()
                 }
             }
 
-            else -> setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, command.move.status)).bind()
+            else -> setWatchStatusHandler.handle(SetWatchStatus(command.userId, command.mediaType, command.mediaId, command.move.status)).mapLeft { notFound }.bind()
         }
-        MoveWatchlistItemResult(before = before, after = place(command), move = command.move)
+        MoveWatchlistItemResult(before = before, after = place(command), move = command.move, rewatchId = rewatchId)
     }
 
     private fun place(command: MoveWatchlistItem) = WatchlistPlace(

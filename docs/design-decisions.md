@@ -10,7 +10,7 @@ The decisions live in topic files under `docs/decisions/`. Read this index, then
 - [API and external data](decisions/api-and-external-data.md): the `/api/v1` security chain, tokens, batch import and title matching, plus the MDBList scores and the Rotten Tomatoes link.
 - [Security and limits](decisions/security-and-limits.md): the 2026-11-23 hardening pass (sessions, sign-in throttling, rate limits, import limits, headers, cookies, pinned dependencies).
 - [Ratings](decisions/ratings.md): quick ratings, tags, the Ratings tab and its filters, TV ratings by season, movie ratings saving in place, and ratings loading as you scroll.
-- [Watchlist and Seen](decisions/watchlist-and-seen.md): Seen versus Watchlist, TV auto-status, upcoming titles, the follow bell, the Watchlist page, and rewatching.
+- [Watchlist and Seen](decisions/watchlist-and-seen.md): Seen versus Watchlist, TV auto-status, upcoming titles, the follow bell, the Watchlist page, rewatching, and the rewatch log (Watched again).
 - [Posters and tiles](decisions/posters-and-tiles.md): quick actions on every poster, rate and add to list from a tile, "Rate it?" after Seen, poster sizes and badges.
 - [Lists](decisions/lists.md): the add-to-list sheet, list progress and filters, tick-off mode, the Lists tab, the compact list header, and "Suggested for this list".
 - [Official and saved lists](decisions/official-and-saved-lists.md): official lists (table, visibility, admin switch, ordering, Discover row) and saving an official list.

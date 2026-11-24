@@ -184,3 +184,20 @@ NOT at the top right".
   overlays came out 8px narrower than the poster, so "⋯" sat 12px in from the right edge and the eye / ★ 16px up from the
   bottom. Chrome's phone emulation drew them in the corners, which is why the earlier fix and the suite missed it (see
   [bugs-and-issues.md](../bugs-and-issues.md#fixed)).
+
+## Watched again in the poster chooser (2026-11-24)
+
+From the rewatch log ([watchlist-and-seen.md](watchlist-and-seen.md#rewatch-log-watched-again-2026-11-24)); the user: *"maybe
+be able to click the same button instead of another one?"*, so the chooser's Seen does what the title page's Seen menu does.
+
+- **On a seen title the "⋯" chooser (touch) shows: Watchlist, Watched again, then Mark as not seen** (an unrated title) **or
+  "Seen · You rated it, so it stays seen"** (a rated movie: tapping it shows the existing locked message), then Rate and Add to
+  list. Not seen: Seen reads "Mark as seen" as before and there is no Watched again row. Flattened into the chooser rather than
+  a second menu: the chooser already is a menu, and a nested one would be one more tap.
+- **Watched again saves in place** (`POST /rewatch` with `X-Requested-With: fetch`, JSON): the chooser closes and the toast
+  says "Logged a rewatch of Dune." with **Undo** (`POST /rewatch/delete`, deletes that row) and **"Update your rating?"**
+  ("Rate it?" when unrated), which opens the poster's own ★: the rating picker, or a show's seasons / a detailed rating's
+  page, like the chooser's Rate row. The poster itself doesn't change (it shows Seen and your score, not the count). The
+  tile toast takes buttons for this (`.tile-toast.has-actions`, 7 s, clickable); plain messages keep the short one.
+- **Not on mouse screens' hover buttons:** with a mouse the poster shows its four buttons on hover; rewatches are logged from
+  the title page there (one click away). The watchlist page's posters keep their own buttons (To watch's Watched again).

@@ -34,14 +34,16 @@ data class WatchlistTypeFilterResponse(
 
 /** One quick-action button under a watchlist tile (POST /watchlist/item). */
 data class WatchlistItemAction(
-    /** The `to` field: seen | watching | dropped | remove. */
+    /** The `to` field: seen | watching | dropped | remove | unlist | rewatched. */
     val to: String,
     val labelKey: String,
     /** Accessible name with the title as {0}, e.g. `Mark "Dune" as seen`. */
     val ariaKey: String,
     val icon: String,
-    /** CSS modifier: `is-seen`, `is-watching`, `is-dropped`, `is-remove`. */
+    /** CSS modifier: `is-seen`, `is-watching`, `is-dropped`, `is-remove`, `is-rewatch`. */
     val kind: String,
+    /** A short label kept on narrow cards, where the others are icons only ("Again" under ↻, which alone reads as refresh). */
+    val shortLabelKey: String? = null,
 )
 
 data class WatchlistItemResponse(
@@ -63,18 +65,19 @@ data class WatchlistItemResponse(
     val slots: Int = 3,
     /** Shown in the slots no button can fill ("Out Dec 18" where Seen would be, "Rated" where Remove would be). */
     val noteKey: String? = null,
-    /** Fork (2026-11-24): on To watch, a title you've already seen (on the watchlist to rewatch). */
+    /**
+     * Fork (2026-11-24): on To watch, a title you've already seen (on the watchlist to rewatch). Its buttons are
+     * Watched again (logs a rewatch, takes it off the watchlist) and Remove.
+     */
     val rewatch: Boolean = false,
 ) {
     /** The note's icon and tooltip key. */
     val noteIcon: String get() = when (noteKey) {
         "watchlist.note.rated" -> "star"
-        WatchlistController.NOTE_REWATCH -> "eye"
         else -> "calendar-clock"
     }
     val noteTitleKey: String get() = when (noteKey) {
         "watchlist.note.rated" -> "watchlist.note.title.rated"
-        WatchlistController.NOTE_REWATCH -> "watchlist.note.title.rewatch"
         else -> "watchlist.note.title.upcoming"
     }
 
@@ -170,7 +173,7 @@ class WatchlistController(
             upcomingDate = if (upcoming) item.releaseDate?.let { ReleaseRules.shortDate(it, today, locale) } else null,
             actions = actionsFor(tab, item.mediaType == MediaType.tvshow, upcoming, rated = item.rated, rewatch = rewatch),
             slots = slotsFor(tab),
-            noteKey = if (rewatch) NOTE_REWATCH else noteFor(tab, upcoming, rated = item.rated, hasDate = item.releaseDate != null),
+            noteKey = if (rewatch && !upcoming) null else noteFor(tab, upcoming, rated = item.rated, hasDate = item.releaseDate != null),
             rewatch = rewatch,
             tileActions = TileActionsView.of(
                 item.tmdbId, item.mediaType, item.progress, rated = item.rated, releaseDate = item.releaseDate,
@@ -188,9 +191,6 @@ class WatchlistController(
     }
 
     companion object {
-        /** The To watch note on a title you've already seen: "Rewatch" where Seen (and Watching) would be. */
-        const val NOTE_REWATCH = "watchlist.note.rewatch"
-
         private val TYPE_FILTERS = mapOf(
             "movie" to MediaType.movie,
             "movies" to MediaType.movie,
@@ -210,8 +210,10 @@ class WatchlistController(
          * is something you're in the middle of), then Remove. To watch and Dropped: Seen · Watching · Remove; Watching:
          * Seen · Drop · Remove; Seen: Remove. An upcoming title gets no Seen or Watching (it isn't out; [noteFor] fills the
          * slot). A rated title on the Seen tab gets no Remove: it would still count as seen through its rating.
-         * Fork (2026-11-24): To watch's Remove only takes it off the watchlist (`unlist`), so a rewatch stays seen; a
-         * rewatch (already seen) gets only Remove, its "Rewatch" note fills the other slots.
+         * Fork (2026-11-24): To watch's Remove only takes it off the watchlist (`unlist`), so a rewatch stays seen. A
+         * rewatch (already seen) gets **Watched again** (`rewatched`: logs a rewatch and takes it off the watchlist; it
+         * was a dead "Rewatch" tag until the rewatch log, user 2026-11-24: "this button isn't clickable") where Seen
+         * would be, then Remove. An upcoming rewatch (rare: seen through the API) only gets Remove beside its date note.
          */
         fun actionsFor(status: WatchStatus, isTv: Boolean, upcoming: Boolean, rated: Boolean, rewatch: Boolean = false): List<WatchlistItemAction> {
             val seen = WatchlistItemAction(WatchlistMove.SEEN.param, "watchlist.action.seen", "watchlist.action.seen.aria", "eye", "is-seen")
@@ -219,9 +221,10 @@ class WatchlistController(
             val dropped = WatchlistItemAction(WatchlistMove.DROPPED.param, "watchlist.action.dropped", "watchlist.action.dropped.aria", "circle-x", "is-dropped")
             val remove = WatchlistItemAction(WatchlistMove.REMOVE.param, "watchlist.action.remove", "watchlist.action.remove.aria.${status.apiName}", "x", "is-remove")
             val unlist = remove.copy(to = WatchlistMove.UNLIST.param)
+            val rewatched = WatchlistItemAction(WatchlistMove.REWATCHED.param, "watchlist.action.rewatched", "watchlist.action.rewatched.aria", "rotate-cw", "is-rewatch", "watchlist.action.rewatched.short")
             return when (status) {
                 WatchStatus.WANT_TO_WATCH ->
-                    if (rewatch) listOf(unlist)
+                    if (rewatch) listOfNotNull(rewatched.takeIf { !upcoming }, unlist)
                     else listOfNotNull(seen.takeIf { !upcoming }, watching.takeIf { isTv && !upcoming }, unlist)
                 WatchStatus.WATCHING -> listOfNotNull(seen.takeIf { !upcoming }, dropped.takeIf { isTv }, remove)
                 WatchStatus.WATCHED -> listOfNotNull(remove.takeIf { !rated })

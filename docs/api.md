@@ -358,6 +358,9 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 }
 ```
 
+`seen`, `watchCount`, `lastWatchedAt` (2026-11-24, [Rewatches](#rewatches)): whether you've seen it (rated, or `watched`; a
+show by the TV rule), 1 + your rewatches when seen (`0` when not), and the latest rewatch (`null` with none).
+
 - `runtimeMinutes` is set for movies, `episodeRuntimeMinutes` + `numberOfSeasons` for shows.
 - `externalScores` is `null` when no MDBList key is set (Admin → Configuration, or the `MDBLIST_API_KEY` variable), MDBList has nothing for the title, or it is
   rate limited; any single score inside it can be `null` too. Rotten Tomatoes and Metacritic are 0-100, IMDb 0-10, Letterboxd 0-5.
@@ -470,7 +473,7 @@ curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/discover?
 Non-2xx responses are `{"error": "<code>", "message": "..."}`. Codes: `unauthorized` (401), `forbidden` (403: changing `isOfficial`
 without an admin token, or changing someone else's public official list), `not_found` (404, also for other users' lists, except public official ones, and tags),
 `invalid_json`, `invalid_parameter`, `invalid_type`, `invalid_name`, `invalid_color`, `list_limit`, `tag_limit`, `not_in_list` (400; `official_list_public` was removed 2026-11-23),
-`tag_exists` (409), `too_many_items` (413), `rate_limited` (429),
+`invalid_date` (400), `tag_exists`, `not_seen`, `not_released` (409), `too_many_items` (413), `rate_limited` (429),
 `tmdb_not_configured` (503), `tmdb_error` (502), `internal_error` (500).
 
 **Rate limit:** each token may send 600 reads (GET) and 60 writes (POST, PUT, PATCH, DELETE) a minute, plus a burst of 100
@@ -503,7 +506,9 @@ unless it is `dropped`. The web page is `/watchlist`.
 | DELETE | `/api/v1/statuses/{type}/{tmdbId}` | | `204` (status and watchlist cleared), or `404` if the title has neither |
 | POST | `/api/v1/statuses` | `{status?, items: [StatusItemInput]}` | `BulkStatusResult` |
 
-**StatusItem**: `{tmdbId, type, title, year, posterUrl, status, score, updatedAt, onWatchlist, seen}`. `score` is your own score (null if unrated); newest first.
+**StatusItem**: `{tmdbId, type, title, year, posterUrl, status, score, updatedAt, onWatchlist, seen, watchCount, lastWatchedAt}`. `score` is your own score (null if unrated); newest first.
+`watchCount` (2026-11-24, [Rewatches](#rewatches)) is 1 + your rewatches for a seen title, `0` when not seen; `lastWatchedAt`
+is the latest rewatch (ISO instant), `null` with none.
 `counts` respects the `type` filter. `status=want_to_watch` lists everything on the watchlist (newest added first), rewatches
 included: their `status` is `watched` and `seen` is `true`; `counts.want_to_watch` counts them and so does `counts.watched`.
 Without a `status` filter each title is listed once, under its `status`.
@@ -561,6 +566,34 @@ already in that state.
 ```bash
 curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/watchlist/movie/949"
 curl -s -X DELETE -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/watchlist/tv/1396"
+```
+
+## Rewatches
+
+Since 2026-11-24: a log of the times you watched a title again (movies and whole shows). The first watch is the title's seen
+state (status `watched`, or rated), so its **watch count is 1 + rewatches**. Logging never changes the status, the rating or
+the watchlist. Rewatches of a title you un-see are kept but not counted anywhere (`watchCount` 0, not in Stats) until it is
+seen again. In the app: the title page's Seen button menu ("Watched again"), the poster "⋯" chooser, and the watchlist's To
+watch "Watched again" (which also takes it off the watchlist).
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| POST | `/api/v1/rewatches/{type}/{tmdbId}` | optional `{watchedAt}` | `201 Rewatch` |
+| DELETE | `/api/v1/rewatches/{id}` | | `204`, or `404` (no such rewatch of yours) |
+
+**Rewatch**: `{id, tmdbId, type, title, year, posterUrl, watchedAt, watchCount, lastWatchedAt}`. `watchCount` is the title's
+count after the call; `lastWatchedAt` its latest rewatch. `watchedAt` on input: a date (`2026-11-20`, counted at noon in the
+server's time zone) or an ISO instant (`2026-11-20T21:30:00Z`); default now, never in the future (`400 invalid_date`).
+Errors: `409 not_seen` (the title isn't seen: mark it `watched` or rate it first, see [Statuses](#statuses-watchlist)),
+`409 not_released` (not out yet), `invalid_type`, `invalid_parameter` (400). The count shows up as `watchCount` /
+`lastWatchedAt` on [statuses](#statuses-watchlist) and [title details](#title-details-scores-and-trailers), and in
+[Stats](#stats).
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/rewatches/movie/949"
+curl -s -X POST -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
+  -d '{"watchedAt":"2026-10-31"}' "$RATELOG_URL/api/v1/rewatches/tv/1396"
+curl -s -X DELETE -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/rewatches/12"
 ```
 
 ## Recommendations
@@ -678,13 +711,21 @@ What counts (a period is a year, or everything with `all`):
   Science Fiction, 10765 Sci-Fi & Fantasy). `generousGenre` / `harshestGenre`: highest and lowest average among genres with
   at least 3 rated titles (both `null` unless two such genres differ). `decades` by release year, oldest first.
 - `top`: your 10 highest rated titles of the period (score, then the most recent first).
+- **Rewatches** (2026-11-24, [Rewatches](#rewatches)) count in the period they happened, only while the title is seen:
+  `totals.titles` = titles watched in the period (first watches + titles rewatched in it, each once; `moviesSeen` and
+  `showsSeen` include rewatched titles), `totals.rewatches` = rewatches in the period, `hours` add each movie rewatch's
+  runtime, and `timeline` counts watches (each title when it counts plus each rewatch in its month). A rewatch is not a rating:
+  `moviesRated`, `ratings`, `averageScore`, `distribution`, `genres`, `decades` and `top` are unchanged.
+  `mostRewatched` (with `all` only, else empty): up to 5 titles, most rewatches first,
+  `{tmdbId, type, title, year, posterUrl, url, rewatches, watchCount, lastWatchedAt}`.
 
 ```json
 {
   "year": "2026",
   "years": [2026, 2025],
   "timeZone": "America/New_York",
-  "totals": {"moviesSeen": 27, "moviesRated": 26, "showsSeen": 4, "showsRated": 3, "seasonsRated": 3, "ratings": 30, "averageScore": 8.39},
+  "totals": {"moviesSeen": 27, "moviesRated": 26, "showsSeen": 4, "showsRated": 3, "seasonsRated": 3, "ratings": 30, "averageScore": 8.39,
+             "titles": 31, "rewatches": 3},
   "hours": {"hours": 61.5, "minutes": 3690, "moviesWithRuntime": 27, "pending": 0, "includesTv": false},
   "distribution": [{"score": 1, "count": 0}, "...", {"score": 10, "count": 4}],
   "timeline": [{"month": 1, "year": null, "movies": 2, "shows": 0, "total": 2}, "..."],
@@ -694,7 +735,8 @@ What counts (a period is a year, or everything with `all`):
   "harshestGenre": {"id": 27, "name": "Horror", "count": 5, "rated": 5, "averageScore": 7.5},
   "top": [{"tmdbId": 278, "type": "movie", "title": "The Shawshank Redemption", "year": 1994,
            "posterUrl": "https://image.tmdb.org/t/p/w342/...", "url": "/movie/278", "score": 10.0,
-           "ratedAt": "2026-04-23T00:00:00Z"}, "..."]
+           "ratedAt": "2026-04-23T00:00:00Z"}, "..."],
+  "mostRewatched": []
 }
 ```
 
