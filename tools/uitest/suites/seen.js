@@ -239,6 +239,8 @@ module.exports = {
       assert(/is-on/.test(r.seen) && /is-locked/.test(r.seen), `seen: ${r.seen}`);
       assert(!r.nudge, 'nudge rendered for a rated movie');
       const token = await t.mark();
+      // Since "Rate it?" saves in place, the earlier "Marked as seen." toast can still be showing: let it clear first.
+      await t.waitFor(() => !document.querySelector('.tile-toast.visible'), undefined, 10000).catch(() => {});
       await t.pressSel('[data-title-seen]');
       await t.waitFor(() => document.querySelector('.tile-toast.visible'));
       const msg = await page.evaluate(() => document.querySelector('.tile-toast.visible').innerText);
