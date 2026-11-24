@@ -15,9 +15,9 @@ Chrome) pushed this laptop to 100% CPU, a "small popup" agent took 2+ hours, and
    screen it is building, sent early, may be added; anything else becomes its own queued agent.
 3. **Time-box every agent:** the brief says "commit a working checkpoint within 45 minutes and report within about 75". Big
    features are split into phases, each its own commit and report. If an agent is late, tell it to wrap up and ship what works.
-4. **Agents test their feature, not the world.** While building: the targeted unit tests. At the end: ONE full clean build
-   (0 failures) and a SHORT browser check of their feature (1440px + one phone width, with screenshots). The full regression
-   walkthrough is run once by the main session after merging, not by every agent.
+4. **Agents test their feature, then the suite once.** While building: the targeted unit tests. At the end: ONE full clean
+   build (0 failures), a SHORT browser check of their feature (1440px + phone widths) and one run of the repo suite
+   (`tools/uitest`, rule 12). The main session runs the suite again once per merged batch.
 5. **Merge and ship continuously.** Merge each finished branch right away (keep both sides of docs / `messages.properties`
    conflicts), then one clean build + one walkthrough run per batch, then push. Never let more than 2 finished branches wait.
 6. **Start agents from the latest master**, give each its own port and database, and don't run two agents on the same
@@ -25,6 +25,31 @@ Chrome) pushed this laptop to 100% CPU, a "small popup" agent took 2+ hours, and
 7. **Browser tests seed their own data** (create their own lists / ratings through the API, never rely on ids or titles left
    in a database), so they pass on any database and on a second run.
 8. **Status on request:** for each agent, how long it has run, its stage (building / testing / docs / committed) and what's queued.
+
+### Token efficiency (user, 2026-11-24: "do an analysis of why token usage is so high ... anything be more efficient?" then
+"yes go ahead, use sonnet for the routine ones too, but make sure we DO NOT compromise on feature quality AT ALL")
+
+Feature quality and the test rules below are never traded for tokens. These cut the waste around them:
+
+9. **Model per agent.** Opus for features: anything with a new flow, data model / migration, several layers, or UI design
+   judgement. Sonnet for routine work with a precise spec: list research and imports, test-suite upkeep, docs restructuring,
+   and small fixes where the brief names the exact files and expected behaviour. A Sonnet agent meets the exact same bar
+   (full clean build, browser check, repo suite, docs); if its result is shaky or misses the brief, redo it with Opus.
+   When unsure, use Opus.
+10. **Tiny fixes in the main session.** A change of a few lines in known files (a CSS tweak, one attribute, a label) is done
+    directly by the main session (with the same tests before pushing) instead of starting an agent, which pays ~50k tokens of
+    reading before it writes anything.
+11. **Brief agents with a context pack:** the exact files to read and change, the relevant doc sections by heading, ports and
+    DB names, and what is out of scope. Agents read `docs/` sections they need (by heading), not whole files.
+12. **One test path.** Agents run their own feature check plus `node tools/uitest/run.js` (the repo suite) once at the end; the
+    main session runs the suite once per merged batch. No extra copies of walkthrough scripts. Read screenshots only to judge a
+    layout or when a check fails, not one per step.
+13. **Short reports:** at most ~250 words: commits, test counts, browser/suite results, failures and open items, and one
+    screenshot folder path (no per-file lists).
+14. **Clean up before reporting:** stop every app, browser and background job the agent started and drop its database. An agent
+    that leaves a job running stays alive and keeps using tokens (one did: 723k tokens over 13 hours, mostly idle).
+15. **Fresh main session per day:** start from a short handoff (what's live, what's queued, open questions) instead of carrying
+    a whole long conversation forward.
 
 ## Documentation: keep it current (required)
 
