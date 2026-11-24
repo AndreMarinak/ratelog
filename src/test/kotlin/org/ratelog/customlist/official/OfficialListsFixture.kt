@@ -10,6 +10,7 @@ import org.ratelog.customlist.official.mark.SetListOfficialHandler
 import org.ratelog.customlist.progress.ListProgressFixture
 import org.ratelog.test.InMemoryListSummaryRepository
 import org.ratelog.test.InMemoryOfficialListRepository
+import org.ratelog.test.InMemorySavedListRepository
 import org.ratelog.test.InMemoryUserRepository
 import org.ratelog.test.MutableClock
 import org.ratelog.test.UserFactory
@@ -25,8 +26,9 @@ class OfficialListsFixture {
     val summaries = InMemoryListSummaryRepository(p.lists, users, p.movies, p.shows, official)
     val clock = MutableClock()
     val setOfficial = SetListOfficialHandler(lists, official, users, clock)
-    val getOfficial = GetOfficialListsHandler(summaries, p.handler)
-    val listsPage = GetListsPageHandler(summaries, users)
+    val saved = InMemorySavedListRepository(p.lists)
+    val getOfficial = GetOfficialListsHandler(summaries, p.handler, saved)
+    val listsPage = GetListsPageHandler(summaries, users, saved)
 
     val admin: User = users.save(UserFactory.aUser(username = "admin", role = Role.SUPERADMIN))
     val andre: User = users.save(UserFactory.aUser(username = "andre"))

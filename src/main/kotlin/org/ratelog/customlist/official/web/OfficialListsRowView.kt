@@ -25,12 +25,29 @@ data class OfficialListsRowView(
 
         /** Null when there are no official lists: the row is left out instead of showing an empty state. */
         fun of(lists: List<OfficialListProgress>, id: String, seeAllHref: String = SEE_ALL_HREF): OfficialListsRowView? =
-            of(lists.map { it.list }, lists.associate { it.list.id to it.seen }, id, seeAllHref)
+            of(
+                lists.map { it.list },
+                lists.associate { it.list.id to it.seen },
+                id,
+                seeAllHref,
+                saved = lists.filter { it.saved }.map { it.list.id }.toSet(),
+                baseOrder = lists.associate { it.list.id to it.baseOrder },
+            )
 
-        fun of(lists: List<ListSummary>, seen: Map<CustomList.Id, Int>, id: String, seeAllHref: String = SEE_ALL_HREF): OfficialListsRowView? {
+        /** [saved]: the viewer's saved lists (their toggle reads "Saved"); [baseOrder]: each card's place before they moved up. */
+        fun of(
+            lists: List<ListSummary>,
+            seen: Map<CustomList.Id, Int>,
+            id: String,
+            seeAllHref: String = SEE_ALL_HREF,
+            saved: Set<CustomList.Id> = emptySet(),
+            baseOrder: Map<CustomList.Id, Int> = emptyMap(),
+        ): OfficialListsRowView? {
             if (lists.isEmpty()) return null
             return OfficialListsRowView(
-                cards = lists.take(ROW_LIMIT).map { it.toOfficialCard(seen[it.id] ?: 0) },
+                cards = lists.take(ROW_LIMIT).mapIndexed { index, it ->
+                    it.toOfficialCard(seen[it.id] ?: 0, saved = it.id in saved, baseOrder = baseOrder[it.id] ?: index)
+                },
                 total = lists.size,
                 id = id,
                 seeAllHref = seeAllHref,
@@ -39,5 +56,9 @@ data class OfficialListsRowView(
     }
 }
 
-/** Official cards never show the owner: the list is presented as the site's, Letterboxd-style. */
-fun ListSummary.toOfficialCard(seen: Int): ListCardView = toCard(showOwner = false, seenCount = seen).copy(isOfficial = true)
+/**
+ * Official cards never show the owner: the list is presented as the site's, Letterboxd-style. Each has the viewer's
+ * Save toggle (fork, saved lists 2026-11-24), except a hidden (private) one, which can't be saved.
+ */
+fun ListSummary.toOfficialCard(seen: Int, saved: Boolean = false, baseOrder: Int = 0): ListCardView =
+    toCard(showOwner = false, seenCount = seen).copy(isOfficial = true, saved = saved.takeIf { isPublic }, baseOrder = baseOrder)

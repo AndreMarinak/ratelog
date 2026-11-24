@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/list-progress.css">
 <link rel="stylesheet" href="/official-lists.css">
+<link rel="stylesheet" href="/saved-lists.css">
 <div th:replace="~{fragments/loader}"></div>
 <div class="page">
     <header class="site-header" th:replace="~{fragments/nav :: nav(active='lists')}"></header>
@@ -20,9 +21,9 @@
     </div>
 
     <div th:if="${#lists.isEmpty(officialCards)}" class="empty-state" th:text="#{lists.official.empty}">No official lists yet.</div>
-    <div th:unless="${#lists.isEmpty(officialCards)}" class="lists-grid official-grid">
+    <div th:unless="${#lists.isEmpty(officialCards)}" class="lists-grid official-grid" data-saved-first>
         <th:block th:each="card : ${officialCards}">
-            <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+            <th:block th:replace="~{fragments/saved-lists :: card(${card})}"></th:block>
         </th:block>
     </div>
 </div>

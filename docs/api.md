@@ -31,7 +31,10 @@ When adding items you can skip ids and send `title` (+ `year`, + `type` if known
 | GET | `/api/v1/search` | `q`, optional `type`, `year` | `{results: [Candidate]}` (raw TMDB search) |
 | POST | `/api/v1/resolve` | `{title, year?, type?}` | `{status: matched\|ambiguous\|not_found, match, candidates}` (dry run, saves nothing) |
 | GET | `/api/v1/lists` | | your lists: `[{id, name, isPublic, isOfficial, itemCount, url, numbered}]` |
-| GET | `/api/v1/lists/official` | | every official list, with your progress (see [Official lists](#official-lists)) |
+| GET | `/api/v1/lists/official` | | every official list, with your progress, your saved ones first (see [Official lists](#official-lists)) |
+| GET | `/api/v1/lists/saved` | | the official lists you saved, newest save first (see [Saved lists](#saved-lists)) |
+| PUT | `/api/v1/lists/{id}/saved` | | save an official list: `{id, saved: true, changed}` (see [Saved lists](#saved-lists)) |
+| DELETE | `/api/v1/lists/{id}/saved` | | un-save it: `{id, saved: false, changed}` |
 | POST | `/api/v1/lists` | `{name, isPublic?, isOfficial?, numbered?, items?: [Item]}` | `201 {list, items: AddItemsResult \| null}` |
 | GET | `/api/v1/lists/{id}` | | `{id, name, isPublic, isOfficial, numbered, url, items: [ListItem], progress: {seen, total}}` (see [List progress](#list-progress)). Your lists and official lists |
 | PATCH | `/api/v1/lists/{id}` | `{name?, isPublic?, isOfficial?, numbered?}` | list detail |
@@ -97,10 +100,11 @@ Admin-curated lists that **every account** sees (Lists tab, Discover, `/lists/of
 
 - **Reading:** any token can `GET /api/v1/lists/{id}` a public official list, whoever owns it; `items` and `progress` are the
   token user's own marks. Other people's ordinary lists, and their hidden official lists, are still `404`, public or not.
-- **Listing:** `GET /api/v1/lists/official` returns every public one, most recently active first (created, or a title added):
+- **Listing:** `GET /api/v1/lists/official` returns every public one: the ones you saved first (newest save first, see
+  [Saved lists](#saved-lists)), then the rest most recently active first (created, or a title added):
   ```json
   [{"id": 12, "name": "AFI's 100 Years...100 Movies", "isPublic": true, "isOfficial": true, "itemCount": 100,
-    "url": "/list/12", "owner": "admin", "progress": {"seen": 37, "total": 100}}]
+    "url": "/list/12", "owner": "admin", "progress": {"seen": 37, "total": 100}, "saved": true}]
   ```
   `GET /api/v1/lists` still returns only your own lists (each with `isOfficial`).
 - **Marking:** `PATCH /api/v1/lists/{id}` with `{"isOfficial": true}` or `false`, or `"isOfficial": true` on `POST /api/v1/lists`.
@@ -131,6 +135,30 @@ curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: app
   -d '{"isPublic": false}' "$RATELOG_URL/api/v1/lists/12"
 curl -s -X PATCH -H "Authorization: Bearer $RATELOG_TOKEN" -H "Content-Type: application/json" \
   -d '{"isPublic": true}' "$RATELOG_URL/api/v1/lists/12"
+```
+
+### Saved lists
+
+Any account can **save** an official list, like saving a playlist (added in this fork, 2026-11-24). Saved lists come first in
+`GET /api/v1/lists/official` and on the site's Official lists sections, and show under your own lists. Only official, public
+lists can be saved for now.
+
+- `PUT /api/v1/lists/{id}/saved` saves it: `200 {"id": 12, "saved": true, "changed": true}` (`changed: false` when it already
+  was; the first save time is kept). `400 not_official` for any other list (your own ordinary lists too), `404 not_found` for a
+  missing list or someone else's private one (a hidden official list included).
+- `DELETE /api/v1/lists/{id}/saved` un-saves it: `200 {"id": 12, "saved": false, "changed": true}`. Works whatever the list's
+  state is now (no longer official, made private) as long as you had saved it; repeating it is harmless (`changed: false`).
+- `GET /api/v1/lists/saved` lists the saved lists you can still see, newest save first, your own official lists included:
+  ```json
+  [{"id": 12, "name": "IMDb Top 250", "isOfficial": true, "itemCount": 250, "url": "/list/12", "owner": "admin",
+    "progress": {"seen": 37, "total": 250}, "savedAt": "2026-11-24T05:50:03.650Z"}]
+  ```
+  A saved list that is made private or un-marked keeps its save but is left out (of this and of every page) until it is a
+  public official list again.
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/12/saved"
+curl -s -H "Authorization: Bearer $RATELOG_TOKEN" "$RATELOG_URL/api/v1/lists/saved"
 ```
 
 ### List order
@@ -309,7 +337,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
     "fetchedAt": "2026-11-22T12:00:00Z", "source": "MDBList"
   },
   "userRating": {"score": 8.4, "reviewTitle": "...", "reviewText": "...", "seasons": null},
-  "inLists": [{"id": 4, "name": "Sci-fi canon", "rank": 3, "url": "/list/4"}]
+  "inLists": [{"id": 4, "name": "Sci-fi canon", "rank": 3, "url": "/list/4"}],
+  "officialLists": [{"id": 12, "name": "IMDb Top 250", "rank": 1, "saved": true, "url": "/list/12"}]
 }
 ```
 
@@ -322,6 +351,8 @@ it saves the title locally if needed. Returns the same extras the movie / TV pag
 - `inLists` names **your own** lists that contain the title, newest list first (`[]` when none); `rank` is its place in
   the list (1 = first, counted in list order like the list page, the same number as `position` in list responses), or `null` on a
   plain (unnumbered) list. Added in this fork.
+- `officialLists` names **every public official list** that contains the title (fork, 2026-11-24): the ones you saved first
+  (`saved: true`, newest save first), then numbered lists by `rank`, then plain lists (`rank: null`) by name. `[]` when none.
 - Extras are cached (TMDB data weekly; scores daily for titles out under 30 days, weekly under a year, monthly after),
   so values can lag the source a little. Errors: `invalid_type`, `invalid_parameter`, `not_found`, `tmdb_not_configured`, `tmdb_error`.
 

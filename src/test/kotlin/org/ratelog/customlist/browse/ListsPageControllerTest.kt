@@ -18,7 +18,7 @@ class ListsPageControllerTest {
     private val me = users.save(UserFactory.aUser(username = "me"))
     private val friend = users.save(UserFactory.aUser(username = "friend"))
     private val controller = ListsPageController(
-        GetListsPageHandler(InMemoryListSummaryRepository(f.lists, users, f.movies, f.shows), users),
+        GetListsPageHandler(InMemoryListSummaryRepository(f.lists, users, f.movies, f.shows), users, org.ratelog.test.InMemorySavedListRepository()),
         f.handler,
     )
 

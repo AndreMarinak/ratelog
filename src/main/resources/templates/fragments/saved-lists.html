@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<body>
+<!--/*
+  Fork: saved lists (user request 2026-11-24: "being able to favorite an official list and that pins it to front of
+  official lists"). Styles in static/saved-lists.css; the toggles save in place with static/saved-lists.js (loaded by
+  fragments/nav.html), and are plain POST forms to /list/{id}/saved without JS.
+
+  List cards:   <th:block th:replace="~{fragments/saved-lists :: card(${card})}"></th:block>
+                (a ListCardView; with `saved` set, the card gets its Save toggle beside the link, never inside it)
+  List page:    <th:block th:replace="~{fragments/saved-lists :: listButton(${listSaved}, ${official})}"></th:block>
+  Title page:   <div th:replace="~{fragments/saved-lists :: titleLine(${officialTitleLists})}"></div>
+  Add-to-list:  <p th:replace="~{fragments/saved-lists :: sheetLine(${officialTitleLists})}"></p>
+*/-->
+
+<!--/* A list card; official ones get the Save toggle over the cover's corner. th:replace runs before th:if, so the
+       conditions sit on wrappers. */-->
+<th:block th:fragment="card(card)">
+<th:block th:if="${card.saved == null}"><a th:replace="~{fragments/list-card :: listCard(${card})}"></a></th:block>
+<div th:if="${card.saved != null}" class="list-tile-wrap" data-saved-card
+     th:attr="data-list-key=${card.saveHref},data-base-order=${card.baseOrder}"
+     th:classappend="${card.saved} ? 'is-saved' : ''">
+    <a th:replace="~{fragments/list-card :: listCard(${card})}"></a>
+    <form th:replace="~{fragments/saved-lists :: toggle(${card.saveHref}, ${card.saved}, ${card.name}, 'is-card')}"></form>
+</div>
+</th:block>
+
+<!--/* The toggle itself. `saved` = the current state; the form sends the opposite. Both icons are in the markup and the
+       state class picks one, so saved-lists.js only flips the state. */-->
+<form th:fragment="toggle(href, saved, name, variant)" class="list-save" th:classappend="${saved} ? ${variant + ' is-saved'} : ${variant}"
+      method="post" th:action="${href}" data-list-save th:attr="data-list-key=${href}">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <input type="hidden" name="saved" th:value="${!saved}" />
+    <button type="submit" class="list-save-button" th:aria-pressed="${saved}"
+            th:title="${saved} ? #{list.saved.button.title.on(${name})} : #{list.saved.button.title.off(${name})}"
+            th:aria-label="${saved} ? #{list.saved.button.title.on(${name})} : #{list.saved.button.title.off(${name})}">
+        <span class="list-save-icon is-off" aria-hidden="true"><i data-lucide="circle-plus"></i></span>
+        <span class="list-save-icon is-on" aria-hidden="true"><i data-lucide="circle-check"></i></span>
+        <span class="list-save-label" th:text="${saved} ? #{list.saved.button.on} : #{list.saved.button.off}">Save</span>
+    </button>
+</form>
+
+<!--/* Beside the list title: on an official, public list (owners and admins too), or on one you saved before so you can
+       take it off. `official` is the list page's ListOfficialView. */-->
+<th:block th:fragment="listButton(saved, official)">
+<th:block th:if="${saved != null and official != null and ((official.official and official.listPublic) or saved.saved)}">
+    <link rel="stylesheet" href="/saved-lists.css">
+    <form th:replace="~{fragments/saved-lists :: toggle(${saved.href}, ${saved.saved}, ${list.name}, 'is-page')}"></form>
+</th:block>
+</th:block>
+
+<!--/* Title page, under the scores: every public official list with the title, saved ones first and highlighted.
+       Three chips, the rest behind "+N more" (a <details>, so it opens without JS). */-->
+<div th:fragment="titleLine(view)" th:if="${view != null and !view.isEmpty}" class="title-official-lists"
+     role="group" th:aria-label="#{title.official.aria}">
+    <link rel="stylesheet" href="/saved-lists.css">
+    <span class="title-official-label">
+        <i data-lucide="badge-check" aria-hidden="true"></i>
+        <span th:text="#{title.official.label}">Official lists</span>
+    </span>
+    <th:block th:each="chip : ${view.shown}"><a th:replace="~{fragments/saved-lists :: chip(${chip})}"></a></th:block>
+    <details th:if="${!#lists.isEmpty(view.more)}" class="title-official-more">
+        <summary>
+            <span class="when-closed" th:text="#{title.official.more(${#lists.size(view.more)})}">+2 more</span>
+            <span class="when-open" th:text="#{title.official.less}">Show less</span>
+        </summary>
+        <div class="title-official-more-chips">
+            <th:block th:each="chip : ${view.more}"><a th:replace="~{fragments/saved-lists :: chip(${chip})}"></a></th:block>
+        </div>
+    </details>
+</div>
+
+<a th:fragment="chip(chip)" class="title-official-chip" th:classappend="${chip.saved} ? 'is-saved' : ''" th:href="${chip.href}"
+   th:title="${chip.saved} ? #{title.official.chip.saved.title(${chip.name})} : #{title.official.chip.title(${chip.name})}">
+    <i th:if="${chip.saved}" data-lucide="circle-check" aria-hidden="true"></i>
+    <span th:if="${chip.rank != null}" class="title-official-chip-text" th:text="#{title.official.rank(${chip.rank}, ${chip.name})}">#12 in IMDb Top 250</span>
+    <span th:if="${chip.rank == null}" class="title-official-chip-text" th:text="${chip.name}">AFI 100</span>
+    <span th:if="${chip.saved}" class="visually-hidden" th:text="#{title.official.saved}">(saved)</span>
+</a>
+
+<!--/* Add-to-list sheet, under your lists: one quiet read-only line for your saved official lists with the title (they
+       aren't yours to change, so no checkboxes). Lists you own are already ticks above. */-->
+<p th:fragment="sheetLine(view)" th:if="${view != null and !#lists.isEmpty(view.savedNotOwned)}" class="list-saved-also">
+    <link rel="stylesheet" href="/saved-lists.css">
+    <i data-lucide="circle-check" aria-hidden="true"></i>
+    <span>
+        <span class="list-saved-also-label" th:text="#{list.member.saved.also}">Also in your saved lists:</span>
+        <th:block th:each="chip, it : ${view.savedNotOwned}"><a th:href="${chip.href}"
+            th:text="${chip.rank != null} ? #{list.member.saved.item.rank(${chip.name}, ${chip.rank})} : ${chip.name}">IMDb Top 250 (#12)</a><th:block th:unless="${it.last}">, </th:block></th:block>
+    </span>
+</p>
+</body>
+</html>

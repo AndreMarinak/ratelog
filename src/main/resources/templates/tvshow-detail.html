@@ -36,6 +36,7 @@
                         <span class="tag" th:each="genreId : ${show.genres}" th:text="#{${'genre.' + genreId}}">Genre</span>
                     </div>
                     <div th:replace="~{fragments/title-info :: titleScores(${titleInfo})}"></div>
+                    <div th:replace="~{fragments/saved-lists :: titleLine(${officialTitleLists})}"></div>
                 </header>
 
                 <div class="title-body">
