@@ -88,6 +88,11 @@ does not create yet.
 
 ## Status
 
+Master `5b4b9c0` (2026-11-24, searchyear + apiguide + rewatchlog merged), main session's port 8110 app, desktop / 390 / 360:
+**283/283** (home 64, seen 56, tilerate 54, title 27, recs 25, backnav 39, savedlists 18). Also checked in WebKit (iPhone 13
+and 1440): search Year menu, whole search pages, the appearances switch, the API guide, and Watched again from the Seen menu
+(bottom sheet on the phone) with Undo.
+
 Updated for the searchyear branch (2026-11-24, `feat/searchyear`): `home` gains "search Year menu" and "person page: Show
 appearances switch" (64 steps). Run on a fresh `ratelog_searchyear` database, port 8121, desktop / 390 / 360: **280/280**
 (home 64, seen 53, tilerate 54, title 27, recs 25, backnav 39, savedlists 18).
