@@ -1,5 +1,6 @@
 package org.ratelog.customlist.official.browse
 
+import org.ratelog.MediaType
 import org.ratelog.customlist.ListSummary
 import org.ratelog.customlist.ListSummaryRepository
 import org.ratelog.customlist.progress.GetListProgressHandler
@@ -18,6 +19,8 @@ data class OfficialListProgress(
 /**
  * Every official list with the viewer's own progress, most recently active first: the Discover row,
  * `/lists/official` and `GET /api/v1/lists/official`. Three queries in all (lists, covers, seen counts).
+ * With [containing], only lists that have at least one title of that type (Discover's Movies / TV row, 2026-11-23),
+ * filtered in the same lists query.
  */
 @Service
 class GetOfficialListsHandler(
@@ -25,8 +28,9 @@ class GetOfficialListsHandler(
     private val listProgressHandler: GetListProgressHandler,
 ) {
     @Transactional(readOnly = true)
-    fun handle(viewerId: User.Id): List<OfficialListProgress> {
-        val lists = listSummaryRepository.findOfficial().filter { it.isOfficial && it.isPublic }
+    fun handle(viewerId: User.Id, containing: MediaType? = null): List<OfficialListProgress> {
+        val found = containing?.let(listSummaryRepository::findOfficialContaining) ?: listSummaryRepository.findOfficial()
+        val lists = found.filter { it.isOfficial && it.isPublic }
         if (lists.isEmpty()) return emptyList()
         val seen = listProgressHandler.seenCounts(viewerId, lists.map { it.id })
         return lists.map { OfficialListProgress(it, seen[it.id] ?: 0) }

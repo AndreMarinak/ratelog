@@ -32,6 +32,7 @@ import org.ratelog.watchlist.getwatchlist.GetWatchlistHandler
 import org.ratelog.watchlist.getwatchlist.WatchlistController
 import org.ratelog.watchlist.getwatchlist.WatchlistItemResponse
 import org.ratelog.watchlist.getwatchlist.WatchlistTabResponse
+import org.ratelog.watchlist.getwatchlist.WatchlistTypeFilterResponse
 import org.ratelog.watchlist.setstatus.SetWatchStatusHandler
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.http.HttpStatus
@@ -210,11 +211,12 @@ class WatchlistQuickActionsTest {
         val tabs = model["tabs"] as List<WatchlistTabResponse>
         assertEquals(listOf("watchlist.tab.want_to_watch", "watchlist.tab.watching", "watchlist.tab.watched", "watchlist.tab.dropped"), tabs.map { it.labelKey })
         assertEquals(listOf("want_to_watch", "watching", "watched", "dropped"), tabs.map { it.status })
-        assertEquals(3, tabs.first().count)
-        assertEquals("/watchlist?status=want_to_watch", model["watchlistSelf"])
+        assertEquals(2, tabs.first().count, "opens on Movies")
+        assertEquals("/watchlist?status=want_to_watch&type=movie", model["watchlistSelf"])
         assertEquals("watchlist.tab.empty.want_to_watch", model["emptyKey"])
 
-        val items = (model["items"] as List<WatchlistItemResponse>).associateBy { it.title }
+        val tv = ExtendedModelMap().also { page.watchlistPage(user, null, "tv", it) }
+        val items = ((model["items"] as List<WatchlistItemResponse>) + (tv["items"] as List<WatchlistItemResponse>)).associateBy { it.title }
         assertTrue(items.values.all { item -> item.actions.any { it.to == "remove" } }, "Remove on every tile")
         assertEquals(listOf("seen", "remove"), items.getValue("Dune: Part Two").actions.map { it.to })
         assertEquals(2, items.getValue("Dune: Part Two").firstSpan, "a movie's Seen takes the Watching slot, Remove lines up")
@@ -241,6 +243,62 @@ class WatchlistQuickActionsTest {
         page.watchlistPage(user, "watching", "tv", model)
         assertEquals("/watchlist?status=watching&type=tv", model["watchlistSelf"])
         assertEquals("watchlist.tab.hint.watching", model["tabHintKey"])
+    }
+
+    // --- Movies by default (user, 2026-11-23: "watchlist tab should default to movies like everything else") ---
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `the watchlist opens on Movies, and Movies or TV is a two-way switch every tab keeps`() {
+        want(dune.id!!.value)
+        want(bear.id!!.value, MediaType.tvshow)
+        val model = ExtendedModelMap()
+
+        page.watchlistPage(user, null, null, model)
+
+        assertEquals(listOf("Dune: Part Two"), (model["items"] as List<WatchlistItemResponse>).map { it.title })
+        val filters = model["typeFilters"] as List<WatchlistTypeFilterResponse>
+        assertEquals(listOf("watchlist.filter.movies", "watchlist.filter.tv"), filters.map { it.labelKey }, "no All, like Ratings and Discover")
+        assertEquals(listOf(true, false), filters.map { it.active })
+        assertEquals(listOf("/watchlist?status=want_to_watch&type=movie", "/watchlist?status=want_to_watch&type=tv"), filters.map { it.href })
+        val tabs = model["tabs"] as List<WatchlistTabResponse>
+        assertTrue(tabs.all { it.href.endsWith("&type=movie") }, "status tabs keep the type: ${tabs.map { it.href }}")
+
+        val tv = ExtendedModelMap().also { page.watchlistPage(user, "want_to_watch", "tv", it) }
+        assertEquals(listOf("The Bear"), (tv["items"] as List<WatchlistItemResponse>).map { it.title })
+        assertEquals(listOf(false, true), (tv["typeFilters"] as List<WatchlistTypeFilterResponse>).map { it.active })
+        assertTrue((tv["tabs"] as List<WatchlistTabResponse>).all { it.href.endsWith("&type=tv") })
+
+        val unknown = ExtendedModelMap().also { page.watchlistPage(user, null, "all", it) }
+        assertEquals(listOf("Dune: Part Two"), (unknown["items"] as List<WatchlistItemResponse>).map { it.title }, "an unknown type is Movies too")
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `Watching is for shows - a bare Watching link opens on TV, and Movies says why it's empty`() {
+        statuses.save(MediaStatus(user.id!!, MediaType.tvshow, bear.id!!.value, WatchStatus.WATCHING, 1L))
+
+        val bare = ExtendedModelMap().also { page.watchlistPage(user, "watching", null, it) } // Home's "Continue watching" See all
+        assertEquals(listOf("The Bear"), (bare["items"] as List<WatchlistItemResponse>).map { it.title })
+        assertEquals("/watchlist?status=watching&type=tv", bare["watchlistSelf"])
+        assertEquals("watchlist.tab.hint.watching", bare["tabHintKey"])
+        assertEquals(1, (bare["tabs"] as List<WatchlistTabResponse>).single { it.status == "watching" }.count)
+
+        val movies = ExtendedModelMap().also { page.watchlistPage(user, "watching", "movie", it) }
+        assertTrue((movies["items"] as List<WatchlistItemResponse>).isEmpty())
+        assertEquals("watchlist.tab.empty.watching.movie", movies["emptyKey"])
+        assertEquals("watchlist.tab.hint.watching.movie", movies["tabHintKey"])
+        assertTrue((movies["tabs"] as List<WatchlistTabResponse>).any { it.status == "watching" }, "the tab stays on Movies")
+
+        // A movie still Watching from before shows on Movies with Seen and Remove (no Drop: movies have none).
+        statuses.save(MediaStatus(user.id!!, MediaType.movie, dune.id!!.value, WatchStatus.WATCHING, 2L))
+        val legacy = ExtendedModelMap().also { page.watchlistPage(user, "watching", "movie", it) }
+        assertEquals(listOf("seen", "remove"), (legacy["items"] as List<WatchlistItemResponse>).single().actions.map { it.to })
+
+        assertEquals(MediaType.movie, WatchlistController.defaultType(WatchStatus.WANT_TO_WATCH))
+        assertEquals(MediaType.movie, WatchlistController.defaultType(WatchStatus.WATCHED))
+        assertEquals(MediaType.movie, WatchlistController.defaultType(WatchStatus.DROPPED))
+        assertEquals(MediaType.tvshow, WatchlistController.defaultType(WatchStatus.WATCHING))
     }
 
     @Test

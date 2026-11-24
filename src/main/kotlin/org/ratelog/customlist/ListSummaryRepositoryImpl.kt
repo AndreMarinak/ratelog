@@ -1,5 +1,6 @@
 package org.ratelog.customlist
 
+import org.ratelog.MediaType
 import org.ratelog.user.User
 import org.springframework.stereotype.Repository
 
@@ -25,6 +26,9 @@ class ListSummaryRepositoryImpl(
 
     override fun findOfficial(): List<ListSummary> =
         withCovers(listSummaryDAO.findOfficial())
+
+    override fun findOfficialContaining(mediaType: MediaType): List<ListSummary> =
+        withCovers(listSummaryDAO.findOfficialContaining(mediaType.name))
 
     private fun withCovers(rows: List<ListSummaryRow>): List<ListSummary> {
         if (rows.isEmpty()) return emptyList()
