@@ -25,6 +25,7 @@ data class BackNavLabel(val key: String, val arg: String? = null) {
         val OFFICIAL_LISTS = BackNavLabel("lists.official")
         val COMMUNITY = BackNavLabel("nav.community")
         val TAGS = BackNavLabel("nav.tags")
+        val STATS = BackNavLabel("nav.stats")
         val OWN_PROFILE = BackNavLabel("backnav.profile.own")
 
         fun list(name: String) = BackNavLabel("backnav.name", name)
@@ -72,6 +73,7 @@ object BackNavPages {
         "/lists/official" -> BackNavLabel.OFFICIAL_LISTS
         "/community" -> BackNavLabel.COMMUNITY
         "/tags" -> BackNavLabel.TAGS
+        "/stats" -> BackNavLabel.STATS
         else -> null
     }
 

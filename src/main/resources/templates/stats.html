@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(#{stats.page.title})}"></head>
+<body>
+<div th:replace="~{fragments/loader}"></div>
+<div class="page">
+    <header class="site-header" th:replace="~{fragments/nav :: nav(active='stats')}"></header>
+    <link rel="stylesheet" href="/home.css">
+    <link rel="stylesheet" href="/search-results.css">
+    <link rel="stylesheet" href="/tile-actions.css">
+    <link rel="stylesheet" href="/stats.css">
+
+    <!--/* Fork: your stats (StatsController). The year links swap this region in place and replace the URL
+           (view-swap.js, "One Back leaves the page"). Charts are CSS bars marked aria-hidden; each has a visually
+           hidden table with the same numbers. */-->
+    <div th:fragment="view" id="statsView" class="stats" data-view data-view-fallback="year" th:with="s=${stats}, h=${stats.headline}">
+        <div class="stats-head">
+            <h1 th:text="#{stats.title}">Stats</h1>
+            <p class="stats-sub" th:text="${s.year != null} ? #{stats.subtitle.year(${'' + s.year})} : #{stats.subtitle.all}">Your 2026 in movies and TV</p>
+        </div>
+
+        <nav class="stats-years" data-view-links="year" th:aria-label="#{stats.years.aria}">
+            <a th:each="y : ${s.switcher}" th:href="${y.href}" class="stats-year" th:classappend="${y.active} ? 'active' : ''"
+               th:attr="aria-current=${y.active} ? 'page' : null,data-stats-year=${y.period}"
+               th:text="${y.labelKey != null} ? #{${y.labelKey}} : ${y.label}">2026</a>
+        </nav>
+
+        <div th:if="${s.empty}" class="empty-state stats-empty" data-stats-empty>
+            <p th:text="${s.year != null} ? #{stats.empty.year(${'' + s.year})} : #{stats.empty.all}">Nothing rated or marked seen in 2026 yet.</p>
+            <p th:if="${s.year != null}" class="stats-empty-links" data-view-links="year">
+                <a th:if="${s.emptyLink != null}" th:href="${s.emptyLink.href}" th:text="#{stats.empty.see(${s.emptyLink.label})}">See 2025</a>
+                <a th:if="${s.emptyLink != null}" href="/stats?year=all" th:text="#{stats.empty.alltime}">See all time</a>
+            </p>
+        </div>
+
+        <th:block th:unless="${s.empty}">
+            <section class="stats-headline" th:aria-label="#{stats.headline.aria}">
+                <div class="stats-stat" data-stat="movies">
+                    <span class="stats-stat-label" th:text="#{stats.movies}">Movies</span>
+                    <strong class="stats-stat-value" th:text="${h.moviesSeen}">45</strong>
+                </div>
+                <div class="stats-stat" data-stat="shows">
+                    <span class="stats-stat-label" th:text="#{stats.shows}">TV shows</span>
+                    <strong class="stats-stat-value" th:text="${h.showsSeen}">8</strong>
+                    <span class="stats-stat-hint" th:text="#{stats.shows.seasons(${h.seasonsRated})}">12 seasons rated</span>
+                </div>
+                <div class="stats-stat" data-stat="ratings">
+                    <span class="stats-stat-label" th:text="#{stats.ratings}">Ratings</span>
+                    <strong class="stats-stat-value" th:text="${h.ratings}">57</strong>
+                    <span class="stats-stat-hint" th:text="#{stats.ratings.hint}">Movies, seasons and whole shows</span>
+                </div>
+                <div class="stats-stat" data-stat="average">
+                    <span class="stats-stat-label" th:text="#{stats.average}">Average score</span>
+                    <strong class="stats-stat-value" th:text="${h.average != null} ? ${h.average} : '–'">7.4</strong>
+                    <span class="stats-stat-hint" th:text="${h.average != null} ? #{stats.average.hint} : #{stats.average.none}">Out of 10, per title</span>
+                </div>
+                <div class="stats-stat stats-stat-hours" data-stat="hours">
+                    <span class="stats-stat-label" th:text="#{stats.hours}">Hours watched</span>
+                    <strong class="stats-stat-value" th:text="${h.hours}">52</strong>
+                    <span class="stats-stat-hint" data-stats-hours-basis
+                          th:text="${h.moviesSeen > 0 and h.runtimeKnown == 0} ? #{stats.hours.none}
+                                 : (${h.runtimePartial} ? (${h.runtimePending} ? #{stats.hours.pending(${h.runtimeKnown}, ${h.moviesSeen})} : #{stats.hours.based(${h.runtimeKnown}, ${h.moviesSeen})})
+                                 : #{stats.hours.movies})">Movies only</span>
+                </div>
+            </section>
+
+            <div class="stats-grid">
+                <section class="card stats-card" aria-labelledby="statsDistributionTitle">
+                    <h2 id="statsDistributionTitle" class="stats-card-title" th:text="#{stats.distribution.title}">Your ratings</h2>
+                    <p class="stats-card-hint" th:text="#{stats.distribution.hint}">Titles by score, rounded to the nearest point.</p>
+                    <ol class="stats-cols stats-cols-10" aria-hidden="true">
+                        <li th:each="b : ${s.distribution}" class="stats-col" th:title="${b.label + ': ' + b.count}">
+                            <span class="stats-col-track">
+                                <span th:if="${b.count > 0}" class="stats-col-value" th:text="${b.count}">3</span>
+                                <span th:if="${b.count > 0}" class="stats-seg stats-seg-single" th:style="|height: ${b.percent}%|"></span>
+                            </span>
+                            <span class="stats-col-label" th:text="${b.label}">8</span>
+                        </li>
+                    </ol>
+                    <table class="visually-hidden">
+                        <caption th:text="#{stats.distribution.caption}">Titles per score</caption>
+                        <thead><tr><th scope="col" th:text="#{stats.distribution.score}">Score</th><th scope="col" th:text="#{stats.titles}">Titles</th></tr></thead>
+                        <tbody><tr th:each="b : ${s.distribution}"><th scope="row" th:text="${b.label}">8</th><td th:text="${b.count}">3</td></tr></tbody>
+                    </table>
+                </section>
+
+                <section class="card stats-card" aria-labelledby="statsTimelineTitle">
+                    <h2 id="statsTimelineTitle" class="stats-card-title" th:text="${s.timelineByYear} ? #{stats.timeline.year} : #{stats.timeline.month}">Month by month</h2>
+                    <p class="stats-card-hint" th:text="#{stats.timeline.hint}">Each title counts once.</p>
+                    <ul class="stats-legend" aria-hidden="true">
+                        <li><span class="stats-swatch stats-swatch-movie"></span><span th:text="#{stats.legend.movies}">Movies</span></li>
+                        <li><span class="stats-swatch stats-swatch-tv"></span><span th:text="#{stats.legend.tv}">TV</span></li>
+                    </ul>
+                    <ol class="stats-cols" th:classappend="${s.timelineByYear} ? 'stats-cols-years' : 'stats-cols-12'" aria-hidden="true"
+                        th:style="|--cols: ${#lists.size(s.timeline)}|">
+                        <li th:each="b : ${s.timeline}" class="stats-col"
+                            th:title="${b.fullLabel + ': ' + b.movies + ' ' + #messages.msg('stats.legend.movies') + ', ' + b.shows + ' ' + #messages.msg('stats.legend.tv')}">
+                            <span class="stats-col-track">
+                                <span th:if="${b.total > 0}" class="stats-col-value" th:text="${b.total}">5</span>
+                                <span th:if="${b.shows > 0}" class="stats-seg stats-seg-tv" th:style="|height: ${b.showsPercent}%|"></span>
+                                <span th:if="${b.movies > 0}" class="stats-seg stats-seg-movie" th:style="|height: ${b.moviesPercent}%|"></span>
+                            </span>
+                            <span class="stats-col-label">
+                                <span class="stats-col-label-long" th:text="${b.label}">Jan</span>
+                                <span class="stats-col-label-short" th:text="${b.shortLabel}">J</span>
+                            </span>
+                        </li>
+                    </ol>
+                    <table class="visually-hidden">
+                        <caption th:text="${s.timelineByYear} ? #{stats.timeline.caption.year} : #{stats.timeline.caption.month}">Titles per month</caption>
+                        <thead><tr>
+                            <th scope="col" th:text="#{stats.timeline.when}">When</th>
+                            <th scope="col" th:text="#{stats.legend.movies}">Movies</th>
+                            <th scope="col" th:text="#{stats.legend.tv}">TV</th>
+                        </tr></thead>
+                        <tbody><tr th:each="b : ${s.timeline}"><th scope="row" th:text="${b.fullLabel}">January 2026</th><td th:text="${b.movies}">3</td><td th:text="${b.shows}">2</td></tr></tbody>
+                    </table>
+                </section>
+
+                <section class="card stats-card" aria-labelledby="statsGenresTitle">
+                    <h2 id="statsGenresTitle" class="stats-card-title" th:text="#{stats.genres.title}">Top genres</h2>
+                    <p class="stats-card-hint" th:text="#{stats.genres.hint}">A title counts in each of its genres.</p>
+                    <p th:if="${#lists.isEmpty(s.genres)}" class="stats-none" th:text="#{stats.genres.none}">No genres known.</p>
+                    <ol th:unless="${#lists.isEmpty(s.genres)}" class="stats-rows" aria-hidden="true">
+                        <li th:each="g : ${s.genres}" class="stats-row">
+                            <span class="stats-row-label" th:text="#{${g.labelKey}}">Drama</span>
+                            <span class="stats-row-track"><span class="stats-row-fill" th:style="|width: ${g.percent}%|"></span></span>
+                            <span class="stats-row-count" th:text="${g.count}">12</span>
+                            <span class="stats-row-avg" th:text="${g.average != null} ? ${'★ ' + g.average} : ''">★ 7.8</span>
+                        </li>
+                    </ol>
+                    <p th:if="${s.generous != null}" class="stats-verdict" data-stats-verdict
+                       th:text="#{stats.verdict(${#messages.msg(s.generous.labelKey)}, ${s.generous.average}, ${#messages.msg(s.harshest.labelKey)}, ${s.harshest.average})}">Most generous with Animation.</p>
+                    <table th:unless="${#lists.isEmpty(s.genres)}" class="visually-hidden">
+                        <caption th:text="#{stats.genres.caption}">Titles and average score per genre</caption>
+                        <thead><tr>
+                            <th scope="col" th:text="#{stats.genres.genre}">Genre</th>
+                            <th scope="col" th:text="#{stats.titles}">Titles</th>
+                            <th scope="col" th:text="#{stats.average.short}">Average</th>
+                        </tr></thead>
+                        <tbody><tr th:each="g : ${s.genres}"><th scope="row" th:text="#{${g.labelKey}}">Drama</th><td th:text="${g.count}">12</td><td th:text="${g.average != null} ? ${g.average} : '–'">7.8</td></tr></tbody>
+                    </table>
+                </section>
+
+                <section class="card stats-card" aria-labelledby="statsDecadesTitle">
+                    <h2 id="statsDecadesTitle" class="stats-card-title" th:text="#{stats.decades.title}">Decades</h2>
+                    <p class="stats-card-hint" th:text="#{stats.decades.hint}">By release year.</p>
+                    <p th:if="${#lists.isEmpty(s.decades)}" class="stats-none" th:text="#{stats.decades.none}">No release years known.</p>
+                    <ol th:unless="${#lists.isEmpty(s.decades)}" class="stats-rows" aria-hidden="true">
+                        <li th:each="d : ${s.decades}" class="stats-row">
+                            <span class="stats-row-label" th:text="${d.label}">1990s</span>
+                            <span class="stats-row-track"><span class="stats-row-fill" th:style="|width: ${d.percent}%|"></span></span>
+                            <span class="stats-row-count" th:text="${d.count}">7</span>
+                            <span class="stats-row-avg" th:text="${d.average != null} ? ${'★ ' + d.average} : ''">★ 7.1</span>
+                        </li>
+                    </ol>
+                    <table th:unless="${#lists.isEmpty(s.decades)}" class="visually-hidden">
+                        <caption th:text="#{stats.decades.caption}">Titles per release decade</caption>
+                        <thead><tr>
+                            <th scope="col" th:text="#{stats.decades.decade}">Decade</th>
+                            <th scope="col" th:text="#{stats.titles}">Titles</th>
+                            <th scope="col" th:text="#{stats.average.short}">Average</th>
+                        </tr></thead>
+                        <tbody><tr th:each="d : ${s.decades}"><th scope="row" th:text="${d.label}">1990s</th><td th:text="${d.count}">7</td><td th:text="${d.average != null} ? ${d.average} : '–'">7.1</td></tr></tbody>
+                    </table>
+                </section>
+            </div>
+
+            <section class="stats-top" aria-labelledby="statsTopTitle">
+                <h2 id="statsTopTitle" class="stats-top-title" th:text="${s.year != null} ? #{stats.top.year(${'' + s.year})} : #{stats.top.title}">Your highest rated</h2>
+                <p th:if="${#lists.isEmpty(s.top)}" class="empty-state" th:text="#{stats.top.none}">Nothing rated in this period.</p>
+                <div th:unless="${#lists.isEmpty(s.top)}" class="search-grid stats-top-grid">
+                    <div th:each="tile : ${s.top}" class="home-tile-wrap search-tile-wrap" th:attr="data-stats-top=${tile.actions.key}">
+                        <a th:href="${tile.href}" class="home-tile search-tile">
+                            <div class="home-poster">
+                                <img th:if="${tile.posterUrl != null}" th:src="${tile.posterUrl}"
+                                     th:srcset="${tile.posterUrl + ' 342w, ' + tile.posterUrl2x + ' 500w'}"
+                                     sizes="(max-width: 600px) 31vw, 170px" alt="" loading="lazy" decoding="async">
+                                <div th:unless="${tile.posterUrl != null}" class="poster-fallback" th:text="${tile.initial}">?</div>
+                                <span class="home-type" th:title="${tile.isMovie} ? #{search.type.movie} : #{search.type.tv}">
+                                    <i th:data-lucide="${tile.isMovie} ? 'film' : 'tv'" aria-hidden="true"></i>
+                                </span>
+                                <span th:replace="~{fragments/tile-actions :: upcoming(${tile.actions})}"></span>
+                            </div>
+                            <span class="home-tile-title" th:text="${tile.title}" th:title="${tile.title}">Title</span>
+                            <span class="home-tile-meta">
+                                <span class="stats-rank" th:text="#{stats.top.rank(${'' + tile.rank})}">#1</span>
+                                <span th:text="${tile.year != null} ? ${' · ' + tile.year} : ''">· 1994</span>
+                            </span>
+                        </a>
+                        <div th:replace="~{fragments/tile-actions :: actions(${tile.actions}, ${tile.title})}"></div>
+                    </div>
+                </div>
+            </section>
+        </th:block>
+    </div>
+</div>
+<script src="/view-swap.js" defer></script>
+<script src="/tile-actions.js" defer></script>
+<th:block th:replace="~{fragments/tile-rate :: assets}"></th:block>
+</body>
+</html>

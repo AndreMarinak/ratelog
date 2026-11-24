@@ -3,7 +3,7 @@
 <body>
 <header class="site-header" th:fragment="nav(active)"
         th:with="signedIn=${#authentication.isAuthenticated() and #authentication.name != 'anonymousUser'},
-                 inMenu=${active == 'tags' or active == 'community' or active == 'profile' or active == 'admin' or active == 'account-add'}"
+                 inMenu=${active == 'tags' or active == 'community' or active == 'profile' or active == 'admin' or active == 'account-add' or active == 'stats'}"
         th:classappend="${signedIn} ? 'signed-in' : ''">
     <div class="nav-brand" th:with="appName=#{app.name}">
         <a href="/" class="nav-monogram" th:aria-label="#{nav.brand.label(${appName})}">
@@ -43,6 +43,11 @@
         <a href="/profile" class="nav-link btn" th:classappend="${active == 'profile'} ? 'active' : ''"
            th:aria-label="#{nav.profile}" th:title="#{nav.profile}">
             <i data-lucide="user" aria-hidden="true"></i>
+        </a>
+        <!-- Fork: your stats (StatsController). -->
+        <a href="/stats" class="nav-link btn" th:classappend="${active == 'stats'} ? 'active' : ''"
+           th:aria-label="#{nav.stats}" th:title="#{nav.stats}">
+            <i data-lucide="chart-column" aria-hidden="true"></i>
         </a>
         <a href="/admin/configuration" class="nav-link btn"
            th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}"
@@ -106,6 +111,10 @@
         <a class="nav-sheet-item" href="/profile" th:classappend="${active == 'profile'} ? 'active' : ''">
             <i data-lucide="user" aria-hidden="true"></i>
             <span th:text="#{nav.profile}">Profile</span>
+        </a>
+        <a class="nav-sheet-item" href="/stats" th:classappend="${active == 'stats'} ? 'active' : ''">
+            <i data-lucide="chart-column" aria-hidden="true"></i>
+            <span th:text="#{nav.stats}">Stats</span>
         </a>
         <a class="nav-sheet-item" href="/admin/configuration"
            th:if="${#authorization.expression('hasAnyRole(''ADMIN'', ''SUPERADMIN'')')}"
