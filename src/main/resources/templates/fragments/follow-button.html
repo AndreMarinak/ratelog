@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Fork: the Follow / Following button for people (Community's People list and profiles). User, 2026-11-23: the old
+  icon-only button "isnt very clear, and the unfollow button or button to show alr following them isnt very clear".
+  - Not following: "+ Follow", filled accent. Following: "✓ Following", outlined; on a mouse it reads "Unfollow" (red)
+    on hover / keyboard focus, on touch screens a tap asks "Unfollow marisol?" first (data-confirm-touch, confirm.js).
+  - All three labels sit in the same grid cell (only one visible), so the button is as wide in every state: no jump.
+  - Posts the state it shows (`following=true|false`) to /user/follow/set, so a stale page can't flip it the wrong way.
+    In place with inplace.js (swaps this form plus `extraRegions`); without JS a plain post that redirects to `back`.
+  - follow-button.js keeps a just-followed button reading "Following" until the pointer leaves it. Styles: follow.css.
+-->
+<form th:fragment="followButton(personId, personName, following, back, extraRegions)"
+      th:id="'follow-' + ${personId}" class="follow-form" th:action="@{/user/follow/set}" method="post"
+      th:data-inplace="${extraRegions != null and !#strings.isEmpty(extraRegions)} ? ('#follow-' + ${personId} + ', ' + ${extraRegions}) : ('#follow-' + ${personId})"
+      th:data-inplace-done="${following} ? #{follow.done.off(${personName})} : #{follow.done.on(${personName})}"
+      th:data-confirm-touch="${following} ? #{follow.confirm(${personName})} : null">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <input type="hidden" name="id" th:value="${personId}" />
+    <input type="hidden" name="following" th:value="${following} ? 'false' : 'true'" />
+    <input type="hidden" name="back" th:value="${back}" />
+    <button type="submit" class="follow-btn" th:classappend="${following} ? 'is-following' : 'is-follow'"
+            th:aria-label="${following} ? #{follow.button.following.aria(${personName})} : #{follow.button.follow.aria(${personName})}"
+            th:title="${following} ? #{follow.button.following.title(${personName})} : null">
+        <span class="follow-face follow-face-follow" aria-hidden="true"><i data-lucide="plus"></i><span th:text="#{follow.button.follow}">Follow</span></span>
+        <span class="follow-face follow-face-following" aria-hidden="true"><i data-lucide="check"></i><span th:text="#{follow.button.following}">Following</span></span>
+        <span class="follow-face follow-face-unfollow" aria-hidden="true"><i data-lucide="user-minus"></i><span th:text="#{follow.button.unfollow}">Unfollow</span></span>
+    </button>
+</form>
+</body>
+</html>

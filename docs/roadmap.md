@@ -92,6 +92,11 @@ accounts and roles `V1130–1139`.
   "Added", the list grows with the new rank, toast), "More suggestions" gives a new batch, "Not interested" hides one for the
   session. Not on other people's lists, empty lists, Edit order or tick-off. API: `GET /api/v1/lists/{id}/suggestions`
   ([docs/api.md](api.md#list-suggestions)). No migration.
+- [x] **26. Community People and clear Follow buttons** (requested 2026-11-23): Community lists every other account (A-Z, initial,
+  rating count, profile link) with a Follow button, beside the Activity feed (People first on phones); "Following 2 of 5".
+  Follow buttons on Community and profiles are labelled: "+ Follow" / "✓ Following" (reads "Unfollow" on hover; touch screens
+  ask before unfollowing), same size in every state, in place, and they post the state they show (`POST /user/follow/set`).
+  User search is case-insensitive. Admins are listed like everyone else. No migration, no API change.
 
 ## Fixes and housekeeping done
 

@@ -27,10 +27,10 @@ class UserRepositoryImpl(
     }
 
     override fun findByUsernameContaining(username: Username): List<User> =
-        userDAO.findByUsernameContaining(username.value).map { it.toDomain() }
+        userDAO.findByUsernameContaining(UsernameSearch.likePattern(username.value)).map { it.toDomain() }
 
     override fun findByUsernameContaining(username: Username, followerId: User.Id): List<User> =
-        userDAO.findByUsernameContaining(username.value).map { it.toDomain() }
+        userDAO.findByUsernameContaining(UsernameSearch.likePattern(username.value)).map { it.toDomain() }
 
     override fun findFollowingByUserId(userId: User.Id): List<User> =
         userFollowDAO.findFollowingUsers(userId.value).map { it.toDomain() }

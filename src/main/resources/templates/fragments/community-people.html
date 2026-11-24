@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Fork: Community's People directory (user, 2026-11-23: "list every user with a follow button"). Every account but the
+  viewer, A-Z, with its rating count and a Follow / Following button (fragments/follow-button.html). Following someone
+  saves in place and also refreshes "Following 2 of 5" and the Activity feed, which now includes their ratings.
+  Data: CommunityPeopleAdvice (`communityPeople`). Styles: static/community-people.css.
+-->
+<section th:fragment="people(people, back)" class="community-people" aria-labelledby="communityPeopleTitle">
+    <div class="community-people-head">
+        <h2 id="communityPeopleTitle" th:text="#{community.people.title}">People</h2>
+        <p id="communityPeopleSummary" class="community-people-summary" th:if="${people != null and people.total > 0}"
+           th:text="#{community.people.summary(${people.followingCount}, ${people.total})}">Following 2 of 5</p>
+    </div>
+
+    <div class="search-wrapper community-people-search">
+        <label for="user-search-input" class="visually-hidden" th:text="#{community.search.users}">Search Users</label>
+        <input type="text" id="user-search-input" name="username" th:placeholder="#{community.search.placeholder}" autocomplete="off"
+               class="w-100" th:data-no-users-msg="#{community.search.no.users.found}" />
+        <div id="user-search-dropdown" class="search-dropdown"></div>
+    </div>
+
+    <ul class="people-list" th:if="${people != null and people.total > 0}">
+        <li class="person-row" th:each="person : ${people.people}">
+            <a class="person-link" th:href="@{'/profile/' + ${person.id}}">
+                <span class="avatar sm" aria-hidden="true" th:text="${person.initial}">M</span>
+                <span class="person-text">
+                    <span class="person-name" th:text="${person.username}">marisol</span>
+                    <span class="person-meta" th:text="#{community.people.ratings(${person.ratingCount})}">12 ratings</span>
+                </span>
+            </a>
+            <form th:replace="~{fragments/follow-button :: followButton(${person.id}, ${person.username}, ${person.following}, ${back}, '#communityPeopleSummary, #communityFeed')}"></form>
+        </li>
+    </ul>
+    <div th:if="${people == null or people.total == 0}" class="empty-state" th:text="#{community.people.empty}">No one else has an account here yet.</div>
+</section>
+</body>
+</html>

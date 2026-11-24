@@ -70,6 +70,14 @@ Problems found while building and running the fork: what happened, the cause, an
 
 ## Fixed
 
+- **User search was case-sensitive, and `_` was a wildcard** (upstream, found 2026-11-23 building Community's People list):
+  `UserDAO` searched `username LIKE CONCAT('%', :username, '%')`, so "Mari" missed "marisol", and since usernames may contain
+  `_`, "a_b" also matched "axb". Now `LOWER(username) LIKE LOWER(:pattern) ESCAPE '!'` with `_`, `%` and `!` escaped in the
+  pattern (`UsernameSearch.likePattern`), results A-Z. Still: the box needs 3+ characters (usernames' minimum length), so "an"
+  finds nobody; the People list shows everyone anyway.
+- **The profile follow button was an unlabeled icon** (user, 2026-11-23: "its not very clear"): a user-round-check icon to
+  follow and user-round-x to unfollow, with no text and only a tooltip. Replaced by the labelled Follow / Following button; see
+  design-decisions ("Community: People and Follow buttons").
 - **Two search boxes on the search results page** (user, phone, 2026-11-23): the earlier fix removed the Browse bar's field on
   Home, but `/?q=…` still had its own "Search movies & TV shows" box under the header search. It's gone; see design-decisions.
 - **Going back to Discover's grid or search results only showed the first page again** (found building the back links,
